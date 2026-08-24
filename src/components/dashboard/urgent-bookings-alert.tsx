@@ -1,10 +1,13 @@
 import { Phone, TriangleAlert } from "lucide-react";
+import { clientulRezervarii } from "@/lib/client-rezervare";
 
 type UrgentBooking = {
   id: string;
   createdAt: Date;
   startTime: Date;
-  customer: { name: string; phone: string | null };
+  customer: { name: string; phone: string | null } | null;
+  guestName: string | null;
+  guestPhone: string | null;
   field: { name: string; contactPhone: string | null };
 };
 
@@ -41,7 +44,7 @@ export function UrgentBookingsAlert({ bookings, ownerPhone }: { bookings: Urgent
                 >
                   <div className="min-w-0">
                     <p className="truncate font-medium text-amber-950 dark:text-amber-200">
-                      {b.customer.name} · {b.field.name}
+                      {clientulRezervarii(b).nume} · {b.field.name}
                     </p>
                     <p className="text-xs text-amber-800/70 dark:text-amber-400/70">
                       cerută acum {minutesAgo(b.createdAt)} min

@@ -3,6 +3,7 @@
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { CalendarIcon, Clock } from "lucide-react";
 import { format } from "date-fns";
@@ -43,6 +44,10 @@ export function BookingForm({
   const [start, setStart] = useState<string>("");
   const [end, setEnd] = useState<string>("");
   const [notes, setNotes] = useState("");
+  // Cerute doar când rezervarea se face fără cont.
+  const [nume, setNume] = useState("");
+  const [telefon, setTelefon] = useState("");
+  const [emailVizitator, setEmailVizitator] = useState("");
   const [error, setError] = useState("");
   const [isPending, startTransition] = useTransition();
 
@@ -114,6 +119,16 @@ export function BookingForm({
       setError("Alege data și intervalul orar.");
       return;
     }
+    if (!isAuthenticated) {
+      if (nume.trim().length < 2) {
+        setError("Scrie numele tău, ca proprietarul să știe cine vine.");
+        return;
+      }
+      if (telefon.trim().length < 7) {
+        setError("Scrie un număr de telefon la care poți fi sunat.");
+        return;
+      }
+    }
     // Momentul exact e calculat aici, în fusul clientului, nu pe server —
     // altfel rezervarea ajungea în baza de date cu altă oră decât cea aleasă.
     const day = format(date, "yyyy-MM-dd");
@@ -125,6 +140,35 @@ export function BookingForm({
     }
 
     startTransition(async () => {
+      // Fără cont, rezervarea trece printr-o rută publică și se întoarce cu un
+      // link: e singurul fel în care omul își mai poate găsi rezervarea.
+      if (!isAuthenticated) {
+        try {
+          const raspuns = await fetch("/api/rezervari-vizitator", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              fieldId,
+              startTime,
+              endTime,
+              nume: nume.trim(),
+              telefon: telefon.trim(),
+              email: emailVizitator.trim() || undefined,
+              observatii: notes.trim() || undefined,
+            }),
+          });
+          const date2 = await raspuns.json();
+          if (!raspuns.ok) {
+            setError(date2.error ?? "Nu am putut trimite cererea.");
+            return;
+          }
+          router.push(new URL(date2.link).pathname);
+        } catch {
+          setError("A apărut o eroare. Încearcă din nou.");
+        }
+        return;
+      }
+
       const result = await createBookingRequest({
         fieldId,
         startTime,
@@ -138,20 +182,6 @@ export function BookingForm({
       toast.success("Cererea de rezervare a fost trimisă! O poți urmări în „Rezervările mele”.");
       router.push("/rezervarile-mele");
     });
-  }
-
-  if (!isAuthenticated) {
-    return (
-      <div className="rounded-2xl border border-dashed p-6 text-center">
-        <p className="text-[14px] font-medium">Autentifică-te pentru a rezerva</p>
-        <p className="mt-1 text-[13px] text-muted-foreground">
-          Ai nevoie de un cont Personal pentru a trimite o cerere de rezervare.
-        </p>
-        <Button className="mt-4" render={<Link href="/autentificare?tip=personal" />} nativeButton={false}>
-          Autentificare
-        </Button>
-      </div>
-    );
   }
 
   return (
@@ -247,6 +277,46 @@ export function BookingForm({
         <p className="mb-1.5 text-[12.5px] font-medium text-muted-foreground">Observații (opțional)</p>
         <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Ex. avem nevoie de mingi." rows={2} />
       </div>
+
+      {/* Fără cont, proprietarul trebuie totuși să știe cine vine și cum îl
+          poate suna dacă se schimbă ceva. */}
+      {!isAuthenticated && (
+        <div className="space-y-3 rounded-xl border bg-muted/40 p-3">
+          <p className="text-[12.5px] font-medium">Datele tale</p>
+          <div>
+            <p className="mb-1.5 text-[12.5px] text-muted-foreground">Nume</p>
+            <Input value={nume} onChange={(e) => setNume(e.target.value)} placeholder="Ion Popescu" autoComplete="name" />
+          </div>
+          <div>
+            <p className="mb-1.5 text-[12.5px] text-muted-foreground">Telefon</p>
+            <Input
+              value={telefon}
+              onChange={(e) => setTelefon(e.target.value)}
+              placeholder="0722 123 456"
+              type="tel"
+              autoComplete="tel"
+            />
+          </div>
+          <div>
+            <p className="mb-1.5 text-[12.5px] text-muted-foreground">Email (opțional)</p>
+            <Input
+              value={emailVizitator}
+              onChange={(e) => setEmailVizitator(e.target.value)}
+              placeholder="nume@exemplu.ro"
+              type="email"
+              autoComplete="email"
+            />
+          </div>
+          <p className="text-[11.5px] text-muted-foreground">
+            Fără cont primești un link cu care îți vezi și îți anulezi rezervarea. Păstrează-l —
+            e singurul mod de a o regăsi. Cu{" "}
+            <Link href="/autentificare?tip=personal" className="underline underline-offset-2">
+              un cont
+            </Link>{" "}
+            le ai pe toate la un loc.
+          </p>
+        </div>
+      )}
 
       {hours > 0 && (
         <div className="flex items-center justify-between rounded-lg bg-muted px-3 py-2 text-[13.5px]">

@@ -13,6 +13,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { unblockSeries, unblockSlot } from "@/lib/actions/blocked-slots";
 import { toDateInput, toTimeInput } from "@/lib/datetime";
 import { sportMeta } from "@/lib/sports";
+import { clientulRezervarii } from "@/lib/client-rezervare";
 import {
   filtreazaTerenuri,
   SelectorSportTeren,
@@ -53,7 +54,9 @@ type Booking = {
   startTime: Date;
   endTime: Date;
   totalPrice: number;
-  customer: { name: string };
+  customer: { name: string } | null;
+  guestName: string | null;
+  guestPhone: string | null;
   field: { id: string; name: string };
 };
 
@@ -389,7 +392,7 @@ export function ScheduleClient({
                             style={{ top, height }}
                             className={`absolute inset-x-1 z-10 flex flex-col items-start overflow-hidden rounded-lg border-l-[3px] px-2 py-1.5 text-left shadow-sm ${BLOCK_BG[b.status]} ${BLOCK_BORDER[b.status]} ${BLOCK_FG[b.status]}`}
                           >
-                            <span className="truncate text-[11.5px] font-semibold leading-tight">{b.customer.name}</span>
+                            <span className="truncate text-[11.5px] font-semibold leading-tight">{clientulRezervarii(b).nume}</span>
                             <span className="mt-auto truncate font-mono text-[10.5px] leading-tight opacity-80 tabular-nums">
                               {fmtHour(start)}–{fmtHour(end)}
                             </span>
@@ -430,7 +433,7 @@ export function ScheduleClient({
                 {fmtHour(hourOf(selected.startTime))} – {fmtHour(hourOf(selected.endTime))}
               </p>
               <p className="mt-3 text-[13.5px]">
-                Client: <span className="font-medium">{selected.customer.name}</span>
+                Client: <span className="font-medium">{clientulRezervarii(selected).nume}</span>
               </p>
               <p className="mt-1 font-mono text-[13px] tabular-nums">{selected.totalPrice.toFixed(0)} RON</p>
               <div className="mt-5 flex gap-2">
@@ -461,7 +464,7 @@ export function ScheduleClient({
       {rescheduling && (
         <RescheduleDialog
           bookingId={rescheduling.id}
-          clientName={rescheduling.customer.name}
+          clientName={clientulRezervarii(rescheduling).nume}
           fieldName={rescheduling.field.name}
           defaultDate={toDateInput(rescheduling.startTime)}
           defaultStart={toTimeInput(rescheduling.startTime)}

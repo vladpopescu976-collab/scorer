@@ -6,6 +6,7 @@ import type { Prisma } from "@prisma/client";
 
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
+import { clientulRezervarii } from "@/lib/client-rezervare";
 import { ActionError, fail, ok, toActionError, type ActionResult } from "@/lib/actions/result";
 import { creeazaSerie, stergeSeria, MAX_SAPTAMANI } from "@/lib/blocari-recurente";
 
@@ -78,7 +79,7 @@ export async function blockSlot(input: z.infer<typeof blockSchema>): Promise<Act
         });
         if (booking) {
           throw new ActionError(
-            `Nu poți bloca intervalul: există deja o rezervare a lui ${booking.customer.name}. Respinge-o sau propune-i altă oră mai întâi.`
+            `Nu poți bloca intervalul: există deja o rezervare a lui ${clientulRezervarii(booking).nume}. Respinge-o sau propune-i altă oră mai întâi.`
           );
         }
 

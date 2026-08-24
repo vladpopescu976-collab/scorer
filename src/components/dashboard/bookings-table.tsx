@@ -7,6 +7,7 @@ import { toast } from "sonner";
 
 import { Input } from "@/components/ui/input";
 import { StatusBadge } from "@/components/dashboard/status-badge";
+import { clientulRezervarii } from "@/lib/client-rezervare";
 import {
   filtreazaTerenuri,
   SelectorSportTeren,
@@ -24,7 +25,10 @@ type Row = {
   startTime: Date;
   endTime: Date;
   totalPrice: number;
-  customer: { name: string; phone: string | null };
+  // Lipsește când rezervarea vine de la cineva fără cont.
+  customer: { name: string; phone: string | null } | null;
+  guestName: string | null;
+  guestPhone: string | null;
   field: { id: string; name: string };
 };
 
@@ -56,7 +60,7 @@ export function BookingsTable({ bookings, fields }: { bookings: Row[]; fields: {
       .filter((b) => {
         if (filter !== "ALL" && b.status !== filter) return false;
         if (!terenuriVizibile.has(b.field.id)) return false;
-        if (query && !b.customer.name.toLowerCase().includes(query.toLowerCase())) return false;
+        if (query && !clientulRezervarii(b).nume.toLowerCase().includes(query.toLowerCase())) return false;
         return true;
       })
       .sort((a, b) => b.startTime.getTime() - a.startTime.getTime());
@@ -156,8 +160,15 @@ export function BookingsTable({ bookings, fields }: { bookings: Row[]; fields: {
                   className="border-b text-[13.5px] last:border-b-0 hover:bg-muted/40"
                 >
                   <td className="px-5 py-3.5">
-                    <p className="font-medium">{b.customer.name}</p>
-                    <p className="text-[11.5px] text-muted-foreground">{b.customer.phone ?? "—"}</p>
+                    <p className="font-medium">{clientulRezervarii(b).nume}</p>
+                    <p className="text-[11.5px] text-muted-foreground">
+                      {clientulRezervarii(b).telefon ?? "—"}
+                      {!clientulRezervarii(b).areCont && (
+                        <span className="ml-1.5 rounded bg-muted px-1.5 py-0.5 text-[10px]">
+                          fără cont
+                        </span>
+                      )}
+                    </p>
                   </td>
                   <td className="px-5 py-3.5">{b.field.name}</td>
                   <td className="px-5 py-3.5">
@@ -220,7 +231,7 @@ export function BookingsTable({ bookings, fields }: { bookings: Row[]; fields: {
       {rescheduling && (
         <RescheduleDialog
           bookingId={rescheduling.id}
-          clientName={rescheduling.customer.name}
+          clientName={clientulRezervarii(rescheduling).nume}
           fieldName={rescheduling.field.name}
           defaultDate={toDateInput(rescheduling.startTime)}
           defaultStart={toTimeInput(rescheduling.startTime)}

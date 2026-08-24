@@ -1,6 +1,7 @@
 import { after } from "next/server";
 
 import { prisma } from "@/lib/prisma";
+import { clientulRezervarii } from "@/lib/client-rezervare";
 import { trimiteEmail, urlAplicatie } from "@/lib/email";
 import { sablon, type Rand } from "@/lib/emailuri/sablon";
 import { APP_TIME_ZONE } from "@/lib/datetime";
@@ -96,7 +97,9 @@ async function trimiteAnuntul(bookingId: string, eveniment: EvenimentRezervare) 
   if (!rezervare) return;
 
   const baza = urlAplicatie();
-  const { customer, field } = rezervare;
+  const { field } = rezervare;
+  // Poate fi un cont sau cineva care a lăsat doar datele de contact.
+  const client = clientulRezervarii(rezervare);
 
   // Intervalul propus contează doar la mesajul despre propunere; în rest
   // vorbim mereu despre ora din rezervare.
@@ -119,8 +122,8 @@ async function trimiteAnuntul(bookingId: string, eveniment: EvenimentRezervare) 
     textLink: "Vezi rezervările",
   };
   const catreClient = {
-    catre: customer.email,
-    salut: customer.name,
+    catre: client.email,
+    salut: client.nume,
     link: `${baza}/rezervarile-mele`,
     textLink: "Vezi rezervarea",
   };
@@ -141,13 +144,13 @@ async function trimiteAnuntul(bookingId: string, eveniment: EvenimentRezervare) 
       subiect: `Cerere nouă de rezervare — ${field.name}`,
       titlu: "Ai o cerere nouă de rezervare",
       paragrafe: [
-        `${customer.name} vrea să rezerve ${field.name}. Cererea așteaptă răspunsul tău.`,
+        `${client.nume} vrea să rezerve ${field.name}. Cererea așteaptă răspunsul tău.`,
         ...(rezervare.notes ? [`Mesajul clientului: „${rezervare.notes}”`] : []),
       ],
       randuri: [
         ...detalii,
-        { eticheta: "Client", valoare: customer.name },
-        ...(customer.phone ? [{ eticheta: "Telefon", valoare: customer.phone }] : []),
+        { eticheta: "Client", valoare: client.nume },
+        ...(client.telefon ? [{ eticheta: "Telefon", valoare: client.telefon }] : []),
         { eticheta: "Total", valoare: `${Number(rezervare.totalPrice)} RON` },
       ],
       incheiere: "Până nu o aprobi, intervalul rămâne blocat pentru alți clienți.",
@@ -177,15 +180,15 @@ async function trimiteAnuntul(bookingId: string, eveniment: EvenimentRezervare) 
       destinatar: catreProprietar,
       subiect: `Rezervare anulată — ${field.name}`,
       titlu: "O rezervare a fost anulată",
-      paragrafe: [`${customer.name} și-a anulat rezervarea. Intervalul este din nou liber.`],
-      randuri: [...detalii, { eticheta: "Client", valoare: customer.name }],
+      paragrafe: [`${client.nume} și-a anulat rezervarea. Intervalul este din nou liber.`],
+      randuri: [...detalii, { eticheta: "Client", valoare: client.nume }],
     },
     "mutata-de-client": {
       destinatar: catreProprietar,
       subiect: `Rezervare mutată — ${field.name}`,
       titlu: "O rezervare a fost mutată",
-      paragrafe: [`${customer.name} și-a mutat rezervarea. Mai jos e intervalul nou.`],
-      randuri: [...detalii, { eticheta: "Client", valoare: customer.name }],
+      paragrafe: [`${client.nume} și-a mutat rezervarea. Mai jos e intervalul nou.`],
+      randuri: [...detalii, { eticheta: "Client", valoare: client.nume }],
     },
     "mutare-propusa": {
       destinatar: catreClient,
@@ -202,21 +205,25 @@ async function trimiteAnuntul(bookingId: string, eveniment: EvenimentRezervare) 
       destinatar: catreProprietar,
       subiect: `Propunerea a fost acceptată — ${field.name}`,
       titlu: "Clientul a acceptat noul interval",
-      paragrafe: [`${customer.name} a acceptat intervalul propus. Rezervarea este confirmată.`],
-      randuri: [...detalii, { eticheta: "Client", valoare: customer.name }],
+      paragrafe: [`${client.nume} a acceptat intervalul propus. Rezervarea este confirmată.`],
+      randuri: [...detalii, { eticheta: "Client", valoare: client.nume }],
     },
     "mutare-refuzata": {
       destinatar: catreProprietar,
       subiect: `Propunerea a fost refuzată — ${field.name}`,
       titlu: "Clientul a refuzat noul interval",
       paragrafe: [
-        `${customer.name} a refuzat intervalul propus, iar rezervarea a fost anulată.`,
+        `${client.nume} a refuzat intervalul propus, iar rezervarea a fost anulată.`,
       ],
-      randuri: [...detalii, { eticheta: "Client", valoare: customer.name }],
+      randuri: [...detalii, { eticheta: "Client", valoare: client.nume }],
     },
   };
 
   const mesaj = mesaje[eveniment];
+
+  // Cineva fără cont poate rezerva lăsând doar numele și telefonul. Fără
+  // adresă nu avem unde trimite, iar asta nu e o eroare.
+  if (!mesaj.destinatar.catre) return;
   const { html, text } = sablon({
     titlu: mesaj.titlu,
     salut: mesaj.destinatar.salut,

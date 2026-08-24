@@ -29,6 +29,9 @@ export default async function BusinessOverviewPage() {
         createdAt: true,
         startTime: true,
         customer: { select: { name: true, phone: true } },
+        // Rezervarea poate veni de la cineva fără cont; datele lui stau aici.
+        guestName: true,
+        guestPhone: true,
         field: { select: { name: true, contactPhone: true } },
       },
       orderBy: { createdAt: "asc" },

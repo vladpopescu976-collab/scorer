@@ -1,6 +1,7 @@
 import type { Booking, BookingStatus, Field, Review, SportType } from "@prisma/client";
 
 import { normalizeazaOras } from "@/lib/orase";
+import { clientulRezervarii } from "@/lib/client-rezervare";
 
 // Formele trimise către aplicația nativă. Sunt scrise explicit ca să nu ajungă
 // din greșeală câmpuri interne în răspuns și ca structurile din Swift să aibă
@@ -61,13 +62,15 @@ export type RezervareApi = {
   pretTotal: number;
   observatii: string | null;
   teren: { id: string; nume: string; oras: string; oraDeschidere: number; oraInchidere: number };
-  client?: { nume: string; telefon: string | null };
+  client?: { nume: string; telefon: string | null; areCont: boolean };
   recenzie?: { nota: number; comentariu: string | null; raspunsProprietar: string | null } | null;
 };
 
 type BookingCuTeren = Booking & {
   field: Pick<Field, "id" | "name" | "city" | "openingHour" | "closingHour">;
-  customer?: { name: string; phone: string | null };
+  // `null` când rezervarea vine de la cineva fără cont, `undefined` când
+  // apelantul nu a cerut deloc clientul.
+  customer?: { name: string; phone: string | null } | null;
   review?: Pick<Review, "rating" | "comment" | "ownerReply"> | null;
 };
 
@@ -89,8 +92,16 @@ export function serializeazaRezervare(booking: BookingCuTeren): RezervareApi {
       oraDeschidere: booking.field.openingHour,
       oraInchidere: booking.field.closingHour,
     },
-    ...(booking.customer
-      ? { client: { nume: booking.customer.name, telefon: booking.customer.phone } }
+    ...(booking.customer !== undefined
+      ? {
+          client: (({ nume, telefon, areCont }) => ({ nume, telefon, areCont }))(
+            clientulRezervarii({
+              customer: booking.customer ?? null,
+              guestName: booking.guestName,
+              guestPhone: booking.guestPhone,
+            })
+          ),
+        }
       : {}),
     ...(booking.review !== undefined
       ? {

@@ -250,8 +250,18 @@ model Booking {
   fieldId String
   field   Field  @relation(fields: [fieldId], references: [id], onDelete: Cascade)
 
-  customerId String
-  customer   User   @relation("CustomerBookings", fields: [customerId], references: [id], onDelete: Cascade)
+  // Optional: o rezervare poate veni si de la cineva fara cont. In cazul acela
+  // datele de contact stau in campurile `guest*` de mai jos.
+  customerId String?
+  customer   User?   @relation("CustomerBookings", fields: [customerId], references: [id], onDelete: Cascade)
+
+  guestName  String?
+  guestEmail String?
+  guestPhone String?
+  /// Amprenta linkului prin care vizitatorul isi vede si isi anuleaza
+  /// rezervarea. Tokenul in clar exista doar in link, ca la confirmarea
+  /// contului.
+  guestTokenHash String? @unique
 
   review Review?
 

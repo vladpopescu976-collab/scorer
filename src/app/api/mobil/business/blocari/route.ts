@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { prisma } from "@/lib/prisma";
+import { clientulRezervarii } from "@/lib/client-rezervare";
 import { cereBusiness, eroare, eroareNeasteptata, raspuns } from "@/lib/api/raspuns";
 import { creeazaSerie, stergeSeria, MAX_SAPTAMANI } from "@/lib/blocari-recurente";
 
@@ -72,7 +73,7 @@ export async function POST(request: Request) {
           },
           include: { customer: { select: { name: true } } },
         });
-        if (rezervare) throw new Error(`REZERVAT:${rezervare.customer.name}`);
+        if (rezervare) throw new Error(`REZERVAT:${clientulRezervarii(rezervare).nume}`);
 
         return tx.blockedSlot.create({
           data: {
