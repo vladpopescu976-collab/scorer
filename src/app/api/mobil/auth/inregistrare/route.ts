@@ -3,7 +3,7 @@ import { z } from "zod";
 
 import { prisma } from "@/lib/prisma";
 import { eroare, eroareNeasteptata, raspuns } from "@/lib/api/raspuns";
-import { trimiteConfirmarea } from "@/lib/verificare-email";
+import { confirmareaEsteObligatorie, trimiteConfirmarea } from "@/lib/verificare-email";
 import { normalizeazaOras } from "@/lib/orase";
 import {
   intervalValues,
@@ -94,13 +94,18 @@ export async function POST(request: Request) {
             }),
         acceptedTermsAt: new Date(),
         marketingOptIn: date.marketingOptIn,
+        emailVerified: confirmareaEsteObligatorie ? null : new Date(),
       },
     });
+
+    if (!confirmareaEsteObligatorie) {
+      return raspuns({ email: user.email, emailTrimis: false, confirmat: true }, 201);
+    }
 
     // Contul nu primeste token de acces: intai trebuie confirmata adresa.
     const stare = await trimiteConfirmarea(user);
 
-    return raspuns({ email: user.email, emailTrimis: stare.trimis }, 201);
+    return raspuns({ email: user.email, emailTrimis: stare.trimis, confirmat: false }, 201);
   } catch (error) {
     return eroareNeasteptata("inregistrare", error);
   }

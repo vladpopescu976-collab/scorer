@@ -63,7 +63,9 @@ type FormularInregistrare = UseFormReturn<RegisterFormInput, unknown, RegisterFo
 
 type Stare =
   | { faza: "formular" }
-  | { faza: "trimis"; email: string; emailTrimis: boolean; motiv?: string };
+  | { faza: "trimis"; email: string; emailTrimis: boolean; motiv?: string }
+  // Când confirmarea pe email e oprită de pe server, contul e gata pe loc.
+  | { faza: "gata"; email: string };
 
 export function RegisterWizard({ role }: { role: Role }) {
   const [pas, setPas] = useState(0);
@@ -164,12 +166,16 @@ export function RegisterWizard({ role }: { role: Role }) {
         return;
       }
 
-      setStare({
-        faza: "trimis",
-        email: date.email,
-        emailTrimis: date.emailTrimis !== false,
-        motiv: date.motiv,
-      });
+      setStare(
+        date.stare === "gata"
+          ? { faza: "gata", email: date.email }
+          : {
+              faza: "trimis",
+              email: date.email,
+              emailTrimis: date.emailTrimis !== false,
+              motiv: date.motiv,
+            }
+      );
     } catch {
       toast.error("A apărut o eroare. Te rugăm să încerci din nou.");
     } finally {
@@ -177,6 +183,9 @@ export function RegisterWizard({ role }: { role: Role }) {
     }
   }
 
+  if (stare.faza === "gata") {
+    return <ContulEGata email={stare.email} />;
+  }
   if (stare.faza === "trimis") {
     return <VerificaEmailul {...stare} />;
   }
@@ -870,6 +879,33 @@ function Rand({ eticheta, valoare }: { eticheta: string; valoare: string }) {
 }
 
 // MARK: - După trimitere
+
+function ContulEGata({ email }: { email: string }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.25 }}
+      className="space-y-4 text-center"
+    >
+      <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-600">
+        <CheckCircle2 className="h-6 w-6" />
+      </div>
+
+      <div className="space-y-1.5">
+        <h3 className="text-lg font-semibold">Contul tău este gata</h3>
+        <p className="text-sm text-muted-foreground">
+          Te poți autentifica acum cu{" "}
+          <span className="font-medium text-foreground">{email}</span>.
+        </p>
+      </div>
+
+      <Button className="w-full" nativeButton={false} render={<Link href="/autentificare" />}>
+        Mergi la autentificare
+      </Button>
+    </motion.div>
+  );
+}
 
 function VerificaEmailul({
   email,

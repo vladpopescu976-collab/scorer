@@ -5,6 +5,17 @@ import { trimiteEmail, urlAplicatie, type RezultatEmail } from "@/lib/email";
 
 const VALABIL_ORE = 24;
 
+/**
+ * Cât timp adresa de expeditor nu are un domeniu verificat în Resend, mesajele
+ * nu ajung la nimeni în afară de titularul contului Resend — deci nimeni nu-și
+ * poate confirma contul. Comutatorul acesta lasă conturile noi confirmate din
+ * start, ca site-ul să poată fi dat pe mână unor testeri.
+ *
+ * Oprit dacă variabila lipsește: pe un site public, un cont nu trebuie să se
+ * poată deschide cu adresa altcuiva.
+ */
+export const confirmareaEsteObligatorie = process.env.CONFIRMARE_EMAIL_OPTIONALA !== "1";
+
 /** Linkul conține tokenul în clar; în baza de date ținem doar amprenta lui. */
 function amprenta(token: string): string {
   return createHash("sha256").update(token).digest("hex");

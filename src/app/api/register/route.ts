@@ -3,7 +3,7 @@ import bcrypt from "bcryptjs";
 
 import { prisma } from "@/lib/prisma";
 import { registerSchema } from "@/lib/validations/auth";
-import { trimiteConfirmarea } from "@/lib/verificare-email";
+import { confirmareaEsteObligatorie, trimiteConfirmarea } from "@/lib/verificare-email";
 import { normalizeazaOras } from "@/lib/orase";
 
 // Baza Prisma Postgres se suspenda cand e inactiva, iar prima cerere
@@ -80,10 +80,15 @@ export async function POST(request: Request) {
           }),
       acceptedTermsAt: new Date(),
       marketingOptIn,
-      // emailVerified ramane null: contul exista, dar nu se poate autentifica
-      // pana cand adresa nu e confirmata.
+      // Ramane null cand confirmarea e obligatorie: contul exista, dar nu se
+      // poate autentifica pana cand adresa nu e confirmata.
+      emailVerified: confirmareaEsteObligatorie ? null : new Date(),
     },
   });
+
+  if (!confirmareaEsteObligatorie) {
+    return NextResponse.json({ stare: "gata", email: user.email }, { status: 201 });
+  }
 
   const rezultat = await trimiteConfirmarea(user);
 

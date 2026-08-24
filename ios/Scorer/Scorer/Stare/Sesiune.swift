@@ -50,8 +50,16 @@ final class Sesiune {
         await aplica(raspuns)
     }
 
-    /// Contul se creează, dar nu primește token: întâi trebuie confirmată
-    /// adresa de email. Întoarce `true` dacă mesajul chiar a plecat.
+    /// Ce s-a întâmplat după înregistrare.
+    enum RezultatInregistrare: Sendable {
+        /// Confirmarea pe email e oprită de pe server — contul e gata de folosit.
+        case gata
+        /// Contul așteaptă confirmarea; `emailTrimis` spune dacă mesajul a plecat.
+        case asteaptaConfirmarea(emailTrimis: Bool)
+    }
+
+    /// Contul se creează, dar nu primește token: dacă e nevoie de confirmare,
+    /// întâi trebuie deschis linkul din email.
     @discardableResult
     func inregistreaza(
         nume: String,
@@ -62,7 +70,7 @@ final class Sesiune {
         numeFirma: String,
         site: String,
         rol: Rol
-    ) async throws -> Bool {
+    ) async throws -> RezultatInregistrare {
         struct Corp: Encodable {
             let name: String
             let email: String
@@ -76,6 +84,8 @@ final class Sesiune {
         struct Raspuns: Decodable {
             let email: String
             let emailTrimis: Bool
+            /// Lipsește pe versiunile mai vechi de server, deci îl citim opțional.
+            let confirmat: Bool?
         }
         let raspuns: Raspuns = try await ApiClient.shared.cere(
             "auth/inregistrare",
@@ -93,7 +103,8 @@ final class Sesiune {
                 role: rol.rawValue
             )
         )
-        return raspuns.emailTrimis
+        if raspuns.confirmat == true { return .gata }
+        return .asteaptaConfirmarea(emailTrimis: raspuns.emailTrimis)
     }
 
     /// Cere pe email un link de schimbare a parolei. Parola nouă se alege pe

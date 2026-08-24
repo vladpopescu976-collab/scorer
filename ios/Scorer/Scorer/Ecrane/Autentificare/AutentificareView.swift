@@ -133,6 +133,7 @@ private struct FormularAutentificare: View {
     @State private var asteaptaConfirmare: String?
     @State private var emailulAPlecat = true
     @State private var linkRetrimis = false
+    @State private var contulEGata = false
     @State private var oras = ""
     @State private var parolaCeruta = false
     /// Câmpurile în plus de la înregistrare se arată doar când e nevoie de ele.
@@ -305,6 +306,14 @@ private struct FormularAutentificare: View {
                 }
             }
 
+            if contulEGata {
+                Section {
+                    Label("Contul a fost creat. Autentifică-te cu datele lui.", systemImage: "checkmark.circle.fill")
+                        .font(.footnote)
+                        .foregroundStyle(Tema.accent)
+                }
+            }
+
             if let eroare {
                 Section {
                     Text(eroare)
@@ -403,7 +412,7 @@ private struct FormularAutentificare: View {
             do {
                 if modInregistrare {
                     let adresa = email.trimmingCharacters(in: .whitespaces)
-                    emailulAPlecat = try await sesiune.inregistreaza(
+                    let rezultat = try await sesiune.inregistreaza(
                         nume: nume.trimmingCharacters(in: .whitespaces),
                         email: adresa,
                         parola: parola,
@@ -413,8 +422,18 @@ private struct FormularAutentificare: View {
                         site: site.trimmingCharacters(in: .whitespaces),
                         rol: rol
                     )
-                    linkRetrimis = false
-                    asteaptaConfirmare = adresa
+                    switch rezultat {
+                    case .gata:
+                        // Contul e deja folosibil; trecem direct la autentificare.
+                        contulEGata = true
+                        modInregistrare = false
+                        parola = ""
+                        confirmareParola = ""
+                    case .asteaptaConfirmarea(let aPlecat):
+                        emailulAPlecat = aPlecat
+                        linkRetrimis = false
+                        asteaptaConfirmare = adresa
+                    }
                 } else {
                     try await sesiune.autentifica(
                         email: email.trimmingCharacters(in: .whitespaces),
