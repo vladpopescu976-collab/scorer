@@ -16,6 +16,7 @@ import { APP_TIME_ZONE } from "@/lib/datetime";
  */
 export type EvenimentRezervare =
   | "cerere-noua"
+  | "confirmata-automat"
   | "aprobata"
   | "respinsa"
   | "anulata-de-client"
@@ -154,6 +155,23 @@ async function trimiteAnuntul(bookingId: string, eveniment: EvenimentRezervare) 
         { eticheta: "Total", valoare: `${Number(rezervare.totalPrice)} RON` },
       ],
       incheiere: "Până nu o aprobi, intervalul rămâne blocat pentru alți clienți.",
+    },
+    "confirmata-automat": {
+      destinatar: catreProprietar,
+      subiect: `Rezervare nouă, confirmată automat — ${field.name}`,
+      titlu: "Ai o rezervare nouă",
+      paragrafe: [
+        `${client.nume} a rezervat ${field.name}. Cererea a venit cu destul timp înainte, așa că a fost confirmată automat, după setarea terenului.`,
+        ...(rezervare.notes ? [`Mesajul clientului: „${rezervare.notes}”`] : []),
+      ],
+      randuri: [
+        ...detalii,
+        { eticheta: "Client", valoare: client.nume },
+        ...(client.telefon ? [{ eticheta: "Telefon", valoare: client.telefon }] : []),
+        { eticheta: "Total", valoare: `${Number(rezervare.totalPrice)} RON` },
+      ],
+      incheiere:
+        "Dacă vrei să răspunzi singur la cereri, pune confirmarea automată pe „Oprită” în setările terenului.",
     },
     aprobata: {
       destinatar: catreClient,

@@ -220,6 +220,7 @@ export default async function FieldDetailPage({ params }: { params: Promise<{ id
             <span className="text-muted-foreground">RON / oră</span>
           </div>
           <BookingForm
+            autoConfirmDays={field.autoConfirmDays}
             fieldId={field.id}
             pricePerHour={Number(field.pricePerHour)}
             openingHour={field.openingHour}

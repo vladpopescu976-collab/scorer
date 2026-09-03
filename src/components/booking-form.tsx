@@ -31,12 +31,15 @@ export function BookingForm({
   openingHour,
   closingHour,
   isAuthenticated,
+  autoConfirmDays,
 }: {
   fieldId: string;
   pricePerHour: number;
   openingHour: number;
   closingHour: number;
   isAuthenticated: boolean;
+  /** 0 înseamnă că proprietarul confirmă fiecare cerere. */
+  autoConfirmDays: number;
 }) {
   const router = useRouter();
   const [date, setDate] = useState<Date | undefined>();
@@ -316,6 +319,14 @@ export function BookingForm({
             le ai pe toate la un loc.
           </p>
         </div>
+      )}
+
+      {autoConfirmDays > 0 && (
+        <p className="text-[11.5px] text-muted-foreground">
+          Rezervările făcute cu cel puțin {autoConfirmDays}{" "}
+          {autoConfirmDays === 1 ? "zi" : "zile"} înainte se confirmă automat. Cele de ultim
+          moment așteaptă răspunsul proprietarului.
+        </p>
       )}
 
       {hours > 0 && (

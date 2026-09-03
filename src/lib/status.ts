@@ -6,6 +6,7 @@ export const bookingStatusLabel: Record<BookingStatus, string> = {
   REJECTED: "Respins",
   RESCHEDULE_PROPOSED: "Mutare propusă",
   CANCELLED: "Anulată",
+  EXPIRED: "Expirată",
 };
 
 export const bookingStatusTone: Record<BookingStatus, "success" | "warning" | "critical" | "info" | "muted"> = {
@@ -14,4 +15,5 @@ export const bookingStatusTone: Record<BookingStatus, "success" | "warning" | "c
   REJECTED: "critical",
   RESCHEDULE_PROPOSED: "info",
   CANCELLED: "muted",
+  EXPIRED: "muted",
 };

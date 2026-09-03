@@ -4,6 +4,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { outsideOpeningHours } from "@/lib/availability";
 import { anuntaRezervare } from "@/lib/emailuri/rezervari";
+import { statusLaCreare } from "@/lib/confirmare-automata";
 import { amprentaToken, linkRezervare, tokenNou } from "@/lib/rezervari-vizitator";
 import { telefonSchema } from "@/lib/validations/auth";
 import { inregistreazaEsec, ipDinCerere, verificaLimitarea } from "@/lib/limitare";
@@ -69,6 +70,7 @@ export async function POST(request: Request) {
   if (inAfaraProgramului) return NextResponse.json({ error: inAfaraProgramului }, { status: 400 });
 
   const ore = (sfarsit.getTime() - inceput.getTime()) / 3_600_000;
+  const status = statusLaCreare(inceput, field.autoConfirmDays);
   const token = tokenNou();
 
   try {
@@ -102,13 +104,18 @@ export async function POST(request: Request) {
           endTime: sfarsit,
           totalPrice: Number(field.pricePerHour) * ore,
           notes: date.observatii?.trim() || null,
-          status: "PENDING",
+          status,
         },
       });
     });
 
     await inregistreazaEsec(`vizitator:${date.telefon}`, ip);
-    anuntaRezervare(rezervare.id, "cerere-noua");
+    if (status === "CONFIRMED") {
+      anuntaRezervare(rezervare.id, "confirmata-automat");
+      anuntaRezervare(rezervare.id, "aprobata");
+    } else {
+      anuntaRezervare(rezervare.id, "cerere-noua");
+    }
 
     return NextResponse.json(
       { id: rezervare.id, link: linkRezervare(token) },

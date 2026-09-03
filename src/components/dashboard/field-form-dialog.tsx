@@ -45,6 +45,7 @@ export type EditableField = {
   pricePerHour: number;
   openingHour: number;
   closingHour: number;
+  autoConfirmDays: number;
   isActive: boolean;
   contactPhone: string | null;
   description: string | null;
@@ -60,6 +61,7 @@ type FormState = {
   price: string;
   open: string;
   close: string;
+  autoConfirm: string;
   contactPhone: string;
   description: string;
   amenities: string;
@@ -73,6 +75,7 @@ const emptyForm: FormState = {
   address: "",
   price: "",
   open: "8",
+  autoConfirm: "2",
   close: "22",
   contactPhone: "",
   description: "",
@@ -89,12 +92,21 @@ function formFromField(field: EditableField): FormState {
     price: String(field.pricePerHour),
     open: String(field.openingHour),
     close: String(field.closingHour),
+    autoConfirm: String(field.autoConfirmDays),
     contactPhone: field.contactPhone ?? "",
     description: field.description ?? "",
     amenities: field.amenities.join(", "),
     isActive: field.isActive,
   };
 }
+
+const AUTO_CONFIRM_ETICHETE: Record<string, string> = {
+  "0": "Oprită — confirm eu fiecare cerere",
+  "1": "Cu cel puțin 1 zi înainte",
+  "2": "Cu cel puțin 2 zile înainte",
+  "3": "Cu cel puțin 3 zile înainte",
+  "7": "Cu cel puțin 7 zile înainte",
+};
 
 type ExistingFieldPhone = { name: string; contactPhone: string };
 
@@ -223,6 +235,7 @@ export function FieldFormDialog({
       pricePerHour: Number(form.price),
       openingHour: Number(form.open),
       closingHour: Number(form.close),
+      autoConfirmDays: Number(form.autoConfirm),
       contactPhone: form.contactPhone.trim(),
       description: form.description.trim() || undefined,
       amenities: splitList(form.amenities, /,/),
@@ -370,6 +383,32 @@ export function FieldFormDialog({
                 className="mt-1.5"
               />
             </div>
+          </div>
+
+          <div>
+            <Label>Confirmare automată</Label>
+            <Select
+              value={form.autoConfirm}
+              onValueChange={(v) => v && set("autoConfirm", v)}
+            >
+              <SelectTrigger className="mt-1.5 w-full">
+                {/* Fără funcția asta, Base UI afișează valoarea brută. */}
+                <SelectValue>
+                  {(valoare) => AUTO_CONFIRM_ETICHETE[String(valoare)] ?? "Oprită"}
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                {Object.entries(AUTO_CONFIRM_ETICHETE).map(([zile, eticheta]) => (
+                  <SelectItem key={zile} value={zile}>
+                    {eticheta}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="mt-1.5 text-[11.5px] text-muted-foreground">
+              Cererile venite cu atâtea zile înainte se confirmă singure. Cele de ultim moment
+              rămân la tine, ca să te uiți la ele.
+            </p>
           </div>
 
           <div>

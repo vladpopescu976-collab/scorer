@@ -3,6 +3,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { outsideOpeningHours } from "@/lib/availability";
 import { anuntaRezervare, type EvenimentRezervare } from "@/lib/emailuri/rezervari";
+import { aTrecutOra, expiraRezervarile } from "@/lib/rezervari-expirate";
 import { cereAutentificare, eroare, eroareNeasteptata, raspuns } from "@/lib/api/raspuns";
 import { serializeazaRezervare } from "@/lib/api/serializare";
 
@@ -148,6 +149,10 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
       }
 
       case "accepta-mutarea": {
+        if (aTrecutOra(rezervare)) {
+          await expiraRezervarile({ id });
+          return eroare("Ora propusă a trecut, așa că propunerea a expirat.", 409);
+        }
         if (
           rezervare.status !== "RESCHEDULE_PROPOSED" ||
           !rezervare.proposedStartTime ||
@@ -190,6 +195,11 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
       }
 
       case "aproba": {
+        // O cerere pentru 28 august nu mai are ce fi confirmata pe 1 septembrie.
+        if (aTrecutOra(rezervare)) {
+          await expiraRezervarile({ id });
+          return eroare("Ora cerută a trecut, așa că cererea a expirat.", 409);
+        }
         await prisma.booking.update({ where: { id }, data: { status: "CONFIRMED" } });
         anunt = "aprobata";
         break;

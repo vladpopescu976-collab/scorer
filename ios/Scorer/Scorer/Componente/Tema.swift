@@ -136,6 +136,8 @@ extension StatusRezervare {
         case .respinsa: Tema.ocupat
         case .mutarePropusa: .blue
         case .anulata: .secondary
+        case .expirata: .secondary
+        case .necunoscut: .secondary
         }
     }
 
@@ -146,6 +148,8 @@ extension StatusRezervare {
         case .respinsa: "xmark.circle.fill"
         case .mutarePropusa: "arrow.triangle.2.circlepath"
         case .anulata: "slash.circle.fill"
+        case .expirata: "clock.badge.xmark"
+        case .necunoscut: "questionmark.circle"
         }
     }
 }

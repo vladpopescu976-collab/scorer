@@ -57,6 +57,13 @@ const fieldBaseSchema = z
       .int("Ora de închidere trebuie să fie un număr întreg.")
       .min(1, "Ora de închidere trebuie să fie între 1 și 24.")
       .max(24, "Ora de închidere trebuie să fie între 1 și 24."),
+    // 0 = proprietarul confirma tot manual.
+    autoConfirmDays: z
+      .number()
+      .int()
+      .min(0, "Numărul de zile nu poate fi negativ.")
+      .max(30, "Cel mult 30 de zile.")
+      .optional(),
     contactPhone: phoneSchema,
     description: z.string().trim().max(600, "Descrierea nu poate depăși 600 de caractere.").optional(),
     amenities: z
@@ -104,6 +111,13 @@ export const fieldUpdateSchema = z
       .min(1, "Ora de închidere trebuie să fie între 1 și 24.")
       .max(24, "Ora de închidere trebuie să fie între 1 și 24."),
     isActive: z.boolean(),
+    // 0 = proprietarul confirma tot manual.
+    autoConfirmDays: z
+      .number()
+      .int()
+      .min(0, "Numărul de zile nu poate fi negativ.")
+      .max(30, "Cel mult 30 de zile.")
+      .optional(),
     contactPhone: phoneSchema,
   })
   .refine((data) => data.closingHour > data.openingHour, {

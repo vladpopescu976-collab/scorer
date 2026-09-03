@@ -51,6 +51,17 @@ enum StatusRezervare: String, Codable, Sendable {
     case respinsa = "REJECTED"
     case mutarePropusa = "RESCHEDULE_PROPOSED"
     case anulata = "CANCELLED"
+    /// Ora a trecut fără ca proprietarul să răspundă.
+    case expirata = "EXPIRED"
+    /// Un status adăugat pe server după ce a fost publicată aplicația.
+    case necunoscut = "NECUNOSCUT"
+
+    /// Fără asta, un status nou pe server ar face să eșueze decodarea întregii
+    /// liste de rezervări, nu doar afișarea lui.
+    init(from decoder: Decoder) throws {
+        let text = try decoder.singleValueContainer().decode(String.self)
+        self = StatusRezervare(rawValue: text) ?? .necunoscut
+    }
 
     var eticheta: String {
         switch self {
@@ -59,6 +70,8 @@ enum StatusRezervare: String, Codable, Sendable {
         case .respinsa: "Respinsă"
         case .mutarePropusa: "Mutare propusă"
         case .anulata: "Anulată"
+        case .expirata: "Expirată"
+        case .necunoscut: "Status necunoscut"
         }
     }
 }

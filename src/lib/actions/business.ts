@@ -6,6 +6,7 @@ import { z } from "zod";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { anuntaRezervare } from "@/lib/emailuri/rezervari";
+import { aTrecutOra, expiraRezervarile } from "@/lib/rezervari-expirate";
 import { outsideOpeningHours } from "@/lib/availability";
 import { ActionError, fail, ok, toActionError, type ActionResult } from "@/lib/actions/result";
 import { fieldEditSchema, fieldSchema, fieldUpdateSchema } from "@/lib/validations/field";
@@ -40,7 +41,15 @@ async function assertOwnsBooking(bookingId: string, ownerId: string) {
 export async function approveBooking(bookingId: string): Promise<ActionResult> {
   try {
     const session = await requireBusinessSession();
-    await assertOwnsBooking(bookingId, session.user.id);
+    const booking = await assertOwnsBooking(bookingId, session.user.id);
+
+    // O cerere pentru 28 august nu mai are ce fi confirmata pe 1 septembrie.
+    if (aTrecutOra(booking)) {
+      await expiraRezervarile({ id: bookingId });
+      revalidateDashboard();
+      return fail("Ora cerută a trecut, așa că cererea a expirat. Nu mai poate fi confirmată.");
+    }
+
     await prisma.booking.update({ where: { id: bookingId }, data: { status: "CONFIRMED" } });
     anuntaRezervare(bookingId, "aprobata");
     revalidateDashboard();

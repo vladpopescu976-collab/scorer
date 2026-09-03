@@ -1,5 +1,6 @@
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
+import { expiraRezervarile } from "@/lib/rezervari-expirate";
 import { OverviewClient } from "@/components/dashboard/overview-client";
 import { UrgentBookingsAlert } from "@/components/dashboard/urgent-bookings-alert";
 
@@ -15,6 +16,9 @@ function oneHourAgo() {
 export default async function BusinessOverviewPage() {
   const session = await auth();
   const ownerId = session!.user.id;
+
+  // Cererile la care nu s-a raspuns pana la ora lor nu mai pot fi confirmate.
+  await expiraRezervarile({ field: { ownerId } });
 
   const [fields, bookings, urgentBookings, owner] = await Promise.all([
     prisma.field.findMany({ where: { ownerId } }),

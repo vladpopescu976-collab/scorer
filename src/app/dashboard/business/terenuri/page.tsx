@@ -25,6 +25,7 @@ export default async function BusinessFieldsPage() {
         pricePerHour: Number(f.pricePerHour),
         openingHour: f.openingHour,
         closingHour: f.closingHour,
+        autoConfirmDays: f.autoConfirmDays,
         isActive: f.isActive,
         contactPhone: f.contactPhone,
         description: f.description,

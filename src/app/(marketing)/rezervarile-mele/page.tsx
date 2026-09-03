@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
+import { expiraRezervarile } from "@/lib/rezervari-expirate";
 import { MyBookingsClient } from "@/components/dashboard/my-bookings-client";
 import { normalizeazaOras } from "@/lib/orase";
 
@@ -15,6 +16,8 @@ export default async function MyBookingsPage() {
   if (!session?.user) {
     redirect("/autentificare?tip=personal");
   }
+
+  await expiraRezervarile({ customerId: session.user.id });
 
   const bookings = await prisma.booking.findMany({
     where: { customerId: session.user.id },

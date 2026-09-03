@@ -1,5 +1,6 @@
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
+import { expiraRezervarile } from "@/lib/rezervari-expirate";
 import { BookingsTable } from "@/components/dashboard/bookings-table";
 
 // Baza Prisma Postgres se suspenda cand e inactiva, iar prima cerere
@@ -10,6 +11,9 @@ export const maxDuration = 60;
 export default async function BusinessBookingsPage() {
   const session = await auth();
   const ownerId = session!.user.id;
+
+  // Cererile la care nu s-a raspuns pana la ora lor nu mai pot fi confirmate.
+  await expiraRezervarile({ field: { ownerId } });
 
   const [bookings, fields] = await Promise.all([
     prisma.booking.findMany({

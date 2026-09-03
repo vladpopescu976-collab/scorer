@@ -8,6 +8,8 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { outsideOpeningHours } from "@/lib/availability";
 import { anuntaRezervare } from "@/lib/emailuri/rezervari";
+import { aTrecutOra, expiraRezervarile } from "@/lib/rezervari-expirate";
+import { statusLaCreare } from "@/lib/confirmare-automata";
 import { ActionError, fail, ok, toActionError, type ActionResult } from "@/lib/actions/result";
 
 // Statusurile care chiar ocupă terenul. Aceleași sunt folosite și de
@@ -104,6 +106,7 @@ export async function createBookingRequest(
 
     const hours = (endTime.getTime() - startTime.getTime()) / 3_600_000;
     const totalPrice = Number(field.pricePerHour) * hours;
+    const status = statusLaCreare(startTime, field.autoConfirmDays);
 
     let booking;
     try {
@@ -141,7 +144,7 @@ export async function createBookingRequest(
             endTime,
             totalPrice,
             notes: data.notes?.trim() || null,
-            status: "PENDING",
+            status,
           },
         });
       });
@@ -150,7 +153,14 @@ export async function createBookingRequest(
       throw error;
     }
 
-    anuntaRezervare(booking.id, "cerere-noua");
+    // La confirmare automată, proprietarul e anunțat că s-a rezervat, iar
+    // clientul primește direct confirmarea.
+    if (status === "CONFIRMED") {
+      anuntaRezervare(booking.id, "confirmata-automat");
+      anuntaRezervare(booking.id, "aprobata");
+    } else {
+      anuntaRezervare(booking.id, "cerere-noua");
+    }
 
     revalidatePath(`/terenuri/${field.id}`);
     revalidatePath("/rezervarile-mele");
@@ -363,6 +373,10 @@ export async function acceptReschedule(bookingId: string): Promise<ActionResult>
       !booking.proposedEndTime
     ) {
       return fail("Nu există o propunere de mutare pentru această rezervare.");
+    }
+    if (aTrecutOra(booking)) {
+      await expiraRezervarile({ id: bookingId });
+      return fail("Ora propusă a trecut, așa că propunerea a expirat.");
     }
 
     try {

@@ -51,6 +51,9 @@ enum BookingStatus {
   REJECTED
   RESCHEDULE_PROPOSED
   CANCELLED
+  /// Ora a trecut fara ca proprietarul sa raspunda. Nu e nici anulare a
+  /// clientului, nici refuz — de aceea are status propriu.
+  EXPIRED
 }
 
 model User {
@@ -214,6 +217,10 @@ model Field {
 
   openingHour Int @default(8)
   closingHour Int @default(23)
+
+  /// Cate zile inainte trebuie facuta o rezervare ca sa fie confirmata
+  /// automat. 0 inseamna ca proprietarul confirma tot manual.
+  autoConfirmDays Int @default(2)
 
   ownerId String
   owner   User   @relation("OwnerFields", fields: [ownerId], references: [id], onDelete: Cascade)

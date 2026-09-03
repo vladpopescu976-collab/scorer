@@ -1,10 +1,12 @@
 import { z } from "zod";
 
 import { prisma } from "@/lib/prisma";
+import { expiraRezervarile } from "@/lib/rezervari-expirate";
 import { cereAutentificare, cerePersonal, eroare, eroareNeasteptata, raspuns } from "@/lib/api/raspuns";
 import { serializeazaRezervare } from "@/lib/api/serializare";
 import { outsideOpeningHours } from "@/lib/availability";
 import { anuntaRezervare } from "@/lib/emailuri/rezervari";
+import { statusLaCreare } from "@/lib/confirmare-automata";
 
 export const maxDuration = 60;
 
@@ -18,6 +20,13 @@ export async function GET(request: Request) {
   try {
     const { eroare: refuz, sesiune } = await cereAutentificare(request);
     if (refuz) return refuz;
+
+    // Cererile la care nu s-a raspuns pana la ora lor nu mai pot fi confirmate.
+    await expiraRezervarile(
+      sesiune.role === "BUSINESS"
+        ? { field: { ownerId: sesiune.userId } }
+        : { customerId: sesiune.userId }
+    );
 
     if (sesiune.role === "BUSINESS") {
       const rezervari = await prisma.booking.findMany({
@@ -70,6 +79,7 @@ export async function POST(request: Request) {
     if (inAfaraProgramului) return eroare(inAfaraProgramului, 422);
 
     const ore = (sfarsit.getTime() - inceput.getTime()) / 3_600_000;
+    const status = statusLaCreare(inceput, field.autoConfirmDays);
 
     try {
       const rezervare = await prisma.$transaction(async (tx) => {
@@ -100,13 +110,18 @@ export async function POST(request: Request) {
             endTime: sfarsit,
             totalPrice: Number(field.pricePerHour) * ore,
             notes: date.observatii?.trim() || null,
-            status: "PENDING",
+            status,
           },
           include: includeStandard,
         });
       });
 
-      anuntaRezervare(rezervare.id, "cerere-noua");
+      if (status === "CONFIRMED") {
+        anuntaRezervare(rezervare.id, "confirmata-automat");
+        anuntaRezervare(rezervare.id, "aprobata");
+      } else {
+        anuntaRezervare(rezervare.id, "cerere-noua");
+      }
       return raspuns(serializeazaRezervare(rezervare), 201);
     } catch (err) {
       const text = err instanceof Error ? err.message : "";
