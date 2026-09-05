@@ -51,6 +51,13 @@ export type EditableField = {
   description: string | null;
   amenities: string[];
   images: string[];
+  extras: {
+    id: string;
+    name: string;
+    price: number;
+    pricing: "PER_HOUR" | "PER_BOOKING";
+    autoLaIntuneric: boolean;
+  }[];
 };
 
 type FormState = {

@@ -18,7 +18,11 @@ export default async function BusinessBookingsPage() {
   const [bookings, fields] = await Promise.all([
     prisma.booking.findMany({
       where: { field: { ownerId } },
-      include: { customer: { select: { name: true, phone: true } }, field: { select: { id: true, name: true } } },
+      include: {
+        customer: { select: { name: true, phone: true } },
+        field: { select: { id: true, name: true } },
+        extras: true,
+      },
       orderBy: { startTime: "desc" },
     }),
     prisma.field.findMany({ where: { ownerId }, select: { id: true, name: true, sportType: true } }),
@@ -26,7 +30,18 @@ export default async function BusinessBookingsPage() {
 
   return (
     <BookingsTable
-      bookings={bookings.map((b) => ({ ...b, totalPrice: Number(b.totalPrice) }))}
+      bookings={bookings.map((b) => ({
+        ...b,
+        totalPrice: Number(b.totalPrice),
+        // Decimal-urile Prisma nu trec ca atare spre componenta client.
+        extras: b.extras.map((e) => ({
+          id: e.id,
+          name: e.name,
+          units: e.units,
+          pricing: e.pricing,
+          total: Number(e.total),
+        })),
+      }))}
       fields={fields}
     />
   );

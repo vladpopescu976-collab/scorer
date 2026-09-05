@@ -7,6 +7,8 @@ import { serializeazaRezervare } from "@/lib/api/serializare";
 import { outsideOpeningHours } from "@/lib/availability";
 import { anuntaRezervare } from "@/lib/emailuri/rezervari";
 import { statusLaCreare } from "@/lib/confirmare-automata";
+import { calculeazaPretul } from "@/lib/pret-rezervare";
+import { linieDeSalvat, optiuneDinTeren } from "@/lib/optiuni-teren";
 
 export const maxDuration = 60;
 
@@ -55,6 +57,7 @@ const creeazaSchema = z.object({
   terenId: z.string().min(1),
   inceput: z.iso.datetime({ message: "Ora de start nu este validă." }),
   sfarsit: z.iso.datetime({ message: "Ora de sfârșit nu este validă." }),
+  optiuni: z.array(z.string()).max(20).optional().default([]),
   observatii: z.string().max(600, "Observațiile nu pot depăși 600 de caractere.").optional(),
 });
 
@@ -65,7 +68,10 @@ export async function POST(request: Request) {
 
     const date = creeazaSchema.parse(await request.json());
 
-    const field = await prisma.field.findUnique({ where: { id: date.terenId } });
+    const field = await prisma.field.findUnique({
+      where: { id: date.terenId },
+      include: { extras: true },
+    });
     if (!field || !field.isActive) return eroare("Terenul nu este disponibil pentru rezervare.", 404);
 
     const inceput = new Date(date.inceput);
@@ -78,7 +84,14 @@ export async function POST(request: Request) {
     );
     if (inAfaraProgramului) return eroare(inAfaraProgramului, 422);
 
-    const ore = (sfarsit.getTime() - inceput.getTime()) / 3_600_000;
+    const pret = calculeazaPretul({
+      pretPeOra: Number(field.pricePerHour),
+      inceput,
+      sfarsit,
+      oras: field.city,
+      optiuni: field.extras.map(optiuneDinTeren),
+      alese: date.optiuni,
+    });
     const status = statusLaCreare(inceput, field.autoConfirmDays);
 
     try {
@@ -108,9 +121,10 @@ export async function POST(request: Request) {
             customerId: sesiune.userId,
             startTime: inceput,
             endTime: sfarsit,
-            totalPrice: Number(field.pricePerHour) * ore,
+            totalPrice: pret.total,
             notes: date.observatii?.trim() || null,
             status,
+            extras: { create: pret.linii.map(linieDeSalvat) },
           },
           include: includeStandard,
         });

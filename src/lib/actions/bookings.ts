@@ -10,6 +10,8 @@ import { outsideOpeningHours } from "@/lib/availability";
 import { anuntaRezervare } from "@/lib/emailuri/rezervari";
 import { aTrecutOra, expiraRezervarile } from "@/lib/rezervari-expirate";
 import { statusLaCreare } from "@/lib/confirmare-automata";
+import { calculeazaPretul } from "@/lib/pret-rezervare";
+import { linieDeSalvat, optiuneDinTeren } from "@/lib/optiuni-teren";
 import { ActionError, fail, ok, toActionError, type ActionResult } from "@/lib/actions/result";
 
 // Statusurile care chiar ocupă terenul. Aceleași sunt folosite și de
@@ -75,6 +77,8 @@ const createBookingSchema = z.object({
   fieldId: z.string().min(1),
   startTime: z.iso.datetime({ message: "Ora de start nu este validă." }),
   endTime: z.iso.datetime({ message: "Ora de sfârșit nu este validă." }),
+  // Doar ce a bifat clientul; prețul nu vine niciodată de la el.
+  optiuni: z.array(z.string()).max(20).optional().default([]),
   notes: z.string().max(600, "Mesajul nu poate depăși 600 de caractere.").optional(),
 });
 
@@ -85,7 +89,10 @@ export async function createBookingRequest(
     const session = await requireSession();
     const data = createBookingSchema.parse(input);
 
-    const field = await prisma.field.findUnique({ where: { id: data.fieldId } });
+    const field = await prisma.field.findUnique({
+      where: { id: data.fieldId },
+      include: { extras: true },
+    });
     if (!field || !field.isActive) {
       return fail("Terenul nu este disponibil pentru rezervare.");
     }
@@ -104,8 +111,17 @@ export async function createBookingRequest(
     );
     if (inAfaraProgramului) return fail(inAfaraProgramului);
 
-    const hours = (endTime.getTime() - startTime.getTime()) / 3_600_000;
-    const totalPrice = Number(field.pricePerHour) * hours;
+    // Prețul se recalculează aici, din opțiunile terenului, nu se ia de la
+    // client: altfel oricine putea trimite ce sumă voia.
+    const pret = calculeazaPretul({
+      pretPeOra: Number(field.pricePerHour),
+      inceput: startTime,
+      sfarsit: endTime,
+      oras: field.city,
+      optiuni: field.extras.map(optiuneDinTeren),
+      alese: data.optiuni,
+    });
+    const totalPrice = pret.total;
     const status = statusLaCreare(startTime, field.autoConfirmDays);
 
     let booking;
@@ -145,6 +161,7 @@ export async function createBookingRequest(
             totalPrice,
             notes: data.notes?.trim() || null,
             status,
+            extras: { create: pret.linii.map(linieDeSalvat) },
           },
         });
       });

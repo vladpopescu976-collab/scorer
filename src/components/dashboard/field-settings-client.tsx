@@ -8,6 +8,7 @@ import { toast } from "sonner";
 
 import { Input } from "@/components/ui/input";
 import { FieldFormDialog, type EditableField } from "@/components/dashboard/field-form-dialog";
+import { OptiuniTeren } from "@/components/dashboard/optiuni-teren";
 import { updateField, removeField } from "@/lib/actions/business";
 import { sportMeta } from "@/lib/sports";
 
@@ -201,6 +202,11 @@ function FieldCard({
             <Trash2 className="h-3.5 w-3.5" />
           </button>
         </div>
+      </div>
+
+      <div className="mt-4 border-t pt-4">
+        <p className="mb-2 text-[12.5px] font-medium">Ce se poate adăuga peste prețul orei</p>
+        <OptiuniTeren fieldId={field.id} optiuni={field.extras} />
       </div>
 
       <FieldFormDialog

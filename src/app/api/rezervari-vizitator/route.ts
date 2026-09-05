@@ -5,6 +5,8 @@ import { prisma } from "@/lib/prisma";
 import { outsideOpeningHours } from "@/lib/availability";
 import { anuntaRezervare } from "@/lib/emailuri/rezervari";
 import { statusLaCreare } from "@/lib/confirmare-automata";
+import { calculeazaPretul } from "@/lib/pret-rezervare";
+import { linieDeSalvat, optiuneDinTeren } from "@/lib/optiuni-teren";
 import { amprentaToken, linkRezervare, tokenNou } from "@/lib/rezervari-vizitator";
 import { telefonSchema } from "@/lib/validations/auth";
 import { inregistreazaEsec, ipDinCerere, verificaLimitarea } from "@/lib/limitare";
@@ -26,6 +28,7 @@ const schema = z.object({
     .refine((v) => v !== "", "Numărul de telefon este obligatoriu."),
   // Fără adresă nu putem trimite confirmarea, dar linkul rămâne pe ecran.
   email: z.string().trim().email("Adresă de email invalidă.").optional().or(z.literal("")),
+  optiuni: z.array(z.string()).max(20).optional().default([]),
   observatii: z.string().trim().max(600, "Observațiile nu pot depăși 600 de caractere.").optional(),
 });
 
@@ -52,7 +55,10 @@ export async function POST(request: Request) {
   const limitare = await verificaLimitarea(`vizitator:${date.telefon}`, ip);
   if (!limitare.permis) return NextResponse.json({ error: limitare.mesaj }, { status: 429 });
 
-  const field = await prisma.field.findUnique({ where: { id: date.fieldId } });
+  const field = await prisma.field.findUnique({
+    where: { id: date.fieldId },
+    include: { extras: true },
+  });
   if (!field || !field.isActive) {
     return NextResponse.json({ error: "Terenul nu este disponibil pentru rezervare." }, { status: 404 });
   }
@@ -69,7 +75,15 @@ export async function POST(request: Request) {
   const inAfaraProgramului = outsideOpeningHours(inceput, sfarsit, field.openingHour, field.closingHour);
   if (inAfaraProgramului) return NextResponse.json({ error: inAfaraProgramului }, { status: 400 });
 
-  const ore = (sfarsit.getTime() - inceput.getTime()) / 3_600_000;
+  // Prețul se recalculează aici, din opțiunile terenului.
+  const pret = calculeazaPretul({
+    pretPeOra: Number(field.pricePerHour),
+    inceput,
+    sfarsit,
+    oras: field.city,
+    optiuni: field.extras.map(optiuneDinTeren),
+    alese: date.optiuni,
+  });
   const status = statusLaCreare(inceput, field.autoConfirmDays);
   const token = tokenNou();
 
@@ -102,9 +116,10 @@ export async function POST(request: Request) {
           guestTokenHash: amprentaToken(token),
           startTime: inceput,
           endTime: sfarsit,
-          totalPrice: Number(field.pricePerHour) * ore,
+          totalPrice: pret.total,
           notes: date.observatii?.trim() || null,
           status,
+          extras: { create: pret.linii.map(linieDeSalvat) },
         },
       });
     });

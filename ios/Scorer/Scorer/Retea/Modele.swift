@@ -76,6 +76,17 @@ enum StatusRezervare: String, Codable, Sendable {
     }
 }
 
+/// Nocturnă, închiriere echipament, vestiar privat — definite de proprietar.
+struct OptiuneTeren: Codable, Identifiable, Sendable, Hashable {
+    let id: String
+    let nume: String
+    let pret: Double
+    /// Fals înseamnă că se plătește o singură dată pe rezervare.
+    let peOra: Bool
+    /// Se adaugă singură pe orele fără lumină naturală.
+    let automatLaIntuneric: Bool
+}
+
 struct Utilizator: Codable, Identifiable, Sendable {
     let id: String
     let nume: String
@@ -111,6 +122,8 @@ struct Teren: Codable, Identifiable, Sendable {
     let activ: Bool
     let notaMedie: Double?
     let numarRecenzii: Int
+    /// Ce se poate adăuga peste prețul orei. Lipsește pe serverele mai vechi.
+    var optiuni: [OptiuneTeren]?
     let favorit: Bool
 }
 

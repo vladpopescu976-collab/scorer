@@ -45,6 +45,12 @@ enum PreferredTime {
   WEEKEND
 }
 
+// Cum se taxeaza o optiune in plus: la fiecare ora sau o singura data.
+enum ExtraPricing {
+  PER_HOUR
+  PER_BOOKING
+}
+
 enum BookingStatus {
   PENDING
   CONFIRMED
@@ -229,6 +235,7 @@ model Field {
   favorites    Favorite[]
   reviews      Review[]
   blockedSlots BlockedSlot[]
+  extras       FieldExtra[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -271,6 +278,7 @@ model Booking {
   guestTokenHash String? @unique
 
   review Review?
+  extras BookingExtra[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -279,6 +287,48 @@ model Booking {
   @@index([customerId])
   @@index([status])
   @@map("bookings")
+}
+
+// Ce se poate adauga peste pretul orei: nocturna, inchiriere echipament,
+// vestiar privat. Proprietarul le defineste, clientul le alege la rezervare.
+model FieldExtra {
+  id String @id @default(cuid())
+
+  fieldId String
+  field   Field  @relation(fields: [fieldId], references: [id], onDelete: Cascade)
+
+  name    String
+  price   Decimal      @db.Decimal(10, 2)
+  pricing ExtraPricing @default(PER_HOUR)
+
+  /// Se adauga singura pe orele fara lumina naturala, calculate din data si
+  /// din orasul terenului. Tipic pentru nocturna.
+  autoLaIntuneric Boolean @default(false)
+
+  createdAt DateTime @default(now())
+
+  @@index([fieldId])
+  @@map("field_extras")
+}
+
+// Ce a fost ales efectiv la o rezervare. Numele si pretul se copiaza aici:
+// daca proprietarul schimba maine tariful, rezervarea de azi trebuie sa ramana
+// la cat s-a agreat.
+model BookingExtra {
+  id String @id @default(cuid())
+
+  bookingId String
+  booking   Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+
+  name      String
+  unitPrice Decimal      @db.Decimal(10, 2)
+  pricing   ExtraPricing
+  /// Ore taxate, sau 1 pentru cele care se platesc o singura data.
+  units     Int
+  total     Decimal      @db.Decimal(10, 2)
+
+  @@index([bookingId])
+  @@map("booking_extras")
 }
 
 // Terenuri salvate de jucători.

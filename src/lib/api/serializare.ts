@@ -1,4 +1,4 @@
-import type { Booking, BookingStatus, Field, Review, SportType } from "@prisma/client";
+import type { Booking, BookingStatus, Field, FieldExtra, Review, SportType } from "@prisma/client";
 
 import { normalizeazaOras } from "@/lib/orase";
 import { clientulRezervarii } from "@/lib/client-rezervare";
@@ -24,10 +24,17 @@ export type TerenApi = {
   notaMedie: number | null;
   numarRecenzii: number;
   favorit: boolean;
+  optiuni: {
+    id: string;
+    nume: string;
+    pret: number;
+    peOra: boolean;
+    automatLaIntuneric: boolean;
+  }[];
 };
 
 export function serializeazaTeren(
-  field: Field,
+  field: Field & { extras?: FieldExtra[] },
   extra: { notaMedie?: number | null; numarRecenzii?: number; favorit?: boolean } = {}
 ): TerenApi {
   return {
@@ -48,6 +55,13 @@ export function serializeazaTeren(
     notaMedie: extra.notaMedie ?? null,
     numarRecenzii: extra.numarRecenzii ?? 0,
     favorit: extra.favorit ?? false,
+    optiuni: (field.extras ?? []).map((optiune) => ({
+      id: optiune.id,
+      nume: optiune.name,
+      pret: Number(optiune.price),
+      peOra: optiune.pricing === "PER_HOUR",
+      automatLaIntuneric: optiune.autoLaIntuneric,
+    })),
   };
 }
 

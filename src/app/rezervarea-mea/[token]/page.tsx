@@ -87,6 +87,17 @@ export default async function RezervareaMeaPage({
               eticheta="Ora"
               valoare={`${formatOra.format(rezervare.startTime)} – ${formatOra.format(rezervare.endTime)}`}
             />
+            {rezervare.extras.map((optiune) => (
+              <Rand
+                key={optiune.id}
+                eticheta={
+                  optiune.pricing === "PER_HOUR"
+                    ? `${optiune.name} · ${optiune.units} ${optiune.units === 1 ? "oră" : "ore"}`
+                    : optiune.name
+                }
+                valoare={`${Number(optiune.total)} RON`}
+              />
+            ))}
             <Rand eticheta="Total" valoare={`${Number(rezervare.totalPrice)} RON`} />
             {rezervare.guestPhone ? (
               <Rand eticheta="Telefonul tău" valoare={rezervare.guestPhone} />

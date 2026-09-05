@@ -32,6 +32,7 @@ export async function rezervareaDinToken(token: string) {
       field: {
         select: { id: true, name: true, city: true, address: true, contactPhone: true },
       },
+      extras: true,
     },
   });
 }

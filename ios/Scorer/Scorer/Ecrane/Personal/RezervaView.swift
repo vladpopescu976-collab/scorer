@@ -19,6 +19,7 @@ struct RezervaView: View {
     @State private var oraStart: Int?
     @State private var oraSfarsit: Int?
     @State private var observatii = ""
+    @State private var optiuniAlese: Set<String> = []
     @State private var ocupate: [Interval] = []
     @State private var seIncarcaOre = true
     @State private var seTrimite = false
@@ -38,6 +39,7 @@ struct RezervaView: View {
                     selectorZile
                     rezumatZi
                     grilaOre
+                    if !esteMutare && !optiuni.isEmpty { sectiuneOptiuni }
                     if !esteMutare { campObservatii }
                     if let eroare { casetaEroare(eroare) }
                     Color.clear.frame(height: 130)
@@ -323,6 +325,63 @@ struct RezervaView: View {
         }
     }
 
+    /// Opțiunile terenului. Cele legate de întuneric nu se bifează: se pun
+    /// singure, doar pentru orele de după apus.
+    private var sectiuneOptiuni: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("În plus").font(.subheadline.weight(.medium))
+
+            ForEach(optiuni.filter { !$0.automatLaIntuneric }) { optiune in
+                Button {
+                    if optiuniAlese.contains(optiune.id) {
+                        optiuniAlese.remove(optiune.id)
+                    } else {
+                        optiuniAlese.insert(optiune.id)
+                    }
+                } label: {
+                    HStack(spacing: 10) {
+                        Image(systemName: optiuniAlese.contains(optiune.id)
+                              ? "checkmark.circle.fill" : "circle")
+                            .foregroundStyle(optiuniAlese.contains(optiune.id) ? Tema.accent : .secondary)
+                        VStack(alignment: .leading, spacing: 1) {
+                            Text(optiune.nume).font(.subheadline.weight(.medium))
+                            Text("\(Int(optiune.pret)) RON \(optiune.peOra ? "/ oră" : "o dată")")
+                                .font(.caption).foregroundStyle(.secondary)
+                        }
+                        Spacer()
+                    }
+                    .contentShape(.rect)
+                }
+                .buttonStyle(.plain)
+            }
+
+            ForEach(optiuni.filter(\.automatLaIntuneric)) { optiune in
+                let linie = liniiDePlata.first { $0.id == optiune.id }
+                HStack(spacing: 10) {
+                    Image(systemName: "moon.stars")
+                        .foregroundStyle(linie != nil ? Tema.accent : .secondary)
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text(optiune.nume).font(.subheadline.weight(.medium))
+                        Text(textNocturna(optiune, linie: linie))
+                            .font(.caption).foregroundStyle(.secondary)
+                    }
+                    Spacer()
+                }
+            }
+        }
+        .fisa()
+    }
+
+    private func textNocturna(
+        _ optiune: OptiuneTeren,
+        linie: (id: String, nume: String, unitati: Int, total: Double)?
+    ) -> String {
+        let baza = "\(Int(optiune.pret)) RON / oră, se adaugă singură după apus"
+        guard oraStart != nil else { return baza }
+        guard let linie else { return baza + " — intervalul ales e pe lumină" }
+        return baza + " — \(linie.unitati) \(linie.unitati == 1 ? "oră" : "ore") la intervalul ales"
+    }
+
     private var campObservatii: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("Observații (opțional)").font(.subheadline.weight(.medium))
@@ -356,8 +415,16 @@ struct RezervaView: View {
                             .font(.caption).foregroundStyle(.secondary)
                     }
                     Spacer()
-                    Text("\(Int(teren.pretPeOra) * (sfarsit - start)) RON")
-                        .font(.title3.weight(.bold))
+                    VStack(alignment: .trailing, spacing: 1) {
+                        Text("\(Int(totalDePlata)) RON")
+                            .font(.title3.weight(.bold))
+                        if !liniiDePlata.isEmpty {
+                            Text("teren \(Int(pretTeren)) + \(liniiDePlata.map(\.nume).joined(separator: ", "))")
+                                .font(.system(size: 10))
+                                .foregroundStyle(.secondary)
+                                .lineLimit(1)
+                        }
+                    }
                 }
                 .transition(.opacity.combined(with: .move(edge: .bottom)))
             }
@@ -421,6 +488,56 @@ struct RezervaView: View {
 
     private func format(_ ora: Int) -> String { String(format: "%02d:00", ora) }
 
+    // MARK: - Preț
+
+    private var optiuni: [OptiuneTeren] { teren.optiuni ?? [] }
+
+    /// Momentele exacte ale intervalului ales, pentru calculul apusului.
+    private var intervalAles: (inceput: Date, sfarsit: Date)? {
+        guard let start = oraStart, let sfarsit = oraSfarsit else { return nil }
+        let calendar = Calendar.current
+        guard
+            let inceput = calendar.date(bySettingHour: start, minute: 0, second: 0, of: zi),
+            let miezul = calendar.date(bySettingHour: 0, minute: 0, second: 0, of: zi),
+            let final = calendar.date(byAdding: .hour, value: sfarsit, to: miezul)
+        else { return nil }
+        return (inceput, final)
+    }
+
+    /// Aceleași reguli ca pe server: aici doar ca omul să vadă totalul cât
+    /// alege. Serverul îl recalculează la trimitere.
+    private var liniiDePlata: [(id: String, nume: String, unitati: Int, total: Double)] {
+        guard let interval = intervalAles else { return [] }
+        let ore = max(0, (oraSfarsit ?? 0) - (oraStart ?? 0))
+
+        return optiuni.compactMap { optiune in
+            let automat = optiune.automatLaIntuneric
+            guard automat || optiuniAlese.contains(optiune.id) else { return nil }
+
+            let unitati: Int
+            if !optiune.peOra {
+                unitati = 1
+            } else if automat {
+                unitati = Soare.oreDeIntuneric(
+                    inceput: interval.inceput, sfarsit: interval.sfarsit, oras: teren.oras
+                )
+            } else {
+                unitati = ore
+            }
+
+            guard unitati > 0 else { return nil }
+            return (optiune.id, optiune.nume, unitati, optiune.pret * Double(unitati))
+        }
+    }
+
+    private var pretTeren: Double {
+        Double(max(0, (oraSfarsit ?? 0) - (oraStart ?? 0))) * teren.pretPeOra
+    }
+
+    private var totalDePlata: Double {
+        pretTeren + liniiDePlata.reduce(0) { $0 + $1.total }
+    }
+
     // MARK: - Rețea
 
     private func incarcaOre() async {
@@ -473,12 +590,14 @@ struct RezervaView: View {
                         let terenId: String
                         let inceput: Date
                         let sfarsit: Date
+                        let optiuni: [String]
                         let observatii: String?
                     }
                     try await ApiClient.shared.cereFaraRaspuns(
                         "rezervari", metoda: "POST",
                         corp: Corp(
                             terenId: teren.id, inceput: inceput, sfarsit: final,
+                            optiuni: Array(optiuniAlese),
                             observatii: observatii.isEmpty ? nil : observatii
                         )
                     )

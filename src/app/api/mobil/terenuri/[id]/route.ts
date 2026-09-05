@@ -12,6 +12,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
     const field = await prisma.field.findUnique({
       where: { id },
       include: {
+        extras: { orderBy: { createdAt: "asc" } },
         reviews: {
           orderBy: { createdAt: "desc" },
           take: 20,

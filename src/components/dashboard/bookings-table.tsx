@@ -29,6 +29,7 @@ type Row = {
   customer: { name: string; phone: string | null } | null;
   guestName: string | null;
   guestPhone: string | null;
+  extras: { id: string; name: string; units: number; pricing: string; total: number }[];
   field: { id: string; name: string };
 };
 
@@ -177,7 +178,15 @@ export function BookingsTable({ bookings, fields }: { bookings: Row[]; fields: {
                       {fmtTime(b.startTime)} – {fmtTime(b.endTime)}
                     </p>
                   </td>
-                  <td className="px-5 py-3.5 font-mono tabular-nums">{b.totalPrice.toFixed(0)} RON</td>
+                  <td className="px-5 py-3.5">
+                    <p className="font-mono tabular-nums">{b.totalPrice.toFixed(0)} RON</p>
+                    {b.extras.map((optiune) => (
+                      <p key={optiune.id} className="text-[11px] text-muted-foreground">
+                        + {optiune.name}
+                        {optiune.pricing === "PER_HOUR" && ` ×${optiune.units}`}
+                      </p>
+                    ))}
+                  </td>
                   <td className="px-5 py-3.5">
                     <StatusBadge status={b.status} />
                   </td>

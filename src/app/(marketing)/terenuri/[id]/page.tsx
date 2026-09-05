@@ -4,6 +4,7 @@ import { MapPin, Clock, Pencil, Sparkles } from "lucide-react";
 
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
+import { optiuneDinTeren } from "@/lib/optiuni-teren";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { BookingForm } from "@/components/booking-form";
@@ -21,7 +22,7 @@ export const maxDuration = 60;
 export default async function FieldDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const [field, session, reviews] = await Promise.all([
-    prisma.field.findUnique({ where: { id } }),
+    prisma.field.findUnique({ where: { id }, include: { extras: { orderBy: { createdAt: "asc" } } } }),
     auth(),
     prisma.review.findMany({
       where: { fieldId: id },
@@ -221,6 +222,8 @@ export default async function FieldDetailPage({ params }: { params: Promise<{ id
           </div>
           <BookingForm
             autoConfirmDays={field.autoConfirmDays}
+            city={field.city}
+            optiuni={field.extras.map(optiuneDinTeren)}
             fieldId={field.id}
             pricePerHour={Number(field.pricePerHour)}
             openingHour={field.openingHour}

@@ -12,7 +12,11 @@ export default async function BusinessFieldsPage() {
   const session = await auth();
   const ownerId = session!.user.id;
 
-  const fields = await prisma.field.findMany({ where: { ownerId }, orderBy: { createdAt: "desc" } });
+  const fields = await prisma.field.findMany({
+    where: { ownerId },
+    orderBy: { createdAt: "desc" },
+    include: { extras: { orderBy: { createdAt: "asc" } } },
+  });
 
   return (
     <FieldSettingsClient
@@ -26,6 +30,13 @@ export default async function BusinessFieldsPage() {
         openingHour: f.openingHour,
         closingHour: f.closingHour,
         autoConfirmDays: f.autoConfirmDays,
+        extras: f.extras.map((e) => ({
+          id: e.id,
+          name: e.name,
+          price: Number(e.price),
+          pricing: e.pricing,
+          autoLaIntuneric: e.autoLaIntuneric,
+        })),
         isActive: f.isActive,
         contactPhone: f.contactPhone,
         description: f.description,

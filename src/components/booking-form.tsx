@@ -10,6 +10,7 @@ import { format } from "date-fns";
 import { ro } from "date-fns/locale";
 
 import { Button } from "@/components/ui/button";
+import { calculeazaPretul, type OptiuneTeren } from "@/lib/pret-rezervare";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -32,6 +33,8 @@ export function BookingForm({
   closingHour,
   isAuthenticated,
   autoConfirmDays,
+  city,
+  optiuni,
 }: {
   fieldId: string;
   pricePerHour: number;
@@ -40,6 +43,8 @@ export function BookingForm({
   isAuthenticated: boolean;
   /** 0 înseamnă că proprietarul confirmă fiecare cerere. */
   autoConfirmDays: number;
+  city: string;
+  optiuni: OptiuneTeren[];
 }) {
   const router = useRouter();
   const [date, setDate] = useState<Date | undefined>();
@@ -51,6 +56,7 @@ export function BookingForm({
   const [nume, setNume] = useState("");
   const [telefon, setTelefon] = useState("");
   const [emailVizitator, setEmailVizitator] = useState("");
+  const [optiuniAlese, setOptiuniAlese] = useState<string[]>([]);
   const [error, setError] = useState("");
   const [isPending, startTransition] = useTransition();
 
@@ -114,7 +120,26 @@ export function BookingForm({
   }
 
   const hours = start && end ? hourOf(end) - hourOf(start) : 0;
-  const total = hours > 0 ? hours * pricePerHour : 0;
+
+  // Aceeași funcție rulează și pe server la creare: aici doar ca omul să vadă
+  // totalul cât alege, nu după ce trimite.
+  const pret = useMemo(() => {
+    if (!date || !start || !end || hours <= 0) return null;
+    const zi = format(date, "yyyy-MM-dd");
+    const inceput = localDateTimeToIso(zi, start);
+    const sfarsit = localDateTimeToIso(zi, end);
+    if (!inceput || !sfarsit) return null;
+    return calculeazaPretul({
+      pretPeOra: pricePerHour,
+      inceput: new Date(inceput),
+      sfarsit: new Date(sfarsit),
+      oras: city,
+      optiuni,
+      alese: optiuniAlese,
+    });
+  }, [date, start, end, hours, pricePerHour, city, optiuni, optiuniAlese]);
+
+  const total = pret?.total ?? 0;
 
   function submit() {
     setError("");
@@ -176,6 +201,7 @@ export function BookingForm({
         fieldId,
         startTime,
         endTime,
+        optiuni: optiuniAlese,
         notes: notes.trim() || undefined,
       });
       if (!result.ok) {
@@ -321,6 +347,59 @@ export function BookingForm({
         </div>
       )}
 
+      {optiuni.length > 0 && (
+        <div className="space-y-2">
+          <p className="text-[12.5px] font-medium text-muted-foreground">În plus</p>
+          {optiuni
+            .filter((o) => !o.autoLaIntuneric)
+            .map((optiune) => (
+              <label
+                key={optiune.id}
+                className="flex cursor-pointer items-start gap-2.5 rounded-lg border px-3 py-2 text-[13px]"
+              >
+                <input
+                  type="checkbox"
+                  className="mt-0.5 h-4 w-4 shrink-0 accent-primary"
+                  checked={optiuniAlese.includes(optiune.id)}
+                  onChange={(e) =>
+                    setOptiuniAlese((curente) =>
+                      e.target.checked
+                        ? [...curente, optiune.id]
+                        : curente.filter((id) => id !== optiune.id)
+                    )
+                  }
+                />
+                <span className="flex-1">
+                  <span className="block font-medium">{optiune.name}</span>
+                  <span className="block text-[11.5px] text-muted-foreground">
+                    {optiune.price} RON {optiune.pricing === "PER_HOUR" ? "/ oră" : "o dată"}
+                  </span>
+                </span>
+              </label>
+            ))}
+
+          {/* Nocturna nu se bifează: se pune singură, pentru orele fără lumină. */}
+          {optiuni
+            .filter((o) => o.autoLaIntuneric)
+            .map((optiune) => {
+              const linie = pret?.linii.find((l) => l.id === optiune.id);
+              return (
+                <div
+                  key={optiune.id}
+                  className="rounded-lg border border-dashed px-3 py-2 text-[13px]"
+                >
+                  <span className="block font-medium">{optiune.name}</span>
+                  <span className="block text-[11.5px] text-muted-foreground">
+                    {optiune.price} RON / oră, se adaugă singură pentru orele de după apus
+                    {linie ? ` — ${linie.unitati} ${linie.unitati === 1 ? "oră" : "ore"} la intervalul ales` : ""}
+                    {pret && !linie ? " — intervalul ales e pe lumină" : ""}
+                  </span>
+                </div>
+              );
+            })}
+        </div>
+      )}
+
       {autoConfirmDays > 0 && (
         <p className="text-[11.5px] text-muted-foreground">
           Rezervările făcute cu cel puțin {autoConfirmDays}{" "}
@@ -329,13 +408,28 @@ export function BookingForm({
         </p>
       )}
 
-      {hours > 0 && (
-        <div className="flex items-center justify-between rounded-lg bg-muted px-3 py-2 text-[13.5px]">
-          <span className="flex items-center gap-1.5 text-muted-foreground">
-            <Clock className="h-3.5 w-3.5" />
-            {hours} {hours === 1 ? "oră" : "ore"}
-          </span>
-          <span className="font-mono font-semibold tabular-nums">{total} RON</span>
+      {pret && (
+        <div className="space-y-1.5 rounded-lg bg-muted px-3 py-2.5 text-[13px]">
+          <div className="flex items-center justify-between">
+            <span className="flex items-center gap-1.5 text-muted-foreground">
+              <Clock className="h-3.5 w-3.5" />
+              Teren · {hours} {hours === 1 ? "oră" : "ore"}
+            </span>
+            <span className="font-mono tabular-nums">{pret.pretTeren} RON</span>
+          </div>
+          {pret.linii.map((linie) => (
+            <div key={linie.id} className="flex items-center justify-between text-muted-foreground">
+              <span>
+                {linie.nume}
+                {linie.pricing === "PER_HOUR" && ` · ${linie.unitati} ${linie.unitati === 1 ? "oră" : "ore"}`}
+              </span>
+              <span className="font-mono tabular-nums">{linie.total} RON</span>
+            </div>
+          ))}
+          <div className="flex items-center justify-between border-t pt-1.5 font-semibold">
+            <span>Total</span>
+            <span className="font-mono tabular-nums">{total} RON</span>
+          </div>
         </div>
       )}
 

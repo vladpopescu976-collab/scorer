@@ -84,6 +84,7 @@ async function trimiteAnuntul(bookingId: string, eveniment: EvenimentRezervare) 
     where: { id: bookingId },
     include: {
       customer: { select: { name: true, email: true, phone: true } },
+      extras: true,
       field: {
         select: {
           name: true,
@@ -114,6 +115,15 @@ async function trimiteAnuntul(bookingId: string, eveniment: EvenimentRezervare) 
     { eticheta: "Ziua", valoare: ziua(inceput) },
     { eticheta: "Ora", valoare: interval(inceput, sfarsit) },
     { eticheta: "Locul", valoare: `${field.address}, ${field.city}` },
+    // Ce s-a ales în plus: proprietarul trebuie să știe dacă are de pregătit
+    // nocturna sau echipamentul.
+    ...rezervare.extras.map((optiune) => ({
+      eticheta:
+        optiune.pricing === "PER_HOUR"
+          ? `${optiune.name} (${optiune.units} ${optiune.units === 1 ? "oră" : "ore"})`
+          : optiune.name,
+      valoare: `${Number(optiune.total)} RON`,
+    })),
   ];
 
   const catreProprietar = {
