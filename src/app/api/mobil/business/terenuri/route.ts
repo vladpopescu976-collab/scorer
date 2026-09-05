@@ -15,7 +15,10 @@ export async function GET(request: Request) {
     const fields = await prisma.field.findMany({
       where: { ownerId: sesiune.userId },
       orderBy: { createdAt: "desc" },
-      include: { reviews: { select: { rating: true } } },
+      include: {
+        reviews: { select: { rating: true } },
+        extras: { orderBy: { createdAt: "asc" } },
+      },
     });
 
     return raspuns(

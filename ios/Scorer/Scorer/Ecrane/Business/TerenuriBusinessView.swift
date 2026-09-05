@@ -7,6 +7,7 @@ struct TerenuriBusinessView: View {
     @State private var eroare: String?
     @State private var deBlocatPeTeren: Teren?
     @State private var deEditat: Teren?
+    @State private var optiuniPentru: Teren?
     @State private var adaugaTeren = false
 
     var body: some View {
@@ -51,6 +52,11 @@ struct TerenuriBusinessView: View {
                         }
                         .font(.footnote)
 
+                        Button("Opțiuni și tarife în plus", systemImage: "plus.circle") {
+                            optiuniPentru = teren
+                        }
+                        .font(.footnote)
+
                         Button("Blochează ore", systemImage: "lock") {
                             deBlocatPeTeren = teren
                         }
@@ -87,7 +93,15 @@ struct TerenuriBusinessView: View {
             }
         }
         .refreshable { await incarca() }
-        .task { await incarca() }
+        .task {
+            await incarca()
+            #if DEBUG
+            // Deschide opțiunile primului teren, pentru verificări automate.
+            if ProcessInfo.processInfo.environment["SCORER_OPTIUNI"] == "1" {
+                optiuniPentru = terenuri.first
+            }
+            #endif
+        }
         .sheet(isPresented: $adaugaTeren) {
             NavigationStack {
                 FormularTerenView { Task { await incarca() } }
@@ -96,6 +110,11 @@ struct TerenuriBusinessView: View {
         .sheet(item: $deEditat) { teren in
             NavigationStack {
                 FormularTerenView(teren: teren) { Task { await incarca() } }
+            }
+        }
+        .sheet(item: $optiuniPentru) { teren in
+            NavigationStack {
+                OptiuniTerenView(teren: teren) { Task { await incarca() } }
             }
         }
         .sheet(item: $deBlocatPeTeren) { teren in
