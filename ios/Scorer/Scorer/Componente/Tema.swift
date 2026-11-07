@@ -15,6 +15,12 @@ enum Tema {
     static let ocupat = Color(red: 0.85, green: 0.30, blue: 0.29)
     static let asteptare = Color(red: 0.93, green: 0.62, blue: 0.14)
 
+    // Calendarul proprietarului: culoarea unui interval spune de unde vine ora
+    // ocupată, nu în ce stare e. Aceleași trei culori ca pe site.
+    static let intervalSite = accent
+    static let intervalTelefon = Color(red: 0.23, green: 0.51, blue: 0.96)
+    static let intervalPrivat = Color(red: 0.55, green: 0.36, blue: 0.96)
+
     static let gradientAccent = LinearGradient(
         colors: [accent, accentDeschis],
         startPoint: .topLeading,

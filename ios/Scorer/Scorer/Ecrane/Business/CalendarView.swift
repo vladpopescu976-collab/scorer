@@ -54,6 +54,7 @@ struct CalendarView: View {
                 VStack(spacing: 0) {
                     if terenuri.count > 1 { selectorTeren }
                     comutatorMod
+                    legenda
                     if mod == .zi {
                         selectorZile
                         agendaZilei
@@ -90,9 +91,13 @@ struct CalendarView: View {
         }
         .sheet(item: $evenimentAles) { eveniment in
             NavigationStack {
-                DetaliuEveniment(eveniment: eveniment, reincarca: { Task { await incarca() } })
+                DetaliuEveniment(
+                    eveniment: eveniment,
+                    teren: terenAles,
+                    reincarca: { Task { await incarca() } }
+                )
             }
-            .presentationDetents([.height(300)])
+            .presentationDetents([.height(460), .large])
         }
         .sheet(item: $celulaLibera) { celula in
             NavigationStack {
@@ -202,6 +207,30 @@ struct CalendarView: View {
         }
         .padding(.horizontal, 14)
         .padding(.bottom, 6)
+    }
+
+    /// Ce înseamnă fiecare culoare din calendar. Fără rândul ăsta, verdele,
+    /// albastrul și movul ar fi doar decor.
+    private var legenda: some View {
+        HStack(spacing: 14) {
+            semn(Tema.intervalSite, "globe", "Site")
+            semn(Tema.intervalTelefon, "phone.fill", "Telefon")
+            semn(Tema.intervalPrivat, "lock.fill", "Privat")
+            Spacer(minLength: 0)
+        }
+        .padding(.horizontal, 14)
+        .padding(.bottom, 8)
+    }
+
+    private func semn(_ culoare: Color, _ simbol: String, _ text: String) -> some View {
+        HStack(spacing: 4) {
+            Image(systemName: simbol)
+                .font(.system(size: 7, weight: .bold))
+                .foregroundStyle(.white)
+                .frame(width: 14, height: 14)
+                .background(culoare, in: .circle)
+            Text(text).font(.caption2).foregroundStyle(.secondary)
+        }
     }
 
     private var antetZile: some View {
@@ -320,7 +349,19 @@ struct CalendarView: View {
                     .padding(.vertical, 4)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .frame(height: inaltime, alignment: .top)
-                    .background(eveniment.culoare, in: .rect(cornerRadius: 8, style: .continuous))
+                    .background(
+                        eveniment.culoare.opacity(eveniment.opacitateFundal),
+                        in: .rect(cornerRadius: 8, style: .continuous)
+                    )
+                    .overlay {
+                        if eveniment.inAsteptare {
+                            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                                .strokeBorder(
+                                    .white.opacity(0.9),
+                                    style: StrokeStyle(lineWidth: 1.5, dash: [3, 2])
+                                )
+                        }
+                    }
                     .foregroundStyle(.white)
                     .overlay(alignment: .leading) {
                         // Muchia mai închisă face blocul să se citească ca un tot.
@@ -542,39 +583,52 @@ struct CalendarView: View {
         let oraStart: Int
         let durataOre: Int
         let fel: Fel
+        /// Rezervare venită de pe site la care proprietarul încă nu a răspuns.
+        var inAsteptare = false
+        /// Ziua intervalului — de aici pornește editarea orei.
+        let zi: Date
         /// Prezent când intervalul face parte dintr-o serie săptămânală.
         var serieId: String?
 
+        /// De unde vine ora ocupată. Culoarea blocului spune exact asta:
+        /// proprietarul vrea întâi să știe pe cine are în față.
         enum Fel {
-            case confirmata, inAsteptare, telefonica, blocare
+            case site, telefon, privat
         }
 
         var culoare: Color {
             switch fel {
-            case .confirmata: Tema.accent
-            case .inAsteptare: Tema.asteptare
-            case .telefonica: Color(red: 0.36, green: 0.45, blue: 0.72)
-            case .blocare: Color.secondary
+            case .site: Tema.intervalSite
+            case .telefon: Tema.intervalTelefon
+            case .privat: Tema.intervalPrivat
             }
         }
 
         var simbol: String {
+            if inAsteptare { return "clock" }
             switch fel {
-            case .confirmata: "checkmark"
-            case .inAsteptare: "clock"
-            case .telefonica: "phone.fill"
-            case .blocare: "lock.fill"
+            case .site: return "globe"
+            case .telefon: return "phone.fill"
+            case .privat: return "lock.fill"
             }
         }
 
         var etichetaFel: String {
             switch fel {
-            case .confirmata: "Rezervare confirmată"
-            case .inAsteptare: "Rezervare în așteptare"
-            case .telefonica: "Rezervare la telefon"
-            case .blocare: "Interval blocat"
+            case .site: inAsteptare ? "Rezervare pe site · în așteptare" : "Rezervare pe site"
+            case .telefon: "Comandă telefonică"
+            case .privat: "Eveniment privat"
             }
         }
+
+        /// Rezervările clienților se mută altfel decât orele notate de
+        /// proprietar: clientul trebuie să accepte noua oră.
+        var esteRezervare: Bool { fel == .site }
+
+        /// Rezervarea fără răspuns păstrează culoarea sursei, dar se desenează
+        /// mai stinsă și cu contur întrerupt: se vede și de unde vine, și că
+        /// mai așteaptă ceva de la proprietar.
+        var opacitateFundal: Double { inAsteptare ? 0.5 : 1 }
 
         var titluScurt: String {
             titlu.split(separator: " ").first.map(String.init) ?? titlu
@@ -635,21 +689,27 @@ struct CalendarView: View {
                     subtitlu: rezervare.client?.telefon,
                     oraStart: start,
                     durataOre: durata,
-                    fel: rezervare.status == .confirmata ? .confirmata : .inAsteptare
+                    fel: .site,
+                    inAsteptare: rezervare.status == .inAsteptare,
+                    zi: zi
                 )
             )
         }
 
         for blocare in blocari where blocare.terenId == teren.id {
             guard let (start, durata) = ceasuri(blocare.inceput, blocare.sfarsit) else { continue }
+            // Cu nume de client, ora a fost luată la telefon; fără, e
+            // evenimentul propriu al proprietarului.
+            let areClient = !(blocare.clientNume ?? "").trimmingCharacters(in: .whitespaces).isEmpty
             rezultat.append(
                 Eveniment(
                     id: blocare.id,
-                    titlu: blocare.clientNume ?? blocare.motiv ?? "Blocat",
+                    titlu: blocare.clientNume ?? blocare.motiv ?? "Eveniment privat",
                     subtitlu: blocare.clientTelefon ?? blocare.motiv,
                     oraStart: start,
                     durataOre: durata,
-                    fel: blocare.clientNume == nil ? .blocare : .telefonica,
+                    fel: areClient ? .telefon : .privat,
+                    zi: zi,
                     serieId: blocare.serieId
                 )
             )
@@ -734,18 +794,45 @@ struct CalendarView: View {
 
 private struct DetaliuEveniment: View {
     let eveniment: CalendarView.Eveniment
+    let teren: Teren?
     let reincarca: () -> Void
 
     @Environment(\.dismiss) private var inchide
+    @State private var oraNoua: Int
+    @State private var durataNoua: Int
+    @State private var seSalveaza = false
     @State private var seSterge = false
     @State private var stergeSeria = false
     @State private var eroare: String?
 
-    private var esteBlocare: Bool {
-        switch eveniment.fel {
-        case .blocare, .telefonica: true
-        default: false
-        }
+    init(eveniment: CalendarView.Eveniment, teren: Teren?, reincarca: @escaping () -> Void) {
+        self.eveniment = eveniment
+        self.teren = teren
+        self.reincarca = reincarca
+        _oraNoua = State(initialValue: eveniment.oraStart)
+        // Dacă programul terenului s-a scurtat după ce s-a făcut rezervarea,
+        // durata veche ar ieși din intervalul stepperului și ora propusă ar
+        // trece de închidere.
+        let panaLaInchidere = max(1, (teren?.oraInchidere ?? 24) - eveniment.oraStart)
+        _durataNoua = State(initialValue: min(eveniment.durataOre, panaLaInchidere))
+    }
+
+    private var esteBlocare: Bool { !eveniment.esteRezervare }
+
+    private var deschidere: Int { teren?.oraDeschidere ?? 0 }
+    private var inchidere: Int { teren?.oraInchidere ?? 24 }
+
+    private var oreDePornire: [Int] {
+        Array(min(deschidere, eveniment.oraStart)..<max(inchidere, eveniment.oraStart + 1))
+    }
+
+    /// Cât poate ține intervalul fără să treacă de ora de închidere.
+    private var maximDurata: Int {
+        max(1, inchidere - oraNoua)
+    }
+
+    private var schimbat: Bool {
+        oraNoua != eveniment.oraStart || durataNoua != eveniment.durataOre
     }
 
     var body: some View {
@@ -763,7 +850,6 @@ private struct DetaliuEveniment: View {
                     }
                 }
                 LabeledContent("Ora", value: eveniment.interval)
-                LabeledContent("Durată", value: eveniment.durataText)
                 if eveniment.serieId != nil {
                     LabeledContent("Se repetă", value: "Săptămânal")
                 }
@@ -772,8 +858,48 @@ private struct DetaliuEveniment: View {
                 }
             }
 
+            Section {
+                Picker("Începe la", selection: $oraNoua) {
+                    ForEach(oreDePornire, id: \.self) { ora in
+                        Text(String(format: "%02d:00", ora)).tag(ora)
+                    }
+                }
+                Stepper(
+                    "Durată: \(durataNoua) \(durataNoua == 1 ? "oră" : "ore")",
+                    value: $durataNoua, in: 1...maximDurata
+                )
+                LabeledContent(
+                    "Devine",
+                    value: String(format: "%02d:00 – %02d:00", oraNoua, oraNoua + durataNoua)
+                )
+            } header: {
+                Text("Schimbă ora")
+            } footer: {
+                Text(eveniment.esteRezervare
+                     ? "Clientul primește propunerea și trebuie să o accepte."
+                     : "Se schimbă pe loc, fără să mai fie nevoie să ștergi ora și să o scrii din nou.")
+            }
+
             if let eroare {
                 Section { Text(eroare).font(.footnote).foregroundStyle(.red) }
+            }
+
+            Section {
+                Button(action: salveaza) {
+                    HStack {
+                        Spacer()
+                        if seSalveaza {
+                            ProgressView().tint(.white)
+                        } else {
+                            Text(eveniment.esteRezervare ? "Propune ora nouă" : "Salvează ora")
+                                .fontWeight(.semibold)
+                        }
+                        Spacer()
+                    }
+                }
+                .disabled(seSalveaza || seSterge || !schimbat)
+                .listRowBackground(schimbat && !seSalveaza ? Tema.accent : Color.gray.opacity(0.35))
+                .foregroundStyle(.white)
             }
 
             Section {
@@ -782,12 +908,12 @@ private struct DetaliuEveniment: View {
                         sterge()
                     } label: {
                         HStack {
-                            Text(eveniment.fel == .telefonica ? "Anulează rezervarea" : "Deblochează ora")
+                            Text(eveniment.fel == .telefon ? "Anulează rezervarea" : "Șterge intervalul")
                             Spacer()
                             if seSterge && !stergeSeria { ProgressView() }
                         }
                     }
-                    .disabled(seSterge)
+                    .disabled(seSterge || seSalveaza)
 
                     if let serieId = eveniment.serieId {
                         Button(role: .destructive) {
@@ -799,10 +925,10 @@ private struct DetaliuEveniment: View {
                                 if seSterge && stergeSeria { ProgressView() }
                             }
                         }
-                        .disabled(seSterge)
+                        .disabled(seSterge || seSalveaza)
                     }
                 } else {
-                    Text("Rezervările clienților se gestionează din secțiunea Rezervări.")
+                    Text("Aprobarea, respingerea și anularea rezervării rămân în secțiunea Rezervări.")
                         .font(.footnote).foregroundStyle(.secondary)
                 }
             }
@@ -811,6 +937,54 @@ private struct DetaliuEveniment: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .cancellationAction) { Button("Închide") { inchide() } }
+        }
+        // Mutată târziu în zi, o rezervare de trei ore ar trece de închidere.
+        .onChange(of: oraNoua) { _, _ in
+            durataNoua = min(durataNoua, maximDurata)
+        }
+    }
+
+    /// Orele notate de proprietar se mută pe loc; rezervările clienților pleacă
+    /// ca propunere, fiindcă ora e o înțelegere cu cineva, nu o notiță.
+    private func salveaza() {
+        let calendar = Calendar.current
+        guard
+            let inceput = calendar.date(bySettingHour: oraNoua, minute: 0, second: 0, of: eveniment.zi),
+            let sfarsit = calendar.date(byAdding: .hour, value: durataNoua, to: inceput)
+        else { return }
+
+        struct CorpBlocare: Encodable {
+            let inceput: Date
+            let sfarsit: Date
+        }
+        struct CorpRezervare: Encodable {
+            let actiune = "propune-mutare"
+            let inceput: Date
+            let sfarsit: Date
+        }
+
+        eroare = nil
+        seSalveaza = true
+
+        Task {
+            defer { seSalveaza = false }
+            do {
+                if eveniment.esteRezervare {
+                    try await ApiClient.shared.cereFaraRaspuns(
+                        "rezervari/\(eveniment.id)", metoda: "PATCH",
+                        corp: CorpRezervare(inceput: inceput, sfarsit: sfarsit)
+                    )
+                } else {
+                    try await ApiClient.shared.cereFaraRaspuns(
+                        "business/blocari/\(eveniment.id)", metoda: "PATCH",
+                        corp: CorpBlocare(inceput: inceput, sfarsit: sfarsit)
+                    )
+                }
+                reincarca()
+                inchide()
+            } catch {
+                eroare = error.localizedDescription
+            }
         }
     }
 
@@ -1060,7 +1234,13 @@ private struct BlocZi: View {
         }
         .overlay {
             RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .stroke(eveniment.culoare.opacity(0.35), lineWidth: 1)
+                .stroke(
+                    eveniment.culoare.opacity(eveniment.inAsteptare ? 0.7 : 0.35),
+                    style: StrokeStyle(
+                        lineWidth: eveniment.inAsteptare ? 1.5 : 1,
+                        dash: eveniment.inAsteptare ? [4, 3] : []
+                    )
+                )
         }
     }
 }

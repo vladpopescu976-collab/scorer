@@ -121,6 +121,91 @@ export async function blockSlot(input: z.infer<typeof blockSchema>): Promise<Act
   }
 }
 
+const updateSchema = z.object({
+  id: z.string().min(1),
+  startTime: z.iso.datetime({ message: "Ora de start nu este validă." }),
+  endTime: z.iso.datetime({ message: "Ora de sfârșit nu este validă." }),
+});
+
+/**
+ * Mută un interval blocat (oră luată la telefon sau eveniment propriu) la altă
+ * oră, direct din calendar. Înainte se putea doar șterge și pus la loc, ceea ce
+ * însemna că o mutare de o oră cerea două operații și pierdea numele clientului.
+ */
+export async function updateBlockedSlot(
+  input: z.infer<typeof updateSchema>
+): Promise<ActionResult> {
+  try {
+    const session = await requireBusinessSession();
+    const data = updateSchema.parse(input);
+
+    const slot = await prisma.blockedSlot.findUnique({
+      where: { id: data.id },
+      include: { field: { select: { id: true, ownerId: true } } },
+    });
+    if (!slot || slot.field.ownerId !== session.user.id) {
+      return fail("Intervalul blocat nu a fost găsit.");
+    }
+
+    const startTime = new Date(data.startTime);
+    const endTime = new Date(data.endTime);
+    if (endTime <= startTime) {
+      return fail("Ora de sfârșit trebuie să fie după ora de start.");
+    }
+
+    try {
+      await prisma.$transaction(async (tx) => {
+        await lockField(tx, slot.field.id);
+
+        const booking = await tx.booking.findFirst({
+          where: {
+            fieldId: slot.field.id,
+            status: { in: ["PENDING", "CONFIRMED"] },
+            startTime: { lt: endTime },
+            endTime: { gt: startTime },
+          },
+          include: { customer: { select: { name: true } } },
+        });
+        if (booking) {
+          throw new ActionError(
+            `Nu poți muta aici: există deja o rezervare a lui ${clientulRezervarii(booking).nume}.`
+          );
+        }
+
+        // Intervalul mutat se suprapune cu el însuși, deci se exclude explicit.
+        const existing = await tx.blockedSlot.findFirst({
+          where: {
+            fieldId: slot.field.id,
+            id: { not: slot.id },
+            startTime: { lt: endTime },
+            endTime: { gt: startTime },
+          },
+        });
+        if (existing) throw new ActionError("Intervalul ales este deja blocat.");
+
+        await tx.blockedSlot.update({
+          where: { id: slot.id },
+          data: { startTime, endTime },
+        });
+      });
+    } catch (error) {
+      const text = errorText(error);
+      if (text.includes("BLOCKED_SLOT_ON_BOOKING")) {
+        return fail("Între timp a apărut o rezervare pe acest interval. Reîncarcă pagina.");
+      }
+      if (text.includes("blocked_slots_no_overlap")) {
+        return fail("Intervalul ales este deja blocat.");
+      }
+      throw error;
+    }
+
+    revalidateAll(slot.field.id);
+    return ok();
+  } catch (error) {
+    return toActionError("updateBlockedSlot", error);
+  }
+}
+
 export async function unblockSlot(blockedSlotId: string): Promise<ActionResult> {
   try {
     const session = await requireBusinessSession();
