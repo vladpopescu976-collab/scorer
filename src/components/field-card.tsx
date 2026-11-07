@@ -7,6 +7,8 @@ import { MapPin } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { FavoriteButton } from "@/components/favorite-button";
+import { TelefonTeren } from "@/components/telefon-teren";
+import { telefonAfisat } from "@/lib/telefon";
 import { sportMeta } from "@/lib/sports";
 import type { SportType } from "@prisma/client";
 
@@ -17,6 +19,8 @@ export type FieldCardData = {
   sportType: SportType;
   pricePerHour: number;
   images: string[];
+  /** Numărul de contact, pentru programările date la telefon. */
+  contactPhone: string | null;
 };
 
 export function FieldCard({
@@ -45,42 +49,47 @@ export function FieldCard({
       {isFavorite !== undefined && (
         <FavoriteButton fieldId={field.id} initialFavorite={isFavorite} />
       )}
-      <Link
-        href={`/terenuri/${field.id}`}
-        className="block overflow-hidden rounded-2xl border bg-card shadow-sm transition-shadow duration-300 group-hover:shadow-xl group-hover:shadow-primary/10"
-      >
-        <div className="relative aspect-[4/3] w-full overflow-hidden bg-gradient-to-br from-primary/15 via-muted to-muted">
-          {coverImage ? (
-            <FieldImage
-              src={coverImage}
-              alt={field.name}
-              sizes="(max-width: 640px) 100vw, 33vw"
-              className="transition-transform duration-500 group-hover:scale-105"
-              fallback={<SportIcon className="h-12 w-12 text-primary/40" strokeWidth={1.5} />}
-            />
-          ) : (
-            <div className="flex h-full w-full items-center justify-center transition-transform duration-500 group-hover:scale-105">
-              <SportIcon className="h-12 w-12 text-primary/40" strokeWidth={1.5} />
-            </div>
-          )}
-          <Badge className="absolute left-3 top-3 gap-1 bg-background/90 text-foreground backdrop-blur-sm">
-            <SportIcon className="h-3.5 w-3.5" />
-            {meta.label}
-          </Badge>
-        </div>
-
-        <div className="space-y-2 p-4">
-          <p className="truncate font-medium leading-tight">{field.name}</p>
-          <p className="flex items-center gap-1 text-sm text-muted-foreground">
-            <MapPin className="h-3.5 w-3.5" />
-            {field.city}
-          </p>
-          <div className="flex items-baseline gap-1 pt-1">
-            <span className="text-lg font-semibold">{field.pricePerHour.toFixed(0)}</span>
-            <span className="text-sm text-muted-foreground">RON / oră</span>
+      <div className="overflow-hidden rounded-2xl border bg-card shadow-sm transition-shadow duration-300 group-hover:shadow-xl group-hover:shadow-primary/10">
+        <Link href={`/terenuri/${field.id}`} className="block">
+          <div className="relative aspect-[4/3] w-full overflow-hidden bg-gradient-to-br from-primary/15 via-muted to-muted">
+            {coverImage ? (
+              <FieldImage
+                src={coverImage}
+                alt={field.name}
+                sizes="(max-width: 640px) 100vw, 33vw"
+                className="transition-transform duration-500 group-hover:scale-105"
+                fallback={<SportIcon className="h-12 w-12 text-primary/40" strokeWidth={1.5} />}
+              />
+            ) : (
+              <div className="flex h-full w-full items-center justify-center transition-transform duration-500 group-hover:scale-105">
+                <SportIcon className="h-12 w-12 text-primary/40" strokeWidth={1.5} />
+              </div>
+            )}
+            <Badge className="absolute left-3 top-3 gap-1 bg-background/90 text-foreground backdrop-blur-sm">
+              <SportIcon className="h-3.5 w-3.5" />
+              {meta.label}
+            </Badge>
           </div>
-        </div>
-      </Link>
+
+          <div className="space-y-2 p-4 pb-3">
+            <p className="truncate font-medium leading-tight">{field.name}</p>
+            <p className="flex items-center gap-1 text-sm text-muted-foreground">
+              <MapPin className="h-3.5 w-3.5" />
+              {field.city}
+            </p>
+            <div className="flex items-baseline gap-1 pt-1">
+              <span className="text-lg font-semibold">{field.pricePerHour.toFixed(0)}</span>
+              <span className="text-sm text-muted-foreground">RON / oră</span>
+            </div>
+          </div>
+        </Link>
+
+        {telefonAfisat(field.contactPhone) && (
+          <div className="border-t">
+            <TelefonTeren telefon={field.contactPhone} marime="rand" />
+          </div>
+        )}
+      </div>
     </motion.div>
   );
 }

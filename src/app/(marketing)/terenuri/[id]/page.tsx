@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { BookingForm } from "@/components/booking-form";
 import { FieldImage } from "@/components/field-image";
+import { TelefonTeren } from "@/components/telefon-teren";
 import { FavoriteButton } from "@/components/favorite-button";
 import { Stars } from "@/components/reviews";
 import { sportMeta } from "@/lib/sports";
@@ -126,6 +127,9 @@ export default async function FieldDetailPage({ params }: { params: Promise<{ id
               <Clock className="h-4 w-4" />
               Program: {String(field.openingHour).padStart(2, "0")}:00 – {String(field.closingHour).padStart(2, "0")}:00
             </p>
+            {/* Sus, lângă adresă: mulți sună direct, în loc să completeze
+                formularul de rezervare. */}
+            <TelefonTeren telefon={field.contactPhone} marime="mare" className="mt-2" />
           </div>
 
           {field.description && (

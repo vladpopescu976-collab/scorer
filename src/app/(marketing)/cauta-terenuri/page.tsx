@@ -141,6 +141,7 @@ async function Results({ sport, oras, pretMax, data }: SearchParams) {
               sportType: field.sportType,
               pricePerHour: Number(field.pricePerHour),
               images: field.images,
+              contactPhone: field.contactPhone,
             }}
           />
         ))}

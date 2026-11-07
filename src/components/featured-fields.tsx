@@ -63,6 +63,7 @@ export async function FeaturedFields() {
                 sportType: field.sportType,
                 pricePerHour: Number(field.pricePerHour),
                 images: field.images,
+                contactPhone: field.contactPhone,
               }}
             />
           ))}
