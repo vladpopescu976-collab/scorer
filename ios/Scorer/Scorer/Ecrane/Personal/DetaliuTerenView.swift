@@ -116,9 +116,7 @@ struct DetaliuTerenView: View {
                     "Deschis \(String(format: "%02d", teren.oraDeschidere)):00 – \(String(format: "%02d", teren.oraInchidere)):00",
                     systemImage: "clock"
                 )
-                if let telefon = teren.telefonContact, !telefon.isEmpty {
-                    Label(telefon, systemImage: "phone")
-                }
+                TelefonApelabil(telefon: teren.telefonContact)
             }
             .font(.subheadline)
             .foregroundStyle(.secondary)

@@ -12,6 +12,7 @@ struct CautaTerenuriView: View {
     @State private var oraDeLa: Int?
     @State private var durataOre = 1
     @State private var arataFiltre = false
+    @State private var derulat = false
 
     private var filtreActive: Int {
         [!oras.isEmpty, pretMax > 0, ziAleasa != nil, sportAles != nil, oraDeLa != nil]
@@ -51,16 +52,21 @@ struct CautaTerenuriView: View {
     }
 
     private var continut: some View {
-        ScrollView {
-            LazyVStack(spacing: 0, pinnedViews: .sectionHeaders) {
-                Section {
-                    lista
-                        .padding(.horizontal, 20)
-                        .padding(.top, 18)
-                        .padding(.bottom, 20)
-                } header: {
-                    antet
-                }
+        // Antetul stă în afara ScrollView-ului. Prins înăuntru, lista îi
+        // trecea pe dedesubt până în dreptul ceasului, iar antetul arăta ca o
+        // bucată lipită peste ecran.
+        VStack(spacing: 0) {
+            antet
+            ScrollView {
+                lista
+                    .padding(.horizontal, 20)
+                    .padding(.top, 18)
+                    .padding(.bottom, 20)
+            }
+            .onScrollGeometryChange(for: Bool.self) { geometrie in
+                geometrie.contentOffset.y + geometrie.contentInsets.top > 1
+            } action: { _, acum in
+                withAnimation(.easeOut(duration: 0.15)) { derulat = acum }
             }
         }
     }
@@ -79,7 +85,12 @@ struct CautaTerenuriView: View {
         }
         .padding(.top, 8)
         .padding(.bottom, 12)
-        .background(.regularMaterial)
+        // Aceeași culoare ca restul ecranului, ca să nu se vadă unde se
+        // termină antetul; linia apare doar după ce începe derularea.
+        .background(Tema.fundal)
+        .overlay(alignment: .bottom) {
+            Divider().opacity(derulat ? 1 : 0)
+        }
     }
 
     /// Un singur loc, evident, în care începe căutarea.

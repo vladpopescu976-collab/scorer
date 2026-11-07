@@ -116,9 +116,9 @@ struct CardRezervareBusiness: View {
                     .font(.footnote.monospaced()).foregroundStyle(.secondary)
                 if let telefon = rezervare.client?.telefon, !telefon.isEmpty {
                     Spacer()
-                    Link(destination: URL(string: "tel:\(telefon)")!) {
-                        Label(telefon, systemImage: "phone").font(.caption)
-                    }
+                    // `URL(string:)!` crăpa aici: un număr scris cu spații
+                    // („0722 123 456”) dă nil, iar forțarea oprea aplicația.
+                    TelefonApelabil(telefon: telefon, marime: .caption)
                 }
             }
 
