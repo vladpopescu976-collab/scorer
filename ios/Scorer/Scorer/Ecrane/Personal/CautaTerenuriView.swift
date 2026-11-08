@@ -319,8 +319,8 @@ struct CardTeren: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             ZStack(alignment: .topTrailing) {
-                PozaTeren(cale: teren.poze.first, sport: teren.sport)
-                    .frame(height: 210)
+                PozaTeren(cale: teren.poze.first, sport: teren.sport, intreaga: true)
+                    .frame(height: 240)
                     .frame(maxWidth: .infinity)
                     .clipped()
                     .clipShape(.rect(cornerRadius: Tema.razaFisa, style: .continuous))

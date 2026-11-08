@@ -4,6 +4,9 @@ import SwiftUI
 struct PozaTeren: View {
     let cale: String?
     let sport: Sport
+    /// Arată toată poza, nedecupată; spațiul rămas se umple cu aceeași poză,
+    /// estompată, ca să nu apară benzi goale.
+    var intreaga = false
 
     var body: some View {
         ZStack {
@@ -13,7 +16,21 @@ struct PozaTeren: View {
                 AsyncImage(url: url) { faza in
                     switch faza {
                     case .success(let imagine):
-                        imagine.resizable().scaledToFill()
+                        if intreaga {
+                            // Poza întreagă dictează doar ce se vede; fundalul
+                            // estompat stă în spate și nu schimbă mărimea cardului.
+                            imagine.resizable().scaledToFit()
+                                .shadow(color: .black.opacity(0.25), radius: 10, y: 4)
+                                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                                .background {
+                                    imagine.resizable().scaledToFill()
+                                        .blur(radius: 26)
+                                        .overlay(Color.black.opacity(0.18))
+                                }
+                                .clipped()
+                        } else {
+                            imagine.resizable().scaledToFill()
+                        }
                     case .failure:
                         simbol
                     default:
