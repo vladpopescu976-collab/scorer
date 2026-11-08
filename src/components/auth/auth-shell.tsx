@@ -19,7 +19,7 @@ export function AuthShell({ children }: { children: React.ReactNode }) {
         />
       </div>
 
-      <div className="w-full max-w-md space-y-6">
+      <div className="w-full max-w-lg space-y-6">
         <Link href="/" aria-label="Scorer, pagina principală" className="flex justify-center">
           <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-primary to-primary/70 font-heading text-2xl font-semibold text-primary-foreground shadow-lg shadow-primary/30 ring-4 ring-background/70">
             S
@@ -33,4 +33,4 @@ export function AuthShell({ children }: { children: React.ReactNode }) {
 
 /** Suprafața de sticlă pe care stau formularele. */
 export const CARD_AUTH =
-  "rounded-3xl border border-white/60 bg-card/75 shadow-xl shadow-primary/10 backdrop-blur-xl dark:border-white/10 [&_[data-slot=input]]:h-11 [&_[data-slot=input]]:rounded-xl [&_[data-slot=input]]:text-base [&_[data-slot=form-item]]:gap-3 [&_[data-slot=form-description]]:leading-relaxed [&_[data-slot=card-content]]:px-6 sm:[&_[data-slot=card-content]]:px-8";
+  "rounded-3xl border border-white/60 bg-card/75 shadow-xl shadow-primary/10 backdrop-blur-xl dark:border-white/10 [&_[data-slot=input]]:h-11 [&_[data-slot=input]]:rounded-xl [&_[data-slot=input]]:text-base [&_[data-slot=form-item]]:gap-2.5 [&_[data-slot=form-label]]:text-[15px] [&_[data-slot=form-label]]:font-medium [&_[data-slot=form-description]]:text-[13.5px] [&_[data-slot=form-message]]:text-[13.5px] [&_[data-slot=form-description]]:leading-relaxed [&_[data-slot=card-content]]:px-6 sm:[&_[data-slot=card-content]]:px-8";

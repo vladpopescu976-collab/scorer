@@ -67,7 +67,7 @@ export const CampParola = forwardRef<
       {capsLock && (
         <p
           role="status"
-          className="flex items-center gap-1 text-xs font-medium text-amber-600 dark:text-amber-500"
+          className="flex items-center gap-1.5 text-sm font-medium text-amber-600 dark:text-amber-500"
         >
           <ArrowBigUp className="h-3.5 w-3.5" />
           Caps Lock este pornit

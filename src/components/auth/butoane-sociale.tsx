@@ -68,7 +68,7 @@ export function ButoaneSociale({
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-3 text-xs text-muted-foreground">
+      <div className="flex items-center gap-3 text-sm text-muted-foreground">
         <span className="h-px flex-1 bg-border" />
         sau continuă cu
         <span className="h-px flex-1 bg-border" />
@@ -107,7 +107,7 @@ export function ButoaneSociale({
           </Button>
         }
       </div>
-      <p className="text-center text-[11px] text-muted-foreground">
+      <p className="text-center text-xs text-muted-foreground">
         Continuând, accepți termenii și politica de confidențialitate.
       </p>
     </div>

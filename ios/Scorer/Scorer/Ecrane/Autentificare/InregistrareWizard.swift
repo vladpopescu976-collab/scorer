@@ -154,30 +154,37 @@ struct InregistrareWizard: View {
             StepperPasi(pas: pas)
 
             VStack(spacing: 6) {
-                Text(Self.titluri[pas]).font(.headline)
+                Text(Self.titluri[pas]).font(.title3.weight(.semibold))
                 Text("Pasul \(pas + 1) din 4 · \(Self.descrieri[pas])")
-                    .font(.caption)
+                    .font(.subheadline)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
             }
             .id("titlu\(pas)")
             .transition(.opacity)
 
-            Group {
-                switch pas {
-                case 0: pasTip
-                case 1: pasDate
-                case 2: pasProfil
-                default: pasConfirmare
+            // Pasul nou alunecă în cadru; tăierea are o margine, ca umbrele și
+            // contururile câmpurilor să nu fie retezate.
+            ZStack {
+                Group {
+                    switch pas {
+                    case 0: pasTip
+                    case 1: pasDate
+                    case 2: pasProfil
+                    default: pasConfirmare
+                    }
                 }
-            }
-            .id(pas)
-            .transition(
-                .asymmetric(
-                    insertion: .move(edge: directie > 0 ? .trailing : .leading).combined(with: .opacity),
-                    removal: .opacity
+                .id(pas)
+                .transition(
+                    .asymmetric(
+                        insertion: .move(edge: directie > 0 ? .trailing : .leading).combined(with: .opacity),
+                        removal: .opacity
+                    )
                 )
-            )
+            }
+            .padding(8)
+            .clipped()
+            .padding(-8)
 
             if let eroare {
                 Text(eroare)
@@ -199,7 +206,6 @@ struct InregistrareWizard: View {
                 )
             }
         }
-        .clipped()
     }
 
     // MARK: Pași
@@ -220,22 +226,22 @@ struct InregistrareWizard: View {
     }
 
     private var pasDate: some View {
-        VStack(spacing: 18) {
+        VStack(spacing: 22) {
             CampAuth(
                 titlu: rol == .business ? "Persoană de contact" : "Nume complet", simbol: "person",
                 text: $nume, tipContinut: .name,
-                eroare: arataErori ? eroareNume : nil
+                eroare: arataErori ? eroareNume : nil, exemplu: "Ion Popescu"
             )
 
             VStack(alignment: .leading, spacing: 8) {
                 CampAuth(
                     titlu: "Adresă de email", simbol: "envelope", text: $email,
                     tipTastatura: .emailAddress, tipContinut: .emailAddress, faraMajuscule: true,
-                    eroare: arataErori ? eroareEmail : nil
+                    eroare: arataErori ? eroareEmail : nil, exemplu: "nume@exemplu.ro"
                 )
                 if let sugestie = ParolaSigura.sugestieEmail(email) {
                     Button("Ai vrut să scrii \(sugestie)?") { withAnimation { email = sugestie } }
-                        .font(.footnote)
+                        .font(.subheadline.weight(.medium))
                         .foregroundStyle(Tema.accent)
                         .padding(.leading, 4)
                         .transition(.opacity)
@@ -245,7 +251,7 @@ struct InregistrareWizard: View {
             VStack(alignment: .leading, spacing: 14) {
                 CampAuth(
                     titlu: "Parolă", simbol: "lock", text: $parola, parola: true, tipContinut: .newPassword,
-                    eroare: arataErori ? eroareParola : nil
+                    eroare: arataErori ? eroareParola : nil, exemplu: "Minim 10 caractere"
                 )
                 PutereaParolei(parola: parola)
                 CerinteParolaView(parola: parola, nume: nume, email: email)
@@ -270,15 +276,15 @@ struct InregistrareWizard: View {
             }
             CampAuth(
                 titlu: "Telefon", simbol: "phone", text: $telefon, tipTastatura: .phonePad,
-                tipContinut: .telephoneNumber, eroare: arataErori ? eroareTelefon : nil
+                tipContinut: .telephoneNumber, eroare: arataErori ? eroareTelefon : nil, exemplu: "0722 123 456"
             )
             Text("Pe el te caută proprietarul sau clientul când apare o schimbare la rezervare.")
-                .font(.caption).foregroundStyle(.secondary)
+                .font(.footnote).foregroundStyle(.secondary)
                 .frame(maxWidth: .infinity, alignment: .leading).padding(.horizontal, 4)
                 .padding(.top, -8)
             CampAuth(
                 titlu: "Oraș", simbol: "mappin.and.ellipse", text: $oras, tipContinut: .addressCity,
-                eroare: arataErori ? eroareOras : nil
+                eroare: arataErori ? eroareOras : nil, exemplu: "Timișoara"
             )
             if rol == .business {
                 CampAuth(
@@ -308,7 +314,7 @@ struct InregistrareWizard: View {
             }
 
             Label("Parola ta e criptată și nu o vedem niciodată. Îți poți șterge contul oricând.", systemImage: "checkmark.shield.fill")
-                .font(.caption)
+                .font(.footnote)
                 .foregroundStyle(.secondary)
                 .labelStyle(.titleAndIcon)
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -316,7 +322,7 @@ struct InregistrareWizard: View {
 
             // Acceptarea prin acțiune, notată pe server ca dată.
             Text("Creând contul accepți termenii și condițiile și politica de confidențialitate, disponibile pe scorer.ro.")
-                .font(.caption2)
+                .font(.caption)
                 .foregroundStyle(.secondary)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.horizontal, 4)
@@ -428,7 +434,7 @@ private struct OptiuneCont: View {
                 VStack(alignment: .leading, spacing: 7) {
                     ForEach(puncte, id: \.self) { punct in
                         Label(punct, systemImage: "checkmark")
-                            .font(.caption)
+                            .font(.footnote)
                             .foregroundStyle(.secondary)
                             .labelStyle(.titleAndIcon)
                     }
@@ -469,7 +475,7 @@ private struct StepperPasi: View {
                         .overlay { Circle().strokeBorder(facut || curent ? Tema.accent : Color.primary.opacity(0.15), lineWidth: 2) }
                     Image(systemName: facut ? "checkmark" : simboluri[index])
                         .font(.system(size: 14, weight: facut ? .bold : .medium))
-                        .foregroundStyle(facut ? .white : (curent ? Tema.accent : .secondary))
+                        .foregroundStyle(facut ? Color.white : (curent ? Tema.accent : Color.primary.opacity(0.45)))
                         .contentTransition(.symbolEffect(.replace))
                 }
                 .frame(width: 38, height: 38)
@@ -486,6 +492,7 @@ private struct StepperPasi: View {
                 }
             }
         }
+        .padding(.horizontal, 6)
         .animation(.snappy(duration: 0.35), value: pas)
         .onAppear {
             withAnimation(.easeOut(duration: 1.6).repeatForever(autoreverses: false)) { puls = true }
@@ -502,27 +509,30 @@ private struct CerinteParolaView: View {
     var body: some View {
         if !parola.isEmpty {
             let cerinte = ParolaSigura.cerinte(parola, nume: nume, email: email)
-            VStack(alignment: .leading, spacing: 11) {
+            VStack(alignment: .leading, spacing: 14) {
                 ForEach(cerinte) { c in
                     HStack(spacing: 11) {
                         ZStack {
                             Circle().fill(c.indeplinita ? Tema.accent : Color.clear)
-                            Circle().strokeBorder(c.indeplinita ? Tema.accent : Color.primary.opacity(0.18), lineWidth: 1.2)
+                            Circle().strokeBorder(c.indeplinita ? Tema.accent : Color.primary.opacity(0.3), lineWidth: 1.8)
                             if c.indeplinita {
-                                Image(systemName: "checkmark").font(.system(size: 8, weight: .heavy)).foregroundStyle(.white)
+                                Image(systemName: "checkmark").font(.system(size: 10, weight: .heavy)).foregroundStyle(.white)
                                     .transition(.scale)
                             }
                         }
-                        .frame(width: 18, height: 18)
+                        .frame(width: 22, height: 22)
                         Text(c.eticheta + (c.obligatorie ? "" : " · recomandat"))
-                            .font(.footnote)
-                            .foregroundStyle(c.indeplinita ? Tema.accent : .secondary)
+                            .font(.subheadline.weight(c.indeplinita ? .medium : .regular))
+                            .foregroundStyle(c.indeplinita ? Tema.accent : Color.primary.opacity(0.75))
                     }
                 }
             }
-            .padding(16)
+            .padding(18)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Color.primary.opacity(0.04), in: .rect(cornerRadius: 14, style: .continuous))
+            .background(Color.primary.opacity(0.04), in: .rect(cornerRadius: 16, style: .continuous))
+            .overlay {
+                RoundedRectangle(cornerRadius: 16, style: .continuous).strokeBorder(Color.primary.opacity(0.08))
+            }
             .animation(.snappy(duration: 0.25), value: cerinte.map(\.indeplinita))
             .transition(.opacity.combined(with: .move(edge: .top)))
         }

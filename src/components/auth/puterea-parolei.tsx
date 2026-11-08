@@ -29,19 +29,19 @@ export function PutereaParolei({ parola }: { parola: string }) {
   if (!parola) return null;
 
   return (
-    <div className="space-y-1.5 pt-0.5">
+    <div className="space-y-2 pt-1">
       <div className="flex gap-1">
         {[0, 1, 2, 3].map((index) => (
           <div
             key={index}
             className={cn(
-              "h-1 flex-1 rounded-full transition-colors",
+              "h-1.5 flex-1 rounded-full transition-colors",
               index < scor ? CULORI[scor] : "bg-muted"
             )}
           />
         ))}
       </div>
-      <p className="text-xs text-muted-foreground">Parolă {ETICHETE[scor].toLowerCase()}</p>
+      <p className="text-sm font-medium text-foreground/80">Parolă {ETICHETE[scor].toLowerCase()}</p>
     </div>
   );
 }

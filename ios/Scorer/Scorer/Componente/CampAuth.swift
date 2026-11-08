@@ -70,12 +70,22 @@ struct CampAuth: View {
     var faraMajuscule = false
     /// Mesajul de sub câmp, când ceva nu e în regulă — apare cât tastezi.
     var eroare: String?
+    /// Textul gri din câmp; implicit titlul.
+    var exemplu: String?
+    /// Eticheta deasupra câmpului, ca să se știe ce e scris și după completare.
+    var cuEticheta = true
 
     @FocusState private var activ: Bool
     @State private var vizibila = false
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 5) {
+        VStack(alignment: .leading, spacing: 8) {
+            if cuEticheta {
+                Text(titlu)
+                    .font(.subheadline.weight(.medium))
+                    .foregroundStyle(eroare != nil ? Tema.ocupat : .primary)
+                    .padding(.leading, 4)
+            }
             HStack(spacing: 10) {
                 Image(systemName: simbol)
                     .font(.system(size: 15, weight: .medium))
@@ -84,9 +94,9 @@ struct CampAuth: View {
 
                 Group {
                     if parola && !vizibila {
-                        SecureField(titlu, text: $text)
+                        SecureField(exemplu ?? titlu, text: $text)
                     } else {
-                        TextField(titlu, text: $text)
+                        TextField(exemplu ?? titlu, text: $text)
                             .keyboardType(tipTastatura)
                             .textInputAutocapitalization(faraMajuscule ? .never : .sentences)
                             .autocorrectionDisabled(faraMajuscule || parola)
@@ -108,7 +118,7 @@ struct CampAuth: View {
                 }
             }
             .padding(.horizontal, 14)
-            .frame(minHeight: 50)
+            .frame(minHeight: 54)
             .background(Tema.fisa, in: .rect(cornerRadius: 14, style: .continuous))
             .overlay {
                 RoundedRectangle(cornerRadius: 14, style: .continuous)
@@ -121,7 +131,7 @@ struct CampAuth: View {
 
             if let eroare {
                 Text(eroare)
-                    .font(.caption)
+                    .font(.footnote)
                     .foregroundStyle(Tema.ocupat)
                     .padding(.leading, 4)
             }
@@ -162,12 +172,12 @@ struct PutereaParolei: View {
                     ForEach(0..<4, id: \.self) { index in
                         Capsule()
                             .fill(index < scor ? culoare : Color.secondary.opacity(0.2))
-                            .frame(height: 4)
+                            .frame(height: 6)
                     }
                 }
                 Text("Parolă \(Self.etichete[scor].lowercased())")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .font(.subheadline.weight(.medium))
+                    .foregroundStyle(.primary.opacity(0.8))
             }
             .animation(.easeOut(duration: 0.2), value: scor)
             .padding(.horizontal, 4)

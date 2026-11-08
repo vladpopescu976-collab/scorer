@@ -278,12 +278,13 @@ private struct FormularAutentificare: View {
 
     private var formularAutentificare: some View {
         VStack(spacing: 22) {
-            VStack(spacing: 16) {
+            VStack(spacing: 20) {
                 CampAuth(
                     titlu: "Adresă de email", simbol: "envelope", text: $email,
-                    tipTastatura: .emailAddress, tipContinut: .emailAddress, faraMajuscule: true
+                    tipTastatura: .emailAddress, tipContinut: .emailAddress, faraMajuscule: true,
+                    exemplu: "nume@exemplu.ro"
                 )
-                CampAuth(titlu: "Parolă", simbol: "lock", text: $parola, parola: true, tipContinut: .password)
+                CampAuth(titlu: "Parolă", simbol: "lock", text: $parola, parola: true, tipContinut: .password, exemplu: "Parola ta")
             }
 
             HStack {

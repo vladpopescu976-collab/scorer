@@ -264,7 +264,7 @@ export function RegisterWizard({ role }: { role: Role }) {
             suprapuneau, fie pasul nou rămânea invizibil până se termina
             ieșirea. `key` forțează remontarea, deci animația de intrare
             pornește la fiecare schimbare de pas. */}
-        <div className="overflow-x-clip">
+        <div className="-mx-2 overflow-x-clip px-2 py-1">
           <motion.div
             key={pas}
             initial={{ opacity: 0, x: directie * 28 }}
@@ -401,8 +401,8 @@ function Progres({ pas }: { pas: number }) {
             exit={{ opacity: 0, y: -6 }}
             transition={{ duration: 0.18 }}
           >
-            <p className="text-[15px] font-semibold">{PASI[pas].titlu}</p>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-lg font-semibold">{PASI[pas].titlu}</p>
+            <p className="mt-1 text-sm text-muted-foreground">
               Pasul {pas + 1} din {PASI.length} · {PASI[pas].descriere}
             </p>
           </motion.div>
