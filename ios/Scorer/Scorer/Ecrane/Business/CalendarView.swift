@@ -66,23 +66,7 @@ struct CalendarView: View {
                     }
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-                // Butonul stă mereu la vedere, deasupra barei de taburi.
-                .overlay(alignment: .bottomTrailing) {
-                    Button {
-                        arataBlocare = true
-                    } label: {
-                        Label("Blochează ore", systemImage: "lock.fill")
-                            .font(.subheadline.weight(.semibold))
-                            .padding(.horizontal, 18)
-                            .frame(height: 50)
-                            .foregroundStyle(.white)
-                            .background(Tema.gradientAccent, in: .capsule)
-                            .shadow(color: Tema.accent.opacity(0.35), radius: 12, y: 6)
-                    }
-                    .apasabil()
-                    .padding(.trailing, 18)
-                    .padding(.bottom, 96)
-                }
+                .butonPlutitor("Blochează ore", simbol: "lock.fill") { arataBlocare = true }
             }
         }
         .navigationTitle("Calendar")
