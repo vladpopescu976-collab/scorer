@@ -16,6 +16,7 @@ struct CalendarView: View {
     @State private var inceputSaptamana = CalendarView.startulSaptamanii(Date())
     @State private var evenimentAles: Eveniment?
     @State private var celulaLibera: CelulaLibera?
+    @State private var arataBlocare = false
 
     /// Săptămâna întreagă are șapte coloane de ~45pt pe un telefon, în care
     /// o rezervare de o oră încape doar ca o iconiță. Pe zi, același bloc are
@@ -65,6 +66,23 @@ struct CalendarView: View {
                     }
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+                // Butonul stă mereu la vedere, deasupra barei de taburi.
+                .overlay(alignment: .bottomTrailing) {
+                    Button {
+                        arataBlocare = true
+                    } label: {
+                        Label("Blochează ore", systemImage: "lock.fill")
+                            .font(.subheadline.weight(.semibold))
+                            .padding(.horizontal, 18)
+                            .frame(height: 50)
+                            .foregroundStyle(.white)
+                            .background(Tema.gradientAccent, in: .capsule)
+                            .shadow(color: Tema.accent.opacity(0.35), radius: 12, y: 6)
+                    }
+                    .apasabil()
+                    .padding(.trailing, 18)
+                    .padding(.bottom, 96)
+                }
             }
         }
         .navigationTitle("Calendar")
@@ -98,6 +116,17 @@ struct CalendarView: View {
                 )
             }
             .presentationDetents([.height(460), .large])
+        }
+        .sheet(isPresented: $arataBlocare) {
+            NavigationStack {
+                BlocheazaOreView(
+                    terenuri: terenuri,
+                    terenInitial: terenAles,
+                    ziInitiala: mod == .zi ? ziAleasa : inceputSaptamana,
+                    reincarca: { Task { await incarca() } }
+                )
+            }
+            .presentationDetents([.large])
         }
         .sheet(item: $celulaLibera) { celula in
             NavigationStack {
@@ -851,7 +880,7 @@ private struct DetaliuEveniment: View {
                 }
                 LabeledContent("Ora", value: eveniment.interval)
                 if eveniment.serieId != nil {
-                    LabeledContent("Se repetă", value: "Săptămânal")
+                    LabeledContent("Face parte din", value: "O serie de blocări")
                 }
                 if let subtitlu = eveniment.subtitlu, !subtitlu.isEmpty {
                     LabeledContent("Detalii", value: subtitlu)

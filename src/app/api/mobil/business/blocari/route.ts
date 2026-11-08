@@ -127,6 +127,8 @@ const serieSchema = z.object({
   oraSfarsit: z.number().int().min(1).max(24),
   dataInceput: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   saptamani: z.number().int().min(1).max(MAX_SAPTAMANI),
+  /** Blocare pe o perioadă: ultima zi inclusă. */
+  dataSfarsit: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
   motiv: z.string().trim().max(200).optional(),
   clientNume: z.string().trim().max(100).optional(),
   clientTelefon: z.string().trim().max(30).optional(),
@@ -147,6 +149,7 @@ export async function PUT(request: Request) {
         oraSfarsit: date.oraSfarsit,
         dataInceput: date.dataInceput,
         saptamani: date.saptamani,
+        dataSfarsit: date.dataSfarsit,
         motiv: date.motiv,
         clientNume: date.clientNume,
         clientTelefon: date.clientTelefon,

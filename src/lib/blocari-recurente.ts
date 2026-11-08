@@ -16,6 +16,8 @@ export type RegulaBlocare = {
   /** Prima zi luată în calcul, „2026-08-24”. */
   dataInceput: string;
   saptamani: number;
+  /** Ultima zi inclusă, „2026-09-03”. Fără ea, regula ține săptămâni întregi. */
+  dataSfarsit?: string | null;
   motiv?: string | null;
   clientNume?: string | null;
   clientTelefon?: string | null;
@@ -35,6 +37,7 @@ export function zileleRegulii(regula: {
   zile: number[];
   dataInceput: string;
   saptamani: number;
+  dataSfarsit?: string | null;
 }): string[] {
   const alese = new Set(regula.zile);
   const rezultat: string[] = [];
@@ -43,6 +46,8 @@ export function zileleRegulii(regula: {
   // decât un calcul de „următoarea zi de luni” și costă la fel de puțin.
   for (let i = 0; i < regula.saptamani * 7; i++) {
     const zi = adaugaZile(regula.dataInceput, i);
+    // Datele ISO se compară corect ca text.
+    if (regula.dataSfarsit && zi > regula.dataSfarsit) break;
     if (alese.has(ziuaSaptamanii(zi))) rezultat.push(zi);
   }
   return rezultat;
