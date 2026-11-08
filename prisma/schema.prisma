@@ -218,6 +218,9 @@ model Field {
   pricePerHour Decimal  @db.Decimal(10, 2)
   images      String[]
   amenities   String[]
+  /// Dimensiunea în jucători: „5+1”, „7+1” la fotbal, „3x3” la baschet etc.
+  /// Coduri din `src/lib/formate-teren.ts`; pot fi mai multe.
+  formate     String[]  @default([])
   isActive    Boolean   @default(true)
   contactPhone String?
 

@@ -3,13 +3,14 @@
 import Link from "next/link";
 import { FieldImage } from "@/components/field-image";
 import { motion } from "framer-motion";
-import { MapPin } from "lucide-react";
+import { MapPin, Users } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { FavoriteButton } from "@/components/favorite-button";
 import { TelefonTeren } from "@/components/telefon-teren";
 import { telefonAfisat } from "@/lib/telefon";
 import { sportMeta } from "@/lib/sports";
+import { formateleTerenului } from "@/lib/formate-teren";
 import type { SportType } from "@prisma/client";
 
 export type FieldCardData = {
@@ -21,6 +22,8 @@ export type FieldCardData = {
   images: string[];
   /** Numărul de contact, pentru programările date la telefon. */
   contactPhone: string | null;
+  /** Dimensiunea în jucători: „5+1”, „3x3”… */
+  formate?: string[];
 };
 
 export function FieldCard({
@@ -36,6 +39,7 @@ export function FieldCard({
   const meta = sportMeta[field.sportType];
   const SportIcon = meta.icon;
   const coverImage = field.images[0];
+  const formate = formateleTerenului(field.sportType, field.formate ?? []);
 
   return (
     <motion.div
@@ -77,9 +81,17 @@ export function FieldCard({
               <MapPin className="h-3.5 w-3.5" />
               {field.city}
             </p>
-            <div className="flex items-baseline gap-1 pt-1">
-              <span className="text-lg font-semibold">{field.pricePerHour.toFixed(0)}</span>
-              <span className="text-sm text-muted-foreground">RON / oră</span>
+            <div className="flex items-center justify-between gap-2 pt-1">
+              <div className="flex items-baseline gap-1">
+                <span className="text-lg font-semibold">{field.pricePerHour.toFixed(0)}</span>
+                <span className="text-sm text-muted-foreground">RON / oră</span>
+              </div>
+              {formate.length > 0 && (
+                <span className="flex items-center gap-1 rounded-full bg-muted px-2.5 py-1 text-[12px] font-semibold tabular-nums">
+                  <Users className="h-3.5 w-3.5 text-primary" />
+                  {formate.map((f) => f.cod).join(" · ")}
+                </span>
+              )}
             </div>
           </div>
         </Link>

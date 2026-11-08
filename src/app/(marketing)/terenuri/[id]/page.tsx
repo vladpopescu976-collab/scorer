@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { MapPin, Clock, Pencil, Sparkles } from "lucide-react";
+import { MapPin, Clock, Pencil, Sparkles, Users } from "lucide-react";
 
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
@@ -13,6 +13,7 @@ import { TelefonTeren } from "@/components/telefon-teren";
 import { FavoriteButton } from "@/components/favorite-button";
 import { Stars } from "@/components/reviews";
 import { sportMeta } from "@/lib/sports";
+import { formateleTerenului } from "@/lib/formate-teren";
 import { normalizeazaOras } from "@/lib/orase";
 
 // Baza Prisma Postgres se suspenda cand e inactiva, iar prima cerere
@@ -107,6 +108,13 @@ export default async function FieldDetailPage({ params }: { params: Promise<{ id
                 <SportIcon className="h-3.5 w-3.5" />
                 {meta.label}
               </Badge>
+              {formateleTerenului(field.sportType, field.formate).map((format) => (
+                <Badge key={format.cod} variant="outline" className="gap-1 tabular-nums">
+                  <Users className="h-3.5 w-3.5 text-primary" />
+                  {format.cod}
+                  <span className="font-normal text-muted-foreground">· {format.jucatori} jucători</span>
+                </Badge>
+              ))}
               {!field.isActive && <Badge variant="outline">Indisponibil</Badge>}
             </div>
             <h1 className="mt-3 text-2xl font-bold tracking-tight sm:text-3xl">{field.name}</h1>

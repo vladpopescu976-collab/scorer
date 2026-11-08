@@ -67,6 +67,10 @@ struct DetaliuTerenView: View {
                         Text(descriere).font(.callout).foregroundStyle(.secondary)
                     }
                 }
+                let formate = detaliu.teren.sport.formateAlese(detaliu.teren.formate)
+                if !formate.isEmpty {
+                    sectiune("Dimensiune") { dimensiuni(formate) }
+                }
                 if !detaliu.teren.facilitati.isEmpty {
                     sectiune("Facilități") { facilitati(detaliu.teren.facilitati) }
                 }
@@ -123,6 +127,23 @@ struct DetaliuTerenView: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .fisa()
+    }
+
+    private func dimensiuni(_ formate: [FormatTeren]) -> some View {
+        LazyVGrid(columns: [.init(.adaptive(minimum: 100), spacing: 8)], spacing: 8) {
+            ForEach(formate, id: \.cod) { format in
+                VStack(spacing: 2) {
+                    Text(format.cod).font(.title3.weight(.bold).monospacedDigit())
+                    Text(format.detaliu)
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 10)
+                .background(Tema.accent.opacity(0.10), in: .rect(cornerRadius: 12, style: .continuous))
+            }
+        }
     }
 
     private func facilitati(_ elemente: [String]) -> some View {

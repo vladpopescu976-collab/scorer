@@ -326,6 +326,13 @@ struct CardTeren: View {
                 HStack(alignment: .firstTextBaseline, spacing: 4) {
                     Text("\(Int(teren.pretPeOra)) RON").font(.subheadline.weight(.semibold))
                     Text("/ oră").font(.subheadline).foregroundStyle(.secondary)
+                    let formate = teren.sport.formateAlese(teren.formate)
+                    if !formate.isEmpty {
+                        Spacer(minLength: 8)
+                        Label(formate.map(\.cod).joined(separator: " · "), systemImage: "person.2.fill")
+                            .font(.caption.weight(.semibold).monospacedDigit())
+                            .foregroundStyle(Tema.accent)
+                    }
                 }
                 .padding(.top, 2)
             }

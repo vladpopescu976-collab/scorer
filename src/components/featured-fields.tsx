@@ -64,6 +64,7 @@ export async function FeaturedFields() {
                 pricePerHour: Number(field.pricePerHour),
                 images: field.images,
                 contactPhone: field.contactPhone,
+                formate: field.formate,
               }}
             />
           ))}

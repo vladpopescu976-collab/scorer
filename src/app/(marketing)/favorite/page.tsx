@@ -78,6 +78,7 @@ export default async function FavoritePage() {
                     pricePerHour: Number(favorite.field.pricePerHour),
                     images: favorite.field.images,
                     contactPhone: favorite.field.contactPhone,
+                    formate: favorite.field.formate,
                   }}
                 />
               ))}

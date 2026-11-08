@@ -19,6 +19,7 @@ struct FormularTerenView: View {
     @State private var telefon = ""
     @State private var descriere = ""
     @State private var facilitati: Set<String> = []
+    @State private var formate: Set<String> = []
     @State private var activ = true
 
     @State private var poze: [String] = []
@@ -39,6 +40,7 @@ struct FormularTerenView: View {
     var body: some View {
         Form {
             sectiuneDetalii
+            if !sport.formate.isEmpty { sectiuneDimensiune }
             sectiuneProgram
             sectiuneContact
             sectiuneFacilitati
@@ -83,6 +85,10 @@ struct FormularTerenView: View {
             orase = (try? await ApiClient.shared.cere("orase", ca: [OrasDisponibil].self)) ?? []
             if let teren { preia(teren) }
         }
+        .onChange(of: sport) { _, nou in
+            // „5+1” nu are sens la tenis: la schimbarea sportului cad formatele vechi.
+            formate = formate.filter { cod in nou.formate.contains { $0.cod == cod } }
+        }
         .onChange(of: alese) { _, noi in
             guard !noi.isEmpty else { return }
             Task { await incarca(noi) }
@@ -114,6 +120,43 @@ struct FormularTerenView: View {
 
             TextField("Preț pe oră (RON)", text: $pret)
                 .keyboardType(.numberPad)
+        }
+    }
+
+    private var sectiuneDimensiune: some View {
+        Section {
+            LazyVGrid(columns: [.init(.adaptive(minimum: 96), spacing: 8)], spacing: 8) {
+                ForEach(sport.formate, id: \.cod) { format in
+                    let ales = formate.contains(format.cod)
+                    Button {
+                        if ales { formate.remove(format.cod) } else { formate.insert(format.cod) }
+                    } label: {
+                        VStack(spacing: 2) {
+                            Text(format.cod)
+                                .font(.headline.monospacedDigit())
+                            Text("\(format.jucatori) jucători")
+                                .font(.caption2)
+                                .foregroundStyle(ales ? .white.opacity(0.85) : .secondary)
+                            if let nota = format.nota {
+                                Text(nota)
+                                    .font(.caption2)
+                                    .foregroundStyle(ales ? .white.opacity(0.85) : .secondary)
+                            }
+                        }
+                        .frame(maxWidth: .infinity, minHeight: 54)
+                        .padding(.vertical, 6)
+                        .background(ales ? Tema.accent : Tema.fundal,
+                                    in: .rect(cornerRadius: 12, style: .continuous))
+                        .foregroundStyle(ales ? .white : .primary)
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .padding(.vertical, 4)
+        } header: {
+            Text("Dimensiune")
+        } footer: {
+            Text("Câți jucători încap. Poți alege mai multe, dacă terenul se poate împărți.")
         }
     }
 
@@ -270,6 +313,7 @@ struct FormularTerenView: View {
         telefon = t.telefonContact ?? ""
         descriere = t.descriere ?? ""
         facilitati = Set(t.facilitati)
+        formate = Set(t.formate ?? [])
         poze = t.poze
         activ = t.activ
     }
@@ -307,6 +351,7 @@ struct FormularTerenView: View {
             let contactPhone: String
             let description: String?
             let amenities: [String]
+            let formate: [String]
             let images: [String]
             let isActive: Bool?
         }
@@ -322,6 +367,7 @@ struct FormularTerenView: View {
             contactPhone: telefon.trimmingCharacters(in: .whitespaces),
             description: descriere.isEmpty ? nil : descriere,
             amenities: Array(facilitati),
+            formate: sport.formate.map(\.cod).filter { formate.contains($0) },
             images: poze,
             isActive: esteEditare ? activ : nil
         )

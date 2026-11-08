@@ -142,6 +142,7 @@ async function Results({ sport, oras, pretMax, data }: SearchParams) {
               pricePerHour: Number(field.pricePerHour),
               images: field.images,
               contactPhone: field.contactPhone,
+              formate: field.formate,
             }}
           />
         ))}

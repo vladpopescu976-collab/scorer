@@ -14,6 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { addField, updateFieldDetails } from "@/lib/actions/business";
 import { sportOptions } from "@/lib/sports";
 import { MAX_FIELD_IMAGES, fieldEditSchema, fieldSchema } from "@/lib/validations/field";
+import { esteFormatValid, formatePentru } from "@/lib/formate-teren";
 import type { SportType } from "@prisma/client";
 
 const MAX_IMAGES = MAX_FIELD_IMAGES;
@@ -50,6 +51,7 @@ export type EditableField = {
   contactPhone: string | null;
   description: string | null;
   amenities: string[];
+  formate: string[];
   images: string[];
   extras: {
     id: string;
@@ -73,6 +75,7 @@ type FormState = {
   contactPhone: string;
   description: string;
   amenities: string;
+  formate: string[];
   isActive: boolean;
 };
 
@@ -88,6 +91,7 @@ const emptyForm: FormState = {
   contactPhone: "",
   description: "",
   amenities: "",
+  formate: [],
   isActive: true,
 };
 
@@ -104,6 +108,7 @@ function formFromField(field: EditableField): FormState {
     contactPhone: field.contactPhone ?? "",
     description: field.description ?? "",
     amenities: field.amenities.join(", "),
+    formate: field.formate,
     isActive: field.isActive,
   };
 }
@@ -247,6 +252,8 @@ export function FieldFormDialog({
       contactPhone: form.contactPhone.trim(),
       description: form.description.trim() || undefined,
       amenities: splitList(form.amenities, /,/),
+      // Doar formatele sportului ales: după o schimbare de sport, cele vechi cad.
+      formate: form.formate.filter((cod) => esteFormatValid(form.sportType, cod)),
       images,
     };
 
@@ -342,6 +349,44 @@ export function FieldFormDialog({
               <Input id="field-city" value={form.city} onChange={(e) => set("city", e.target.value)} placeholder="ex. București" className="mt-1.5" />
             </div>
           </div>
+
+          {formatePentru(form.sportType).length > 0 && (
+            <div>
+              <Label>Dimensiune</Label>
+              <p className="mt-0.5 text-[12.5px] text-muted-foreground">
+                Câți jucători încap. Poți alege mai multe, dacă terenul se poate împărți.
+              </p>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {formatePentru(form.sportType).map((format) => {
+                  const ales = form.formate.includes(format.cod);
+                  return (
+                    <button
+                      key={format.cod}
+                      type="button"
+                      aria-pressed={ales}
+                      onClick={() =>
+                        set(
+                          "formate",
+                          ales ? form.formate.filter((cod) => cod !== format.cod) : [...form.formate, format.cod]
+                        )
+                      }
+                      className={
+                        "flex min-w-[76px] flex-col items-center rounded-xl border px-3 py-2 transition-all " +
+                        (ales
+                          ? "border-primary bg-primary text-primary-foreground shadow-md shadow-primary/25"
+                          : "text-muted-foreground hover:border-primary/40 hover:text-foreground")
+                      }
+                    >
+                      <span className="text-[15px] font-bold tabular-nums">{format.cod}</span>
+                      <span className="text-[11px]">
+                        {format.jucatori} jucători{format.nota ? ` · ${format.nota}` : ""}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
           <div>
             <Label htmlFor="field-address">Adresă</Label>

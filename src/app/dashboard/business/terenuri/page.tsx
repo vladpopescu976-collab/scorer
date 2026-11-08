@@ -42,6 +42,7 @@ export default async function BusinessFieldsPage() {
         contactPhone: f.contactPhone,
         description: f.description,
         amenities: f.amenities,
+        formate: f.formate,
         images: f.images,
       }))}
     />

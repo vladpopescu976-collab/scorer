@@ -8,6 +8,54 @@ enum Rol: String, Codable, Sendable {
     case business = "BUSINESS"
 }
 
+/// Dimensiunea unui teren, cum o spun jucătorii. Același catalog ca pe site
+/// (`src/lib/formate-teren.ts`).
+struct FormatTeren: Hashable, Sendable {
+    let cod: String
+    /// Jucători în total, ambele echipe.
+    let jucatori: Int
+    var nota: String?
+
+    var detaliu: String { "\(jucatori) jucători" + (nota.map { " · \($0)" } ?? "") }
+}
+
+extension Sport {
+    var formate: [FormatTeren] {
+        switch self {
+        case .fotbal: [
+            FormatTeren(cod: "4+1", jucatori: 10), FormatTeren(cod: "5+1", jucatori: 12),
+            FormatTeren(cod: "6+1", jucatori: 14), FormatTeren(cod: "7+1", jucatori: 16),
+            FormatTeren(cod: "8+1", jucatori: 18), FormatTeren(cod: "10+1", jucatori: 22, nota: "teren mare"),
+        ]
+        case .baschet: [
+            FormatTeren(cod: "3x3", jucatori: 6, nota: "jumătate de teren"),
+            FormatTeren(cod: "5x5", jucatori: 10, nota: "teren întreg"),
+        ]
+        case .tenis, .badminton: [
+            FormatTeren(cod: "1x1", jucatori: 2, nota: "simplu"),
+            FormatTeren(cod: "2x2", jucatori: 4, nota: "dublu"),
+        ]
+        case .volei: [
+            FormatTeren(cod: "2x2", jucatori: 4, nota: "plajă"), FormatTeren(cod: "4x4", jucatori: 8),
+            FormatTeren(cod: "6x6", jucatori: 12, nota: "sală"),
+        ]
+        case .handbal: [
+            FormatTeren(cod: "4+1", jucatori: 10, nota: "minihandbal"), FormatTeren(cod: "6+1", jucatori: 14),
+        ]
+        case .padel: [
+            FormatTeren(cod: "1x1", jucatori: 2, nota: "single"),
+            FormatTeren(cod: "2x2", jucatori: 4, nota: "dublu"),
+        ]
+        case .altele: []
+        }
+    }
+
+    /// Formatele salvate ale unui teren, în ordinea din catalog.
+    func formateAlese(_ coduri: [String]?) -> [FormatTeren] {
+        formate.filter { (coduri ?? []).contains($0.cod) }
+    }
+}
+
 enum Sport: String, Codable, CaseIterable, Sendable {
     case fotbal = "FOOTBALL"
     case baschet = "BASKETBALL"
@@ -130,6 +178,8 @@ struct Teren: Codable, Identifiable, Sendable {
     let pretPeOra: Double
     let poze: [String]
     let facilitati: [String]
+    /// Dimensiunea în jucători („5+1”, „3x3”…). Lipsește pe serverele mai vechi.
+    var formate: [String]?
     let oraDeschidere: Int
     let oraInchidere: Int
     let telefonContact: String?

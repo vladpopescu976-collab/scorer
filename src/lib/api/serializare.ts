@@ -17,6 +17,7 @@ export type TerenApi = {
   pretPeOra: number;
   poze: string[];
   facilitati: string[];
+  formate: string[];
   oraDeschidere: number;
   oraInchidere: number;
   telefonContact: string | null;
@@ -49,6 +50,7 @@ export function serializeazaTeren(
     pretPeOra: Number(field.pricePerHour),
     poze: field.images,
     facilitati: field.amenities,
+    formate: field.formate,
     oraDeschidere: field.openingHour,
     oraInchidere: field.closingHour,
     telefonContact: field.contactPhone,

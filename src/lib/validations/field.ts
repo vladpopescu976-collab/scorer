@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { esteFormatValid } from "@/lib/formate-teren";
+
 // Aceleași reguli sunt folosite și în formular (client), și în acțiunea de
 // server. Altfel formularul lăsa să treacă date pe care serverul le respingea,
 // iar în producție mesajul real era ascuns de Next.
@@ -70,16 +72,26 @@ const fieldBaseSchema = z
       .array(z.string().trim().min(1))
       .max(20, "Poți adăuga maximum 20 de facilități.")
       .optional(),
+    // Dimensiunea în jucători („5+1”, „3x3”…). Lipsă = nu se schimbă.
+    formate: z.array(z.string().trim().min(1)).max(10).optional(),
     images: z
       .array(imageSourceSchema)
       .max(MAX_FIELD_IMAGES, `Poți adăuga maximum ${MAX_FIELD_IMAGES} poze.`)
       .optional(),
   });
 
-export const fieldSchema = fieldBaseSchema.refine(
-  (data) => data.closingHour > data.openingHour,
-  closingAfterOpening
-);
+// Formatele trebuie să fie ale sportului ales: „5+1” nu are sens la tenis.
+const formateValide = {
+  message: "Dimensiunea aleasă nu se potrivește cu sportul terenului.",
+  path: ["formate"],
+};
+function formatePotrivite(data: { sportType: Parameters<typeof esteFormatValid>[0]; formate?: string[] }) {
+  return (data.formate ?? []).every((cod) => esteFormatValid(data.sportType, cod));
+}
+
+export const fieldSchema = fieldBaseSchema
+  .refine((data) => data.closingHour > data.openingHour, closingAfterOpening)
+  .refine(formatePotrivite, formateValide);
 
 export type FieldInput = z.infer<typeof fieldSchema>;
 
@@ -90,7 +102,8 @@ export const fieldEditSchema = fieldBaseSchema
     fieldId: z.string().min(1),
     isActive: z.boolean(),
   })
-  .refine((data) => data.closingHour > data.openingHour, closingAfterOpening);
+  .refine((data) => data.closingHour > data.openingHour, closingAfterOpening)
+  .refine(formatePotrivite, formateValide);
 
 export type FieldEditInput = z.infer<typeof fieldEditSchema>;
 
