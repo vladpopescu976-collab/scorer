@@ -5,6 +5,8 @@ import { prisma } from "@/lib/prisma";
 import { registerSchema } from "@/lib/validations/auth";
 import { confirmareaEsteObligatorie, trimiteConfirmarea } from "@/lib/verificare-email";
 import { normalizeazaOras } from "@/lib/orase";
+import { ipDinCerere } from "@/lib/limitare";
+import { verificaInregistrare } from "@/lib/inregistrare-sigura";
 
 // Baza Prisma Postgres se suspenda cand e inactiva, iar prima cerere
 // care o trezeste poate dura ~30s. Implicit Vercel taie functia la 10s,
@@ -13,6 +15,18 @@ export const maxDuration = 60;
 
 export async function POST(request: Request) {
   const body = await request.json();
+
+  // Capcană pentru scripturi: câmpul e ascuns oamenilor, deci doar un script îl
+  // completează. Răspundem ca la o reușită, ca să nu afle ce l-a trădat.
+  if (typeof body?.confirmaEmail === "string" && body.confirmaEmail !== "") {
+    return NextResponse.json({ stare: "asteapta-confirmare", email: String(body.email ?? ""), emailTrimis: true });
+  }
+  // Un om nu completează patru pași în sub patru secunde.
+  const deschisLa = Number(body?.deschisLa);
+  if (Number.isFinite(deschisLa) && Date.now() - deschisLa < 4000) {
+    return NextResponse.json({ error: "Ai completat formularul prea repede. Mai încearcă o dată." }, { status: 429 });
+  }
+
   const parsed = registerSchema.safeParse(body);
 
   if (!parsed.success) {
@@ -28,6 +42,14 @@ export async function POST(request: Request) {
     companyName, website,
     marketingOptIn,
   } = parsed.data;
+
+  const refuz = await verificaInregistrare({
+    ip: ipDinCerere(request),
+    email,
+    parola: password,
+    nume: name,
+  });
+  if (refuz) return NextResponse.json({ error: refuz.mesaj }, { status: refuz.status });
 
   const existingUser = await prisma.user.findUnique({
     where: { email },

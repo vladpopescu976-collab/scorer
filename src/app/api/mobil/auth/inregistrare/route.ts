@@ -5,6 +5,8 @@ import { prisma } from "@/lib/prisma";
 import { eroare, eroareNeasteptata, raspuns } from "@/lib/api/raspuns";
 import { confirmareaEsteObligatorie, trimiteConfirmarea } from "@/lib/verificare-email";
 import { normalizeazaOras } from "@/lib/orase";
+import { ipDinCerere } from "@/lib/limitare";
+import { verificaInregistrare } from "@/lib/inregistrare-sigura";
 import {
   intervalValues,
   nivelValues,
@@ -57,6 +59,14 @@ const schema = z
 export async function POST(request: Request) {
   try {
     const date = schema.parse(await request.json());
+
+    const refuz = await verificaInregistrare({
+      ip: ipDinCerere(request),
+      email: date.email,
+      parola: date.password,
+      nume: date.name,
+    });
+    if (refuz) return eroare(refuz.mesaj, refuz.status);
 
     const existent = await prisma.user.findUnique({
       where: { email: date.email },

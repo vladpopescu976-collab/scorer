@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { LUNGIME_MINIMA, problemaParola } from "@/lib/parola-sigura";
+
 const email = z
   .string()
   .min(1, "Emailul este obligatoriu.")
@@ -33,11 +35,15 @@ export const numeSchema = z
   .string()
   .trim()
   .min(2, "Numele trebuie să aibă cel puțin 2 caractere.")
-  .max(100, "Numele este prea lung.");
+  .max(100, "Numele este prea lung.")
+  // Fără adrese, linkuri sau cifre singure în loc de nume: sunt semnul
+  // conturilor făcute de scripturi.
+  .refine((valoare) => !/[<>@/\\]|https?:|www\./i.test(valoare), "Numele nu poate conține adrese sau simboluri.")
+  .refine((valoare) => !/^[\d\s]+$/.test(valoare), "Introdu un nume, nu doar cifre.");
 
 export const parolaSchema = z
   .string()
-  .min(8, "Parola trebuie să aibă cel puțin 8 caractere.")
+  .min(LUNGIME_MINIMA, `Parola trebuie să aibă cel puțin ${LUNGIME_MINIMA} caractere.`)
   .max(72, "Parola este prea lungă.")
   .regex(/[a-zA-Z]/, "Parola trebuie să conțină cel puțin o literă.")
   .regex(/\d/, "Parola trebuie să conțină cel puțin o cifră.");
@@ -149,6 +155,9 @@ export const registerFormSchema = z
   // Denumirea firmei e cerută doar de la conturile Business; verificarea nu
   // poate sta pe câmp, fiindcă depinde de tipul de cont ales la primul pas.
   .superRefine((date, context) => {
+    const problema = problemaParola(date.password, date.name, date.email);
+    if (problema) context.addIssue({ code: "custom", path: ["password"], message: problema });
+
     if (date.role !== "BUSINESS") return;
 
     if (date.companyName.trim().length < 2) {

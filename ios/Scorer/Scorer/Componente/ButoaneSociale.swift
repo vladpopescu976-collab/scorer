@@ -2,80 +2,57 @@ import AuthenticationServices
 import CryptoKit
 import SwiftUI
 
-/// „Continuă cu Apple / Google". Fiecare furnizor dă aplicației un token de
-/// identitate, pe care serverul îl verifică înainte să creeze sau să deschidă
-/// contul.
+/// „Continuă cu Apple / Google". Doar sigla, în două butoane egale: textul nu
+/// aduce nimic, iar sigla se recunoaște dintr-o privire. Fiecare furnizor dă
+/// aplicației un token de identitate, pe care serverul îl verifică înainte să
+/// creeze sau să deschidă contul.
 struct ButoaneSociale: View {
     let continua: (_ furnizor: String, _ token: String, _ nume: String?) async throws -> Void
     let laEroare: (String) -> Void
 
-    @Environment(\.colorScheme) private var schema
     @State private var seIncarca = false
     private let google = GoogleAutentificare()
+    private let apple = AppleAutentificare()
 
     var body: some View {
-        VStack(spacing: 14) {
+        VStack(spacing: 16) {
             HStack(spacing: 12) {
-                Rectangle().fill(.secondary.opacity(0.25)).frame(height: 1)
+                Rectangle().fill(.secondary.opacity(0.22)).frame(height: 1)
                 Text("sau continuă cu").font(.caption).foregroundStyle(.secondary)
-                Rectangle().fill(.secondary.opacity(0.25)).frame(height: 1)
+                Rectangle().fill(.secondary.opacity(0.22)).frame(height: 1)
             }
 
-            HStack(spacing: 12) {
-                SignInWithAppleButton(.continue) { cerere in
-                    cerere.requestedScopes = [.fullName, .email]
-                } onCompletion: { rezultat in
-                    apple(rezultat)
+            HStack(spacing: 14) {
+                ButonSigla(eticheta: "Continuă cu Apple") {
+                    Image(systemName: "apple.logo")
+                        .font(.system(size: 24, weight: .regular))
+                        .foregroundStyle(.primary)
+                } actiune: {
+                    Task { await pornesteApple() }
                 }
-                .signInWithAppleButtonStyle(schema == .dark ? .white : .black)
-                .frame(height: 48)
-                .clipShape(.rect(cornerRadius: 14, style: .continuous))
 
-                Group {
-                    Button {
-                        Task { await pornesteGoogle() }
-                    } label: {
-                        HStack(spacing: 8) {
-                            Text("G").font(.system(size: 18, weight: .bold, design: .rounded))
-                                .foregroundStyle(Color(red: 0.26, green: 0.52, blue: 0.96))
-                            Text("Google").font(.subheadline.weight(.semibold))
-                        }
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 48)
-                        .background(Tema.fisa, in: .rect(cornerRadius: 14, style: .continuous))
-                        .overlay {
-                            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                                .strokeBorder(Color.primary.opacity(0.12), lineWidth: 1)
-                        }
-                    }
-                    .buttonStyle(.plain)
+                ButonSigla(eticheta: "Continuă cu Google") {
+                    SiglaGoogle().frame(width: 24, height: 24)
+                } actiune: {
+                    Task { await pornesteGoogle() }
                 }
             }
             .disabled(seIncarca)
             .opacity(seIncarca ? 0.5 : 1)
+            .animation(.easeOut(duration: 0.15), value: seIncarca)
         }
     }
 
-    private func apple(_ rezultat: Result<ASAuthorization, Error>) {
-        switch rezultat {
-        case .failure(let eroare):
-            // Renunțarea nu e o eroare de arătat.
-            if (eroare as? ASAuthorizationError)?.code != .canceled {
-                laEroare("Autentificarea cu Apple nu a reușit. Încearcă din nou.")
-            }
-        case .success(let autorizare):
-            guard
-                let date = autorizare.credential as? ASAuthorizationAppleIDCredential,
-                let bucati = date.identityToken,
-                let token = String(data: bucati, encoding: .utf8)
-            else {
-                laEroare("Apple nu a trimis datele necesare.")
-                return
-            }
-            // Apple trimite numele doar la prima autentificare.
-            let nume = [date.fullName?.givenName, date.fullName?.familyName]
-                .compactMap { $0 }.joined(separator: " ")
-            Task { await trimite("apple", token, nume.isEmpty ? nil : nume) }
+    private func pornesteApple() async {
+        seIncarca = true
+        defer { seIncarca = false }
+        do {
+            let rezultat = try await apple.autentifica()
+            try await continua("apple", rezultat.token, rezultat.nume)
+        } catch AppleEroare.renuntat {
+            // Utilizatorul a închis fereastra.
+        } catch {
+            laEroare(error.localizedDescription)
         }
     }
 
@@ -91,11 +68,129 @@ struct ButoaneSociale: View {
             laEroare(error.localizedDescription)
         }
     }
+}
 
-    private func trimite(_ furnizor: String, _ token: String, _ nume: String?) async {
-        seIncarca = true
-        defer { seIncarca = false }
-        do { try await continua(furnizor, token, nume) } catch { laEroare(error.localizedDescription) }
+/// Buton pătrat-lat cu o singură siglă: sticlă fină, contur subțire, umbră
+/// moale, și o mică apăsare la atingere.
+private struct ButonSigla<Sigla: View>: View {
+    let eticheta: String
+    @ViewBuilder let sigla: () -> Sigla
+    let actiune: () -> Void
+
+    var body: some View {
+        Button(action: actiune) {
+            sigla()
+                .frame(maxWidth: .infinity)
+                .frame(height: 54)
+                .background(Tema.fisa, in: .rect(cornerRadius: 18, style: .continuous))
+                .overlay {
+                    RoundedRectangle(cornerRadius: 18, style: .continuous)
+                        .strokeBorder(Color.primary.opacity(0.08), lineWidth: 1)
+                }
+                .shadow(color: .black.opacity(0.06), radius: 10, y: 4)
+                .contentShape(.rect(cornerRadius: 18, style: .continuous))
+        }
+        .buttonStyle(ApasabilStyle())
+        .accessibilityLabel(eticheta)
+    }
+}
+
+/// „G"-ul Google în cele patru culori ale mărcii, desenat ca arce: fără
+/// imagini în proiect și clar la orice dimensiune.
+private struct SiglaGoogle: View {
+    var body: some View {
+        GeometryReader { geo in
+            let d = min(geo.size.width, geo.size.height)
+            let grosime = d * 0.2
+            ZStack {
+                arc(de: 0.62, pana: 0.88, culoare: Color(red: 0.92, green: 0.26, blue: 0.21))   // roșu, sus
+                arc(de: 0.88, pana: 1.12, culoare: Color(red: 0.98, green: 0.74, blue: 0.02))   // galben, stânga
+                arc(de: 0.12, pana: 0.37, culoare: Color(red: 0.20, green: 0.66, blue: 0.33))   // verde, jos
+                arc(de: 0.37, pana: 0.5, culoare: Color(red: 0.26, green: 0.52, blue: 0.96))    // albastru, dreapta
+                Rectangle()
+                    .fill(Color(red: 0.26, green: 0.52, blue: 0.96))
+                    .frame(width: d * 0.46, height: grosime)
+                    .offset(x: d * 0.2, y: 0)
+            }
+            .frame(width: d - grosime, height: d - grosime)
+            .frame(width: geo.size.width, height: geo.size.height)
+        }
+    }
+
+    private func arc(de: Double, pana: Double, culoare: Color) -> some View {
+        GeometryReader { geo in
+            let d = min(geo.size.width, geo.size.height)
+            Circle()
+                .trim(from: de, to: pana)
+                .stroke(culoare, style: StrokeStyle(lineWidth: d * 0.25, lineCap: .butt))
+                .rotationEffect(.degrees(0))
+                .frame(width: d * 0.84, height: d * 0.84)
+                .frame(width: geo.size.width, height: geo.size.height)
+        }
+    }
+}
+
+// MARK: - Apple
+
+enum AppleEroare: LocalizedError {
+    case renuntat, raspunsInvalid
+
+    var errorDescription: String? {
+        switch self {
+        case .renuntat: nil
+        case .raspunsInvalid: "Autentificarea cu Apple nu a reușit. Încearcă din nou."
+        }
+    }
+}
+
+/// Sign in with Apple, pornit din butonul nostru, nu din cel standard: cel
+/// standard nu poate fi făcut doar siglă.
+@MainActor
+final class AppleAutentificare: NSObject, ASAuthorizationControllerDelegate,
+    ASAuthorizationControllerPresentationContextProviding
+{
+    private var continuare: CheckedContinuation<(token: String, nume: String?), Error>?
+
+    func presentationAnchor(for controller: ASAuthorizationController) -> ASPresentationAnchor {
+        UIApplication.shared.connectedScenes
+            .compactMap { ($0 as? UIWindowScene)?.keyWindow }.first ?? ASPresentationAnchor()
+    }
+
+    func autentifica() async throws -> (token: String, nume: String?) {
+        try await withCheckedThrowingContinuation { continuare in
+            self.continuare = continuare
+            let cerere = ASAuthorizationAppleIDProvider().createRequest()
+            cerere.requestedScopes = [.fullName, .email]
+            let controler = ASAuthorizationController(authorizationRequests: [cerere])
+            controler.delegate = self
+            controler.presentationContextProvider = self
+            controler.performRequests()
+        }
+    }
+
+    func authorizationController(controller: ASAuthorizationController, didCompleteWithAuthorization autorizare: ASAuthorization) {
+        defer { continuare = nil }
+        guard
+            let date = autorizare.credential as? ASAuthorizationAppleIDCredential,
+            let bucati = date.identityToken,
+            let token = String(data: bucati, encoding: .utf8)
+        else {
+            continuare?.resume(throwing: AppleEroare.raspunsInvalid)
+            return
+        }
+        // Apple trimite numele doar la prima autentificare.
+        let nume = [date.fullName?.givenName, date.fullName?.familyName]
+            .compactMap { $0 }.joined(separator: " ")
+        continuare?.resume(returning: (token, nume.isEmpty ? nil : nume))
+    }
+
+    func authorizationController(controller: ASAuthorizationController, didCompleteWithError eroare: Error) {
+        defer { continuare = nil }
+        if (eroare as? ASAuthorizationError)?.code == .canceled {
+            continuare?.resume(throwing: AppleEroare.renuntat)
+        } else {
+            continuare?.resume(throwing: AppleEroare.raspunsInvalid)
+        }
     }
 }
 
