@@ -4,7 +4,7 @@ import { esteEmailTemporar, problemaParola } from "@/lib/parola-sigura";
 import { inregistreazaEsec, verificaLimitarea } from "@/lib/limitare";
 
 /** Parola apare în breșe publice? Interogare k-anonimă: Have I Been Pwned primește doar 5 caractere din amprentă. */
-async function parolaCompromisa(parola: string): Promise<boolean> {
+export async function parolaCompromisa(parola: string): Promise<boolean> {
   try {
     const amprenta = createHash("sha1").update(parola).digest("hex").toUpperCase();
     const raspuns = await fetch(`https://api.pwnedpasswords.com/range/${amprenta.slice(0, 5)}`, {

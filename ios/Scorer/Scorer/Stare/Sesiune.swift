@@ -160,6 +160,14 @@ final class Sesiune {
         utilizator = raspuns.utilizator
     }
 
+
+    /// Citește din nou profilul, după o schimbare de email, telefon sau parolă.
+    func reincarcaProfil() async {
+        if let actual = try? await ApiClient.shared.cere("eu", ca: Utilizator.self) {
+            utilizator = actual
+        }
+    }
+
     func deconecteaza() async {
         Keychain.sterge(cheieToken)
         await ApiClient.shared.seteazaToken(nil)

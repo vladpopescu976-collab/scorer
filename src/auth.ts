@@ -109,10 +109,22 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       user.role = rezultat.rol;
       return true;
     },
-    jwt({ token, user }) {
+    async jwt({ token, user, trigger }) {
       if (user) {
         token.id = user.id as string;
         token.role = user.role;
+      }
+      // După schimbarea emailului din „Contul meu”, pagina cere o actualizare
+      // a sesiunii, ca peste tot să apară adresa nouă.
+      if (trigger === "update" && token.id) {
+        const actual = await prisma.user.findUnique({
+          where: { id: token.id as string },
+          select: { email: true, name: true },
+        });
+        if (actual) {
+          token.email = actual.email;
+          token.name = actual.name;
+        }
       }
       return token;
     },

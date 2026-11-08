@@ -509,7 +509,7 @@ private struct StepperPasi: View {
 }
 
 /// Lista de cerințe, care se bifează animat cât scrii parola.
-private struct CerinteParolaView: View {
+struct CerinteParolaView: View {
     let parola: String
     let nume: String
     let email: String
