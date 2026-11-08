@@ -30,13 +30,14 @@ export const CampParola = forwardRef<
     <div className="space-y-1.5">
       <div className="relative">
         {Pictograma && (
-          <Pictograma className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Pictograma className="pointer-events-none absolute left-4 top-1/2 h-[18px] w-[18px] -translate-y-1/2 text-muted-foreground" />
         )}
         <Input
           {...props}
           ref={ref}
           type={vizibila ? "text" : "password"}
-          className={Pictograma ? "pl-10 pr-11" : "pr-11"}
+          data-cu-icon={Pictograma ? "" : undefined}
+          className={Pictograma ? "pl-12 pr-14" : "pl-4 pr-14"}
           onKeyDown={(e) => {
             verificaCaps(e);
             onKeyDown?.(e);
@@ -55,7 +56,7 @@ export const CampParola = forwardRef<
           onClick={() => setVizibila((v) => !v)}
           aria-label={vizibila ? "Ascunde parola" : "Arată parola"}
           aria-pressed={vizibila}
-          className="absolute right-1 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none"
+          className="absolute right-1.5 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none"
         >
           {vizibila ? (
             <EyeOff className="h-4 w-4" />

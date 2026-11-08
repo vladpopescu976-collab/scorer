@@ -12,6 +12,9 @@ import {
   Check,
   CheckCircle2,
   ClipboardList,
+  Globe,
+  MapPin,
+  Phone,
   Loader2,
   Lock,
   Mail,
@@ -712,7 +715,8 @@ function CampOras({ form }: { form: FormularInregistrare }) {
         <FormItem>
           <FormLabel>Oraș</FormLabel>
           <FormControl>
-            <Input
+            <CampIcon
+              pictograma={MapPin}
               placeholder="Timișoara"
               list="orase-inregistrare"
               autoComplete="address-level2"
@@ -746,7 +750,8 @@ function CampTelefon({ form }: { form: FormularInregistrare }) {
         <FormItem>
           <FormLabel>Telefon</FormLabel>
           <FormControl>
-            <Input
+            <CampIcon
+              pictograma={Phone}
               placeholder="0722 123 456"
               type="tel"
               autoComplete="tel"
@@ -904,7 +909,8 @@ function ProfilBusiness({ form }: { form: FormularInregistrare }) {
           <FormItem>
             <FormLabel>Denumirea firmei</FormLabel>
             <FormControl>
-              <Input
+              <CampIcon
+                pictograma={Building2}
                 placeholder="Sport Arena SRL"
                 autoComplete="organization"
                 {...field}
@@ -946,7 +952,7 @@ function ProfilBusiness({ form }: { form: FormularInregistrare }) {
           <FormItem>
             <FormLabel>Site (opțional)</FormLabel>
             <FormControl>
-              <Input placeholder="terenulmeu.ro" inputMode="url" {...field} />
+              <CampIcon pictograma={Globe} placeholder="terenulmeu.ro" inputMode="url" {...field} />
             </FormControl>
             <FormMessage />
           </FormItem>
