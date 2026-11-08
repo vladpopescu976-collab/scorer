@@ -84,10 +84,25 @@ export function BookingForm({
     }
   }
 
-  const busy = useMemo(
-    () => (date ? busyHours(date, occupied, openingHour, closingHour) : new Set<number>()),
-    [date, occupied, openingHour, closingHour]
-  );
+  // Orele care au început deja nu se mai pot rezerva: serverul refuză orice
+  // rezervare care pornește în trecut, deci și ora în curs. Înainte le arătam
+  // libere, iar la 21:30 intervalul 21–22 părea liber și apoi era respins.
+  const inceput = useMemo(() => {
+    const set = new Set<number>();
+    if (!date) return set;
+    const acum = new Date();
+    for (let ora = openingHour; ora < closingHour; ora++) {
+      if (new Date(date.getFullYear(), date.getMonth(), date.getDate(), ora) <= acum) set.add(ora);
+    }
+    return set;
+  }, [date, openingHour, closingHour]);
+
+  const busy = useMemo(() => {
+    if (!date) return new Set<number>();
+    const set = busyHours(date, occupied, openingHour, closingHour);
+    inceput.forEach((ora) => set.add(ora));
+    return set;
+  }, [date, occupied, openingHour, closingHour, inceput]);
 
   const startOptions = useMemo(() => hourLabels(openingHour, closingHour), [openingHour, closingHour]);
   const endOptions = useMemo(() => {
@@ -102,7 +117,11 @@ export function BookingForm({
 
   function pickStart(value: string) {
     if (busy.has(hourOf(value))) {
-      setError(`Intervalul ${value} este deja rezervat pe acest teren. Alege altă oră.`);
+      setError(
+        inceput.has(hourOf(value))
+          ? `Ora ${value} a început deja. Alege o oră de mai târziu.`
+          : `Intervalul ${value} este deja rezervat pe acest teren. Alege altă oră.`
+      );
       return;
     }
     setError("");

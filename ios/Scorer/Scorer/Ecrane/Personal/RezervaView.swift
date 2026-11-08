@@ -188,10 +188,10 @@ struct RezervaView: View {
             // Intervalul și durata stau împreună, deasupra grilei: puse sub
             // ea, ajungeau dincolo de marginea ecranului imediat ce alegeai o
             // oră, iar alegerea duratei părea că nu există.
-            if let start = oraStart, let sfarsit = oraSfarsit {
-                bannerInterval(start, sfarsit)
-                selectorDurata(start)
-            }
+            // Stau mereu pe ecran, chiar fără nimic ales: altfel grila cobora
+            // la prima apăsare, iar a doua apăsare nimerea altă oră.
+            bannerInterval(oraStart, oraSfarsit)
+            selectorDurata(oraStart)
 
             // Coloanele sunt mai late decât ar cere o singură oră, fiindcă
             // fiecare celulă scrie intervalul întreg: „18:00 – 19:00”, nu
@@ -220,7 +220,7 @@ struct RezervaView: View {
     /// Intervalul ales, scris o dată mare și fără prescurtări. Fără el,
     /// alegerea unei singure ore se vedea doar ca o celulă colorată, iar ora
     /// la care se termină rezervarea trebuia ghicită.
-    private func bannerInterval(_ start: Int, _ sfarsit: Int) -> some View {
+    private func bannerInterval(_ start: Int?, _ sfarsit: Int?) -> some View {
         HStack(spacing: 10) {
             Image(systemName: "clock.fill")
                 .font(.system(size: 13, weight: .semibold))
@@ -229,10 +229,18 @@ struct RezervaView: View {
                 .background(Tema.gradientAccent, in: .circle)
 
             VStack(alignment: .leading, spacing: 1) {
-                Text("\(format(start)) – \(format(sfarsit))")
-                    .font(.title3.weight(.bold).monospacedDigit())
-                Text("\(sfarsit - start) \(sfarsit - start == 1 ? "oră" : "ore") · \(zi.ziScurta)")
-                    .font(.caption).foregroundStyle(.secondary)
+                if let start, let sfarsit {
+                    Text("\(format(start)) – \(format(sfarsit))")
+                        .font(.title3.weight(.bold).monospacedDigit())
+                    Text("\(sfarsit - start) \(sfarsit - start == 1 ? "oră" : "ore") · \(zi.ziScurta)")
+                        .font(.caption).foregroundStyle(.secondary)
+                } else {
+                    Text("Niciun interval ales")
+                        .font(.title3.weight(.bold))
+                        .foregroundStyle(.secondary)
+                    Text("Apasă o oră; apoi alte ore ca să-l lungești")
+                        .font(.caption).foregroundStyle(.secondary)
+                }
             }
             Spacer()
         }
@@ -245,14 +253,16 @@ struct RezervaView: View {
 
     /// După ce s-a ales începutul, durata e mai ușor de gândit decât o a doua
     /// oră căutată în grilă. Apar doar duratele care chiar încap.
-    private func selectorDurata(_ start: Int) -> some View {
-        let maxim = maximOreLibere(de: start)
+    private func selectorDurata(_ startAles: Int?) -> some View {
+        let start = startAles ?? teren.oraDeschidere
+        let maxim = startAles == nil ? 4 : maximOreLibere(de: start)
         return VStack(alignment: .leading, spacing: 8) {
             Text("Cât durează?").font(.footnote.weight(.medium)).foregroundStyle(.secondary)
 
             HStack(spacing: 8) {
-                ForEach(1...min(maxim, 4), id: \.self) { ore in
-                    let ales = oraSfarsit == start + ore
+                ForEach(1...4, id: \.self) { ore in
+                    let ales = startAles != nil && oraSfarsit == start + ore
+                    let posibil = startAles != nil && ore <= maxim
                     Button {
                         withAnimation(.snappy) {
                             eroare = nil
@@ -264,7 +274,7 @@ struct RezervaView: View {
                                 .font(.caption.weight(.semibold))
                             // Scrie unde ajunge alegerea, ca durata să nu fie
                             // un număr din care trebuie calculată ora de final.
-                            Text("→ \(format(start + ore))")
+                            Text(startAles == nil ? " " : "→ \(format(start + ore))")
                                 .font(.system(size: 10, weight: .medium).monospacedDigit())
                                 .opacity(0.85)
                         }
@@ -276,10 +286,12 @@ struct RezervaView: View {
                         .clipShape(.rect(cornerRadius: 10, style: .continuous))
                     }
                     .apasabil()
+                    .disabled(!posibil)
+                    .opacity(posibil ? 1 : 0.4)
                 }
             }
 
-            if maxim == 1 {
+            if startAles != nil && maxim == 1 {
                 Text("După \(format(start + 1)) urmează un interval ocupat.")
                     .font(.caption2).foregroundStyle(.secondary)
             }
@@ -298,13 +310,15 @@ struct RezervaView: View {
     }
 
     private var indicatie: String {
-        oraStart == nil ? "Alege intervalul" : "Intervalul ales"
+        // Un singur rând în ambele stări, ca grila să nu se miște între apăsări.
+        oraStart == nil ? "Alege orele" : "Intervalul ales"
     }
 
     private var legenda: some View {
         HStack(spacing: 14) {
             eticheta(culoare: Tema.fisa, contur: true, text: "Liber")
             eticheta(culoare: Tema.ocupat.opacity(0.16), contur: false, text: "Ocupat")
+            eticheta(culoare: Color.secondary.opacity(0.12), contur: false, text: "Trecut")
             eticheta(culoare: Tema.accent, contur: false, text: "Ales")
             Spacer()
         }
@@ -446,13 +460,22 @@ struct RezervaView: View {
 
     // Orele alese arată la fel, indiferent dacă sunt prima, ultima sau la
     // mijloc: intervalul se citește din text, nu din nuanțe de verde.
-    enum StareOra { case libera, ocupata, aleasa }
+    enum StareOra { case libera, ocupata, aleasa, trecuta }
 
     private func stareOra(_ ora: Int) -> StareOra {
         if let start = oraStart, let sfarsit = oraSfarsit, ora >= start, ora < sfarsit {
             return .aleasa
         }
+        if aInceput(ora) { return .trecuta }
         return esteOcupata(ora) ? .ocupata : .libera
+    }
+
+    /// Ora a început deja. Serverul refuză orice rezervare care pornește în
+    /// trecut, deci și ora în curs: înainte o arătam liberă până la sfârșitul
+    /// ei, iar la 21:30 intervalul 21–22 părea liber și apoi era respins.
+    private func aInceput(_ ora: Int) -> Bool {
+        guard let inceput = Calendar.current.date(bySettingHour: ora, minute: 0, second: 0, of: zi) else { return false }
+        return inceput <= Date()
     }
 
     private func esteOcupata(_ ora: Int) -> Bool {
@@ -462,27 +485,61 @@ struct RezervaView: View {
             let sfarsit = calendar.date(byAdding: .hour, value: 1, to: inceput)
         else { return false }
 
-        // Orele deja trecute din ziua curentă nu mai pot fi rezervate.
-        if sfarsit <= Date() { return true }
+        if aInceput(ora) { return true }
 
         return ocupate.contains { $0.inceput < sfarsit && $0.sfarsit > inceput }
     }
 
+    /// Toate orele din [de, pana) sunt libere?
+    private func suntLibere(de: Int, pana: Int) -> Bool {
+        (de..<pana).allSatisfy { !esteOcupata($0) }
+    }
+
+    /// Se pot apăsa mai multe căsuțe la rând: prima apăsare alege o oră, iar
+    /// următoarele întind sau strâng intervalul. Durata de deasupra grilei
+    /// rămâne ca scurtătură.
     private func alegeOra(_ ora: Int) {
-        if esteOcupata(ora) {
-            let trecut = Calendar.current.isDateInToday(zi)
-                && (Calendar.current.date(bySettingHour: ora, minute: 59, second: 0, of: zi) ?? .distantPast) < Date()
-            eroare = trecut
-                ? "Ora \(format(ora)) a trecut deja."
+        let selectata = oraStart.map { ora >= $0 && ora < (oraSfarsit ?? $0 + 1) } ?? false
+        if esteOcupata(ora) && !selectata {
+            eroare = aInceput(ora)
+                ? "Ora \(format(ora)) a început deja. Alege o oră de mai târziu."
                 : "Intervalul \(format(ora))–\(format(ora + 1)) este deja ocupat. Alege altă oră."
             return
         }
 
         withAnimation(.snappy) {
             eroare = nil
-            // Apăsarea alege mereu ora de început; durata se alege dedesubt.
-            oraStart = ora
-            oraSfarsit = ora + 1
+            guard let start = oraStart, let sfarsit = oraSfarsit else {
+                oraStart = ora
+                oraSfarsit = ora + 1
+                return
+            }
+
+            if ora >= sfarsit {
+                // După interval: îl întinde până la ora apăsată, dacă tot drumul e liber.
+                if suntLibere(de: sfarsit, pana: ora + 1) {
+                    oraSfarsit = ora + 1
+                } else {
+                    oraStart = ora; oraSfarsit = ora + 1
+                    eroare = "Între ele e o oră ocupată, așa că am început un interval nou de la \(format(ora))."
+                }
+            } else if ora < start {
+                // Înainte de interval: îl întinde înapoi.
+                if suntLibere(de: ora, pana: start) {
+                    oraStart = ora
+                } else {
+                    oraStart = ora; oraSfarsit = ora + 1
+                    eroare = "Între ele e o oră ocupată, așa că am început un interval nou de la \(format(ora))."
+                }
+            } else if sfarsit - start == 1 {
+                // A apăsat singura oră aleasă: o deselectează.
+                oraStart = nil; oraSfarsit = nil
+            } else if ora == start {
+                oraStart = start + 1
+            } else {
+                // Pe o oră din interval: îl scurtează până la ea, inclusiv.
+                oraSfarsit = ora == sfarsit - 1 ? sfarsit - 1 : ora + 1
+            }
         }
     }
 
@@ -651,6 +708,7 @@ private struct CelulaOra: View {
         case .ocupata: "ocupat"
         case .aleasa: "ales"
         case .libera: "liber"
+        case .trecuta: "trecut"
         }
     }
 
@@ -660,6 +718,7 @@ private struct CelulaOra: View {
         case .aleasa: Tema.gradientAccent
         case .ocupata: Tema.ocupat.opacity(0.10)
         case .libera: Tema.fundal
+        case .trecuta: Color.secondary.opacity(0.08)
         }
     }
 
@@ -668,6 +727,7 @@ private struct CelulaOra: View {
         case .aleasa: .white
         case .ocupata: Tema.ocupat.opacity(0.85)
         case .libera: .primary
+        case .trecuta: .secondary.opacity(0.6)
         }
     }
 
