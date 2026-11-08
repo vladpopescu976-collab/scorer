@@ -25,7 +25,9 @@ struct RezervaView: View {
     @State private var seIncarcaOre = true
     @State private var seTrimite = false
     @State private var eroare: String?
-    @State private var metodaPlata = MetodaPlata.applePay
+    /// Nimic ales la început: butonul de jos întreabă întâi cum vrei să rezervi.
+    @State private var metodaPlata: MetodaPlata?
+    @State private var sprePlata = 0
     @State private var applePay = ApplePay()
 
     private var esteMutare: Bool { rezervareExistenta != nil }
@@ -37,6 +39,7 @@ struct RezervaView: View {
         ZStack(alignment: .bottom) {
             Tema.fundal.ignoresSafeArea()
 
+            ScrollViewReader { derulare in
             ScrollView {
                 VStack(spacing: 14) {
                     selectorZile
@@ -44,12 +47,16 @@ struct RezervaView: View {
                     grilaOre
                     if !esteMutare && !optiuni.isEmpty { sectiuneOptiuni }
                     if !esteMutare { campObservatii }
-                    if !esteMutare && oraStart != nil { AlegeMetodaPlata(metoda: $metodaPlata) }
+                    if !esteMutare && oraStart != nil { AlegeMetodaPlata(metoda: $metodaPlata).id("plata") }
                     if let eroare { casetaEroare(eroare) }
                     Color.clear.frame(height: 130)
                 }
                 .padding(.horizontal, Tema.spatiu)
                 .padding(.top, 8)
+            }
+            .onChange(of: sprePlata) {
+                withAnimation(.snappy) { derulare.scrollTo("plata", anchor: .center) }
+            }
             }
 
             bataieDeSubsol
@@ -451,7 +458,15 @@ struct RezervaView: View {
                 .transition(.opacity.combined(with: .move(edge: .bottom)))
             }
 
-            if !esteMutare && metodaPlata == .applePay {
+            if !esteMutare && metodaPlata == nil {
+                // Până nu se alege plata, butonul duce la alegere.
+                ButonPrincipal(
+                    titlu: "Cum dorești să rezervi?",
+                    simbol: "hand.tap.fill",
+                    activ: oraStart != nil && oraSfarsit != nil,
+                    actiune: { if oraStart != nil { sprePlata += 1 } }
+                )
+            } else if !esteMutare && metodaPlata == .applePay {
                 // Butonul oficial Apple Pay, cum îl recunoaște oricine.
                 PayWithApplePayButton(.book) { platesteCuApplePay() }
                     .payWithApplePayButtonStyle(.black)
@@ -472,6 +487,7 @@ struct RezervaView: View {
         .padding(Tema.spatiu)
         .background(.regularMaterial)
         .animation(.snappy, value: oraSfarsit)
+        .animation(.snappy, value: metodaPlata)
     }
 
     // MARK: - Stări ore

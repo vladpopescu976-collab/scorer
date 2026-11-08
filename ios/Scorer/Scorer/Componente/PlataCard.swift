@@ -70,11 +70,11 @@ final class ApplePay: NSObject, PKPaymentAuthorizationControllerDelegate {
 }
 
 struct AlegeMetodaPlata: View {
-    @Binding var metoda: MetodaPlata
+    @Binding var metoda: MetodaPlata?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("Plata").font(.subheadline.weight(.medium))
+            Text("Cum dorești să rezervi?").font(.subheadline.weight(.medium))
             HStack(spacing: 10) {
                 ForEach(MetodaPlata.allCases) { optiune in
                     let ales = metoda == optiune
