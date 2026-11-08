@@ -33,4 +33,4 @@ export function AuthShell({ children }: { children: React.ReactNode }) {
 
 /** Suprafața de sticlă pe care stau formularele. */
 export const CARD_AUTH =
-  "rounded-3xl border border-white/60 bg-card/75 shadow-xl shadow-primary/10 backdrop-blur-xl dark:border-white/10 [&_[data-slot=input]]:h-11 [&_[data-slot=input]]:rounded-xl [&_[data-slot=input]]:text-base";
+  "rounded-3xl border border-white/60 bg-card/75 shadow-xl shadow-primary/10 backdrop-blur-xl dark:border-white/10 [&_[data-slot=input]]:h-11 [&_[data-slot=input]]:rounded-xl [&_[data-slot=input]]:text-base [&_[data-slot=form-item]]:gap-3 [&_[data-slot=form-description]]:leading-relaxed [&_[data-slot=card-content]]:px-6 sm:[&_[data-slot=card-content]]:px-8";

@@ -23,14 +23,14 @@ export function CerinteParola({
     <motion.ul
       initial={{ opacity: 0, height: 0 }}
       animate={{ opacity: 1, height: "auto" }}
-      className="grid grid-cols-1 gap-x-4 gap-y-1.5 overflow-hidden pt-1 sm:grid-cols-2"
+      className="mt-3 grid grid-cols-1 gap-x-5 gap-y-2.5 overflow-hidden rounded-xl bg-muted/50 px-4 py-3.5 sm:grid-cols-2"
       aria-label="Cerințe pentru parolă"
     >
       {cerinte.map((c) => (
         <li
           key={c.id}
           className={cn(
-            "flex items-center gap-2 text-xs transition-colors",
+            "flex items-center gap-2.5 text-[12.5px] leading-snug transition-colors",
             c.indeplinita ? "text-primary" : "text-muted-foreground",
           )}
         >

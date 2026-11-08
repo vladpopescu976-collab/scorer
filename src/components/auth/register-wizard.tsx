@@ -244,7 +244,7 @@ export function RegisterWizard({ role }: { role: Role }) {
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(trimite)} className="space-y-5">
+      <form onSubmit={form.handleSubmit(trimite)} className="space-y-8">
         <Progres pas={pas} />
 
         {/* Capcană pentru scripturi: invizibilă și ignorată de tastatură. */}
@@ -270,7 +270,7 @@ export function RegisterWizard({ role }: { role: Role }) {
             initial={{ opacity: 0, x: directie * 28 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
-            className="space-y-4"
+            className="space-y-6"
           >
             {pas === 0 && <PasTipCont form={form} />}
             {pas === 1 && <PasDate form={form} />}
@@ -279,7 +279,7 @@ export function RegisterWizard({ role }: { role: Role }) {
           </motion.div>
         </div>
 
-        <div className="flex gap-2 pt-1">
+        <div className="flex gap-3 pt-2">
           {pas > 0 && (
             <Button
               type="button"
@@ -327,7 +327,7 @@ const PICTOGRAME = [Sparkles, UserRound, ClipboardList, ShieldCheck] as const;
 
 function Progres({ pas }: { pas: number }) {
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <ol className="flex items-center" aria-label="Pașii înregistrării">
         {PASI.map((p, index) => {
           const Pictograma = PICTOGRAME[index];
@@ -392,7 +392,7 @@ function Progres({ pas }: { pas: number }) {
         })}
       </ol>
 
-      <div className="space-y-0.5 text-center">
+      <div className="space-y-1.5 text-center">
         <AnimatePresence mode="wait" initial={false}>
           <motion.div
             key={pas}
@@ -533,7 +533,7 @@ function SugestieEmail({
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0 }}
           onClick={() => aplica(sugestie)}
-          className="mt-1 block text-left text-xs text-primary underline underline-offset-4"
+          className="mt-2 block text-left text-[13px] text-primary underline underline-offset-4"
         >
           Ai vrut să scrii {sugestie}?
         </motion.button>

@@ -177,9 +177,7 @@ private struct FormularAutentificare: View {
         VStack(spacing: 18) {
             Spacer()
 
-            Image(systemName: "envelope.badge")
-                .font(.system(size: 46))
-                .foregroundStyle(Tema.accent)
+            SuccesAnimat(simbol: "envelope.fill")
 
             VStack(spacing: 8) {
                 Text("Verifică-ți emailul")
@@ -235,158 +233,105 @@ private struct FormularAutentificare: View {
 
     private var formular: some View {
         ScrollView {
-            VStack(spacing: 20) {
-                VStack(spacing: 12) {
+            VStack(spacing: 28) {
+                VStack(spacing: 14) {
                     SiglaScorer(marime: 52)
-                    VStack(spacing: 5) {
+                    VStack(spacing: 6) {
                         Text(modInregistrare ? "Creează un cont" : "Bine ai revenit")
                             .font(.title2.bold())
-                        Text(modInregistrare
-                             ? (rol == .business ? "Pentru terenurile tale." : "Pentru rezervări rapide.")
-                             : "Intră în cont ca să continui.")
+                        Text(modInregistrare ? "Durează mai puțin de un minut." : "Intră în cont ca să continui.")
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
                     }
                 }
-                .padding(.top, 4)
+                .padding(.top, 8)
 
-                VStack(spacing: 16) {
+                VStack(spacing: 26) {
                     ComutatorAuth(inregistrare: $modInregistrare)
 
-                    VStack(spacing: 12) {
-                        if modInregistrare {
-                            CampAuth(
-                                titlu: rol == .business ? "Persoană de contact" : "Nume complet",
-                                simbol: "person", text: $nume, tipContinut: .name
-                            )
-                        }
-
-                        CampAuth(
-                            titlu: "Adresă de email", simbol: "envelope", text: $email,
-                            tipTastatura: .emailAddress, tipContinut: .emailAddress,
-                            faraMajuscule: true
-                        )
-
-                        CampAuth(
-                            titlu: "Parolă", simbol: "lock", text: $parola, parola: true,
-                            tipContinut: modInregistrare ? .newPassword : .password
-                        )
-                        if modInregistrare { PutereaParolei(parola: parola) }
-
-                        if modInregistrare {
-                            CampAuth(
-                                titlu: "Confirmă parola", simbol: "lock.rotation",
-                                text: $confirmareParola, parola: true, tipContinut: .newPassword,
-                                // Scris cât tastezi, nu abia la trimitere.
-                                eroare: !confirmareParola.isEmpty && confirmareParola != parola
-                                    ? "Parolele nu coincid." : nil
-                            )
-                            CampAuth(
-                                titlu: "Telefon", simbol: "phone", text: $telefon,
-                                tipTastatura: .phonePad, tipContinut: .telephoneNumber
-                            )
-                            CampAuth(
-                                titlu: "Oraș", simbol: "mappin.and.ellipse", text: $oras,
-                                tipContinut: .addressCity
-                            )
-
-                            if rol == .business {
-                                CampAuth(
-                                    titlu: "Denumirea firmei", simbol: "building.2",
-                                    text: $numeFirma, tipContinut: .organizationName
-                                )
-                                CampAuth(
-                                    titlu: "Site (opțional)", simbol: "globe", text: $site,
-                                    tipTastatura: .URL, tipContinut: .URL, faraMajuscule: true
-                                )
-                            }
-
-                            Text("Parola trebuie să aibă cel puțin 8 caractere, dintre care o literă și o cifră.")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                                .padding(.horizontal, 4)
-                        }
-                    }
-
-                    if !modInregistrare {
-                        HStack {
-                            Spacer()
-                            Button(parolaCeruta ? "Link trimis pe email" : "Ai uitat parola?") {
-                                cereParolaNoua()
-                            }
-                            .font(.footnote.weight(.medium))
-                            .foregroundStyle(Tema.accent)
-                            .disabled(parolaCeruta || seTrimite)
-                        }
-                        if parolaCeruta {
-                            Text("Dacă adresa are un cont, linkul de schimbare a parolei e pe drum. Este valabil o oră.")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                        }
-                    }
-
-                    if contulEGata {
-                        Label("Contul a fost creat. Autentifică-te cu datele lui.", systemImage: "checkmark.circle.fill")
-                            .font(.footnote)
-                            .foregroundStyle(Tema.accent)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                    }
-
-                    if let eroare {
-                        VStack(alignment: .leading, spacing: 6) {
-                            Text(eroare)
-                                .font(.footnote)
-                                .foregroundStyle(Tema.ocupat)
-                            Button("Schimbă adresa serverului") { arataSetariServer = true }
-                                .font(.footnote)
-                            Text("Server: \(Config.textServer)")
-                                .font(.caption2)
-                                .foregroundStyle(.secondary)
-                        }
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(12)
-                        .background(Tema.ocupat.opacity(0.08), in: .rect(cornerRadius: 12, style: .continuous))
-                    }
-
-                    ButonPrincipal(
-                        titlu: modInregistrare ? "Creează contul" : "Autentificare",
-                        seIncarca: seTrimite,
-                        actiune: trimite
-                    )
-
-                    ButoaneSociale(
-                        continua: { furnizor, token, nume in
-                            try await sesiune.autentificaSocial(
-                                furnizor: furnizor, token: token, nume: nume, rol: rol
-                            )
-                        },
-                        laEroare: { eroare = $0 }
-                    )
-                    .padding(.top, 4)
-
-                    if seTrimite {
-                        Text("Prima autentificare după o pauză poate dura până la un minut, cât pornește serverul.")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                            .multilineTextAlignment(.center)
-                    }
                     if modInregistrare {
-                        // Acceptarea prin acțiune, notată pe server ca dată.
-                        Text("Creând contul accepți termenii și condițiile și politica de confidențialitate, disponibile pe scorer.ro.")
-                            .font(.caption2)
-                            .foregroundStyle(.secondary)
-                            .multilineTextAlignment(.center)
+                        InregistrareWizard(rolInitial: rol) { adresa, rezultat in
+                            switch rezultat {
+                            case .gata:
+                                // Contul e deja folosibil; trecem direct la autentificare.
+                                contulEGata = true
+                                modInregistrare = false
+                                email = adresa
+                            case .asteaptaConfirmarea(let aPlecat):
+                                emailulAPlecat = aPlecat
+                                linkRetrimis = false
+                                asteaptaConfirmare = adresa
+                            }
+                        }
+                    } else {
+                        formularAutentificare
                     }
                 }
                 .sticlaAuth()
             }
             .padding(.horizontal, 20)
-            .padding(.bottom, 24)
+            .padding(.bottom, 32)
         }
         .scrollDismissesKeyboard(.interactively)
         .scrollIndicators(.hidden)
+    }
+
+    private var formularAutentificare: some View {
+        VStack(spacing: 22) {
+            VStack(spacing: 16) {
+                CampAuth(
+                    titlu: "Adresă de email", simbol: "envelope", text: $email,
+                    tipTastatura: .emailAddress, tipContinut: .emailAddress, faraMajuscule: true
+                )
+                CampAuth(titlu: "Parolă", simbol: "lock", text: $parola, parola: true, tipContinut: .password)
+            }
+
+            HStack {
+                Spacer()
+                Button(parolaCeruta ? "Link trimis pe email" : "Ai uitat parola?") { cereParolaNoua() }
+                    .font(.footnote.weight(.medium))
+                    .foregroundStyle(Tema.accent)
+                    .disabled(parolaCeruta || seTrimite)
+            }
+            .padding(.top, -8)
+
+            if parolaCeruta {
+                Text("Dacă adresa are un cont, linkul de schimbare a parolei e pe drum. Este valabil o oră.")
+                    .font(.caption).foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+
+            if contulEGata {
+                Label("Contul a fost creat. Autentifică-te cu datele lui.", systemImage: "checkmark.circle.fill")
+                    .font(.footnote).foregroundStyle(Tema.accent)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+
+            if let eroare {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(eroare).font(.footnote).foregroundStyle(Tema.ocupat)
+                    Button("Schimbă adresa serverului") { arataSetariServer = true }.font(.footnote)
+                    Text("Server: \(Config.textServer)").font(.caption2).foregroundStyle(.secondary)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(14)
+                .background(Tema.ocupat.opacity(0.08), in: .rect(cornerRadius: 14, style: .continuous))
+            }
+
+            ButonPrincipal(titlu: "Autentificare", seIncarca: seTrimite, actiune: trimite)
+
+            if seTrimite {
+                Text("Prima autentificare după o pauză poate dura până la un minut, cât pornește serverul.")
+                    .font(.caption).foregroundStyle(.secondary).multilineTextAlignment(.center)
+            }
+
+            ButoaneSociale(
+                continua: { furnizor, token, nume in
+                    try await sesiune.autentificaSocial(furnizor: furnizor, token: token, nume: nume, rol: rol)
+                },
+                laEroare: { eroare = $0 }
+            )
+        }
     }
 
     private func cereParolaNoua() {
@@ -423,57 +368,15 @@ private struct FormularAutentificare: View {
 
     private func trimite() {
         eroare = nil
-
-        if modInregistrare {
-            guard parola.count >= 8 else {
-                eroare = "Parola trebuie să aibă cel puțin 8 caractere."
-                return
-            }
-            guard parola == confirmareParola else {
-                eroare = "Parolele nu coincid."
-                return
-            }
-            if rol == .business, numeFirma.trimmingCharacters(in: .whitespaces).count < 2 {
-                eroare = "Completează denumirea firmei."
-                return
-            }
-        }
-
         seTrimite = true
         Task {
             defer { seTrimite = false }
             do {
-                if modInregistrare {
-                    let adresa = email.trimmingCharacters(in: .whitespaces)
-                    let rezultat = try await sesiune.inregistreaza(
-                        nume: nume.trimmingCharacters(in: .whitespaces),
-                        email: adresa,
-                        parola: parola,
-                        telefon: telefon.trimmingCharacters(in: .whitespaces),
-                        oras: oras.trimmingCharacters(in: .whitespaces),
-                        numeFirma: numeFirma.trimmingCharacters(in: .whitespaces),
-                        site: site.trimmingCharacters(in: .whitespaces),
-                        rol: rol
-                    )
-                    switch rezultat {
-                    case .gata:
-                        // Contul e deja folosibil; trecem direct la autentificare.
-                        contulEGata = true
-                        modInregistrare = false
-                        parola = ""
-                        confirmareParola = ""
-                    case .asteaptaConfirmarea(let aPlecat):
-                        emailulAPlecat = aPlecat
-                        linkRetrimis = false
-                        asteaptaConfirmare = adresa
-                    }
-                } else {
-                    try await sesiune.autentifica(
-                        email: email.trimmingCharacters(in: .whitespaces),
-                        parola: parola,
-                        rol: rol
-                    )
-                }
+                try await sesiune.autentifica(
+                    email: email.trimmingCharacters(in: .whitespaces),
+                    parola: parola,
+                    rol: rol
+                )
             } catch {
                 eroare = error.localizedDescription
             }
