@@ -43,9 +43,15 @@ struct BlocheazaOreView: View {
     @State private var motiv = ""
     @State private var clientNume = ""
     @State private var clientTelefon = ""
+    /// Două feluri de a alege zilele, independente unul de altul: o zi sau mai
+    /// multe zile la rând, ori anumite zile din fiecare săptămână.
+    @State private var repetare = false
     @State private var deLa = Calendar.current.startOfDay(for: Date())
+    @State private var maiMulteZile = false
     @State private var panaLa = Calendar.current.startOfDay(for: Date())
-    @State private var zile: Set<Int> = Set(1...7)
+    /// Pentru repetare: nicio zi aleasă la început — alegi exact ce vrei.
+    @State private var zile: Set<Int> = []
+    @State private var panaLaRepetare = Calendar.current.date(byAdding: .month, value: 3, to: Calendar.current.startOfDay(for: Date())) ?? Date()
     @State private var toataZiua = false
     @State private var oraStart = 18
     @State private var oraSfarsit = 20
@@ -54,6 +60,20 @@ struct BlocheazaOreView: View {
     @State private var rezultat: String?
 
     private static let numeZile = ["L", "Ma", "Mi", "J", "V", "S", "D"]
+    private static let numeZileLungi = ["luni", "marți", "miercuri", "joi", "vineri", "sâmbătă", "duminică"]
+
+    /// Ultima zi luată în calcul, după modul ales.
+    private var sfarsitPerioada: Date {
+        repetare ? panaLaRepetare : (maiMulteZile ? panaLa : deLa)
+    }
+
+    /// „Fiecare luni și sâmbătă".
+    private var textZileAlese: String {
+        let nume = zile.sorted().map { Self.numeZileLungi[$0 - 1] }
+        guard let ultima = nume.last else { return "" }
+        let inceput = nume.dropLast()
+        return "Fiecare " + (inceput.isEmpty ? ultima : inceput.joined(separator: ", ") + " și " + ultima)
+    }
 
     private var teren: Teren? { terenuri.first { $0.id == terenId } }
     private var deschidere: Int { teren?.oraDeschidere ?? 0 }
@@ -64,8 +84,9 @@ struct BlocheazaOreView: View {
         var rezultat: [Date] = []
         var zi = deLa
         let calendar = Calendar.current
-        while zi <= panaLa, rezultat.count < 400 {
-            if zile.contains(Self.ziIso(zi)) { rezultat.append(zi) }
+        while zi <= sfarsitPerioada, rezultat.count < 400 {
+            // Fără repetare, fiecare zi din interval contează, indiferent de ziua săptămânii.
+            if !repetare || zile.contains(Self.ziIso(zi)) { rezultat.append(zi) }
             zi = calendar.date(byAdding: .day, value: 1, to: zi) ?? panaLa.addingTimeInterval(86_400)
         }
         return rezultat
@@ -76,11 +97,11 @@ struct BlocheazaOreView: View {
     private var problema: String? {
         if teren == nil { return "Alege terenul." }
         if fel == .telefon && clientNume.trimmingCharacters(in: .whitespaces).isEmpty { return "Scrie numele clientului." }
-        if zile.isEmpty { return "Alege cel puțin o zi a săptămânii." }
+        if repetare && zile.isEmpty { return "Alege zilele în care se repetă." }
         let (start, sfarsit) = oreEfective
         if sfarsit <= start { return "Ora de sfârșit trebuie să fie după ora de început." }
         if zileAcoperite.isEmpty { return "Perioada aleasă nu cuprinde nicio zi bifată." }
-        let saptamani = Int((Double(Self.zileIntre(deLa, panaLa) + 1) / 7).rounded(.up))
+        let saptamani = Int((Double(Self.zileIntre(deLa, sfarsitPerioada) + 1) / 7).rounded(.up))
         if saptamani > 52 { return "Poți bloca cel mult un an odată." }
         return nil
     }
@@ -121,30 +142,61 @@ struct BlocheazaOreView: View {
             }
 
             Section {
-                DatePicker("De la", selection: $deLa, displayedComponents: .date)
-                DatePicker("Până la", selection: $panaLa, in: deLa..., displayedComponents: .date)
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("În zilele").font(.subheadline)
-                    HStack(spacing: 6) {
-                        ForEach(1...7, id: \.self) { zi in
-                            let ales = zile.contains(zi)
-                            Button {
-                                if ales { zile.remove(zi) } else { zile.insert(zi) }
-                            } label: {
-                                Text(Self.numeZile[zi - 1])
-                                    .font(.footnote.weight(.semibold))
-                                    .frame(maxWidth: .infinity)
-                                    .frame(height: 36)
-                                    .foregroundStyle(ales ? .white : .primary)
-                                    .background(ales ? Tema.accent : Color.primary.opacity(0.06), in: .circle)
+                Picker("Când", selection: $repetare.animation(.snappy)) {
+                    Text("O zi sau o perioadă").tag(false)
+                    Text("În fiecare săptămână").tag(true)
+                }
+                .pickerStyle(.segmented)
+                .listRowSeparator(.hidden)
+
+                if repetare {
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text("Repetă în fiecare").font(.subheadline)
+                        HStack(spacing: 6) {
+                            ForEach(1...7, id: \.self) { zi in
+                                let ales = zile.contains(zi)
+                                Button {
+                                    withAnimation(.snappy(duration: 0.2)) {
+                                        if ales { zile.remove(zi) } else { zile.insert(zi) }
+                                    }
+                                } label: {
+                                    Text(Self.numeZile[zi - 1])
+                                        .font(.footnote.weight(.semibold))
+                                        .frame(maxWidth: .infinity)
+                                        .frame(height: 40)
+                                        .foregroundStyle(ales ? .white : .primary)
+                                        .background(ales ? Tema.accent : Color.primary.opacity(0.06), in: .circle)
+                                }
+                                .buttonStyle(.plain)
+                                .accessibilityLabel(Self.numeZileLungi[zi - 1])
+                                .accessibilityAddTraits(ales ? .isSelected : [])
                             }
-                            .buttonStyle(.plain)
+                        }
+                        if !zile.isEmpty {
+                            Text(textZileAlese).font(.footnote).foregroundStyle(Tema.accent)
                         }
                     }
+                    .padding(.vertical, 4)
+                    DatePicker("Începând cu", selection: $deLa, displayedComponents: .date)
+                    DatePicker(
+                        "Până la", selection: $panaLaRepetare,
+                        in: deLa...(Calendar.current.date(byAdding: .day, value: 363, to: deLa) ?? deLa),
+                        displayedComponents: .date
+                    )
+                } else {
+                    DatePicker(maiMulteZile ? "De la" : "Ziua", selection: $deLa, displayedComponents: .date)
+                    Toggle("Mai multe zile la rând", isOn: $maiMulteZile.animation(.snappy))
+                        .tint(Tema.accent)
+                    if maiMulteZile {
+                        DatePicker("Până la", selection: $panaLa, in: deLa..., displayedComponents: .date)
+                    }
                 }
-                .padding(.vertical, 4)
             } header: {
-                Text("Perioada")
+                Text("Când")
+            } footer: {
+                Text(repetare
+                     ? "De exemplu, un client care vine mereu luni și sâmbătă: bifezi doar L și S."
+                     : "Fiecare zi din interval se blochează la orele de mai jos.")
             }
 
             Section("Orele") {
@@ -166,7 +218,8 @@ struct BlocheazaOreView: View {
                 } else {
                     let (start, sfarsit) = oreEfective
                     Label(
-                        "\(zileAcoperite.count) \(zileAcoperite.count == 1 ? "zi" : "zile") · \(String(format: "%02d:00–%02d:00", start, sfarsit))",
+                        (repetare ? "\(textZileAlese) · " : "")
+                            + "\(zileAcoperite.count) \(zileAcoperite.count == 1 ? "zi" : "zile") · \(String(format: "%02d:00–%02d:00", start, sfarsit))",
                         systemImage: "calendar.badge.clock"
                     )
                 }
@@ -191,10 +244,15 @@ struct BlocheazaOreView: View {
         .toolbar {
             ToolbarItem(placement: .cancellationAction) { Button("Renunță") { inchide() } }
         }
+        .onChange(of: deLa) { _, zi in
+            if panaLa < zi { panaLa = zi }
+            if panaLaRepetare < zi { panaLaRepetare = zi }
+        }
         .onAppear {
             if terenId.isEmpty { terenId = terenInitial?.id ?? terenuri.first?.id ?? "" }
             deLa = ziInitiala
             panaLa = ziInitiala
+            panaLaRepetare = Calendar.current.date(byAdding: .month, value: 3, to: ziInitiala) ?? ziInitiala
             if let teren {
                 oraStart = max(teren.oraDeschidere, min(18, teren.oraInchidere - 1))
                 oraSfarsit = min(teren.oraInchidere, oraStart + 2)
@@ -262,12 +320,12 @@ struct BlocheazaOreView: View {
                 "business/blocari", metoda: "PUT",
                 corp: Corp(
                     terenId: teren.id,
-                    zile: zile.sorted(),
+                    zile: repetare ? zile.sorted() : Array(1...7),
                     oraStart: start,
                     oraSfarsit: sfarsit,
                     dataInceput: ZiApi.text(deLa),
-                    dataSfarsit: ZiApi.text(panaLa),
-                    saptamani: max(1, Int((Double(Self.zileIntre(deLa, panaLa) + 1) / 7).rounded(.up))),
+                    dataSfarsit: ZiApi.text(sfarsitPerioada),
+                    saptamani: max(1, Int((Double(Self.zileIntre(deLa, sfarsitPerioada) + 1) / 7).rounded(.up))),
                     motiv: motivFinal,
                     clientNume: fel == .telefon ? clientNume.trimmingCharacters(in: .whitespaces) : nil,
                     clientTelefon: fel == .telefon && !clientTelefon.isEmpty ? clientTelefon : nil
