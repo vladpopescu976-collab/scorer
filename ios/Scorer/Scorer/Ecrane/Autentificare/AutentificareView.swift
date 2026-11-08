@@ -356,6 +356,16 @@ private struct FormularAutentificare: View {
                         actiune: trimite
                     )
 
+                    ButoaneSociale(
+                        continua: { furnizor, token, nume in
+                            try await sesiune.autentificaSocial(
+                                furnizor: furnizor, token: token, nume: nume, rol: rol
+                            )
+                        },
+                        laEroare: { eroare = $0 }
+                    )
+                    .padding(.top, 4)
+
                     if seTrimite {
                         Text("Prima autentificare după o pauză poate dura până la un minut, cât pornește serverul.")
                             .font(.caption)

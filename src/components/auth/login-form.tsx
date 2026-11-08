@@ -6,10 +6,9 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { signIn } from "next-auth/react";
 import { toast } from "sonner";
-import { Loader2 } from "lucide-react";
+import { Loader2, Lock, Mail } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import {
   Form,
   FormControl,
@@ -18,6 +17,7 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
+import { CampIcon } from "@/components/auth/camp-icon";
 import { CampParola } from "@/components/auth/camp-parola";
 import { RetrimiteConfirmarea } from "@/components/auth/retrimite-confirmarea";
 import { loginSchema, type LoginInput } from "@/lib/validations/auth";
@@ -132,7 +132,7 @@ export function LoginForm({
             <FormItem>
               <FormLabel>Email</FormLabel>
               <FormControl>
-                <Input placeholder="nume@exemplu.ro" type="email" autoComplete="email" {...field} />
+                <CampIcon pictograma={Mail} placeholder="nume@exemplu.ro" type="email" autoComplete="email" {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -147,6 +147,7 @@ export function LoginForm({
               <FormLabel>Parolă</FormLabel>
               <FormControl>
                 <CampParola
+                  pictograma={Lock}
                   placeholder="••••••••"
                   autoComplete="current-password"
                   {...field}

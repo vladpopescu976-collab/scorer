@@ -15,6 +15,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { CARD_AUTH } from "@/components/auth/auth-shell";
+import { ButoaneSociale } from "@/components/auth/butoane-sociale";
 import { LoginForm } from "@/components/auth/login-form";
 import { RegisterWizard } from "@/components/auth/register-wizard";
 import type { Role } from "@prisma/client";
@@ -35,11 +36,13 @@ export function AuthPanel({
   initialMode,
   error,
   code,
+  social,
 }: {
   role: Role;
   initialMode: "login" | "register";
   error?: string;
   code?: string;
+  social: { google: boolean; apple: boolean };
 }) {
   const [mod, setMod] = useState(initialMode);
 
@@ -68,11 +71,11 @@ export function AuthPanel({
           {/* La înregistrare, tipul contului se alege în primul pas al
               formularului, deci antetul nu poate pretinde că îl știe: spunea
               „Cont Personal” și după ce alegeai Business. */}
-          <CardTitle className="text-xl font-semibold tracking-tight">{mod === "register" ? "Cont nou" : copy[role].title}</CardTitle>
+          <CardTitle className="text-xl font-semibold tracking-tight">{mod === "register" ? "Creează un cont" : "Bine ai revenit"}</CardTitle>
           <CardDescription>
             {mod === "register"
               ? "Îți faci cont în patru pași. Poți reveni oricând la pasul dinainte."
-              : copy[role].description}
+              : `${copy[role].title} · ${copy[role].description}`}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -88,6 +91,9 @@ export function AuthPanel({
               <RegisterWizard role={role} />
             </TabsContent>
           </Tabs>
+          <div className="pt-5">
+            <ButoaneSociale role={role} google={social.google} apple={social.apple} />
+          </div>
         </CardContent>
       </Card>
 

@@ -50,6 +50,23 @@ final class Sesiune {
         await aplica(raspuns)
     }
 
+    /// Autentificare prin Apple sau Google: serverul verifică tokenul primit de
+    /// la furnizor și deschide contul, sau îl creează dacă nu există.
+    func autentificaSocial(furnizor: String, token: String, nume: String?, rol: Rol) async throws {
+        struct Corp: Encodable {
+            let furnizor: String
+            let token: String
+            let role: String
+            let nume: String?
+        }
+        let raspuns: RaspunsAutentificare = try await ApiClient.shared.cere(
+            "auth/social",
+            metoda: "POST",
+            corp: Corp(furnizor: furnizor, token: token, role: rol.rawValue, nume: nume)
+        )
+        await aplica(raspuns)
+    }
+
     /// Ce s-a întâmplat după înregistrare.
     enum RezultatInregistrare: Sendable {
         /// Confirmarea pe email e oprită de pe server — contul e gata de folosit.

@@ -4,6 +4,7 @@ import type { Role } from "@prisma/client";
 
 import { AuthChooser } from "@/components/auth/auth-chooser";
 import { AuthPanel } from "@/components/auth/auth-panel";
+import { appleActiv, googleActiv } from "@/lib/social";
 import { AuthShell } from "@/components/auth/auth-shell";
 
 export const metadata: Metadata = {
@@ -38,6 +39,7 @@ export default async function AutentificarePage({
           initialMode={mod === "inregistrare" ? "register" : "login"}
           error={error}
           code={code}
+          social={{ google: googleActiv(), apple: appleActiv() }}
         />
       ) : (
         <AuthChooser />

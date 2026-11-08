@@ -12,6 +12,9 @@
 	     nu al Mac-ului, iar cererea expiră.
 	     iPhone real: pune adresa Mac-ului din rețea (o vezi la pornirea lui
 	     „npm run dev”, la „Network:”) sau adresa de producție. -->
+	<!-- ID-ul clientului Google de tip iOS. Gol = butonul Google nu apare. -->
+	<key>GoogleClientID</key>
+	<string></string>
 	<key>ScorerApiURL</key>
 	<string>http://127.0.0.1:3000</string>
 

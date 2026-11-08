@@ -1,8 +1,12 @@
 import NextAuth, { CredentialsSignin } from "next-auth";
 import Credentials from "next-auth/providers/credentials";
+import Google from "next-auth/providers/google";
+import Apple from "next-auth/providers/apple";
+import { cookies } from "next/headers";
 import bcrypt from "bcryptjs";
 
 import { prisma } from "@/lib/prisma";
+import { appleActiv, autentificaSocial, googleActiv } from "@/lib/social";
 import { loginSchema } from "@/lib/validations/auth";
 import { inregistreazaEsec, ipDinCerere, stergeEsecurile, verificaLimitarea } from "@/lib/limitare";
 
@@ -80,8 +84,31 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         };
       },
     }),
+    // Apar doar când sunt configurate cheile; fără ele butoanele nu se afișează.
+    ...(googleActiv() ? [Google({ clientId: process.env.AUTH_GOOGLE_ID, clientSecret: process.env.AUTH_GOOGLE_SECRET })] : []),
+    ...(appleActiv() ? [Apple({ clientId: process.env.AUTH_APPLE_ID, clientSecret: process.env.AUTH_APPLE_SECRET })] : []),
   ],
   callbacks: {
+    async signIn({ user, account, profile }) {
+      if (!account || account.type === "credentials") return true;
+
+      // Tipul de cont ales înainte de a pleca la furnizor, ținut într-un cookie.
+      const tip = (await cookies()).get("scorer_tip")?.value;
+      const rezultat = await autentificaSocial({
+        email: user.email,
+        emailConfirmat:
+          account.provider === "apple"
+            ? true // Apple trimite doar adrese verificate
+            : (profile as { email_verified?: boolean } | undefined)?.email_verified === true,
+        nume: user.name,
+        rol: tip === "business" ? "BUSINESS" : "PERSONAL",
+      });
+      if (!rezultat.ok) return false;
+
+      user.id = rezultat.id;
+      user.role = rezultat.rol;
+      return true;
+    },
     jwt({ token, user }) {
       if (user) {
         token.id = user.id as string;
