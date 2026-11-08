@@ -1,6 +1,7 @@
 import { Hero } from "@/components/hero";
 import { HowItWorks } from "@/components/how-it-works";
 import { FeaturedFields } from "@/components/featured-fields";
+import { prisma } from "@/lib/prisma";
 
 // Baza Prisma Postgres se suspenda cand e inactiva, iar prima cerere
 // care o trezeste poate dura ~30s. Implicit Vercel taie functia la 10s,
@@ -12,10 +13,12 @@ export const maxDuration = 60;
 // ulterior nu mai apareau niciodata.
 export const dynamic = "force-dynamic";
 
-export default function Home() {
+export default async function Home() {
+  // Numărul real de terenuri active, afișat sus, lângă punctul verde.
+  const numarTerenuri = await prisma.field.count({ where: { isActive: true } }).catch(() => 0);
   return (
     <>
-      <Hero />
+      <Hero numarTerenuri={numarTerenuri} />
       <FeaturedFields />
       <HowItWorks />
     </>

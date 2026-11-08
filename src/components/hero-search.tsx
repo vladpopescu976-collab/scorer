@@ -42,7 +42,7 @@ export function HeroSearch() {
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.6, delay: 0.35, ease: [0.22, 1, 0.36, 1] as const }}
-      className="flex w-full max-w-3xl flex-col gap-2 rounded-2xl bg-card p-2 text-foreground shadow-2xl shadow-black/30 ring-1 ring-black/5 sm:flex-row sm:items-center sm:rounded-full"
+      className="flex w-full max-w-3xl flex-col gap-2 rounded-2xl bg-white p-2 text-neutral-900 shadow-[0_1px_1px_rgba(0,0,0,0.08),0_10px_20px_-6px_rgba(0,0,0,0.28),0_40px_80px_-20px_rgba(0,0,0,0.6)] ring-1 ring-black/5 sm:flex-row sm:items-center sm:rounded-full"
     >
       <div className="flex flex-1 items-center gap-2 rounded-xl px-3 py-2 sm:rounded-full">
         <Search className="h-4 w-4 shrink-0 text-muted-foreground" />
@@ -103,7 +103,7 @@ export function HeroSearch() {
       </Popover>
 
       <motion.div whileTap={{ scale: 0.97 }} className="sm:shrink-0">
-        <Button type="submit" size="lg" className="w-full rounded-full sm:w-auto">
+        <Button type="submit" size="lg" className="w-full rounded-full bg-[#0E6B3A] shadow-[inset_0_1px_0_rgba(255,255,255,0.18),0_6px_14px_-4px_rgba(14,107,58,0.6)] hover:bg-[#0B5A30] sm:w-auto">
           <Search className="h-4 w-4" />
           Caută
         </Button>
