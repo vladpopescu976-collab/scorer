@@ -1,4 +1,4 @@
-import { clockInAppZone } from "@/lib/datetime";
+import { clockInAppZone, instantInAppZone, ziCaText } from "@/lib/datetime";
 
 export type Interval = { start: Date; end: Date };
 
@@ -13,8 +13,9 @@ export function hourOf(label: string): number {
   return Number(label.split(":")[0]);
 }
 
+/** Ora din ziua aleasă, în ora României (ziua vine din calendarul paginii). */
 function slotOfDay(day: Date, hour: number) {
-  return new Date(day.getFullYear(), day.getMonth(), day.getDate(), hour, 0, 0, 0);
+  return instantInAppZone(ziCaText(day), hour) ?? new Date(NaN);
 }
 
 /** Orele dintr-o zi care se suprapun peste o rezervare activă. */

@@ -4,6 +4,14 @@ import SwiftUI
 struct ScorerApp: App {
     @State private var sesiune = Sesiune()
 
+    init() {
+        // Terenurile sunt în România: orele alese și afișate sunt ora României,
+        // oricare ar fi fusul telefonului. Pe un telefon setat pe CET (o oră în
+        // urmă), „20:00–22:00” pleca drept 21:00–23:00 și serverul răspundea că
+        // terenul e închis la 22:00.
+        NSTimeZone.default = .aplicatie
+    }
+
     var body: some Scene {
         WindowGroup {
             RadacinaView()
@@ -11,6 +19,7 @@ struct ScorerApp: App {
                 .task { await sesiune.porneste() }
                 .tint(Tema.accent)
                 .environment(\.locale, .aplicatie)
+                .environment(\.timeZone, .aplicatie)
         }
     }
 }

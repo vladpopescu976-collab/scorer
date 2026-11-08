@@ -16,7 +16,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { createBookingRequest, getBookedSlots } from "@/lib/actions/bookings";
-import { localDateTimeToIso } from "@/lib/datetime";
+import { instantInAppZone, localDateTimeToIso, ziCaText } from "@/lib/datetime";
 import {
   busyHours,
   describeOccupied,
@@ -69,8 +69,9 @@ export function BookingForm({
     setLoadingSlots(true);
     setOccupied([]);
     try {
-      const dayStart = new Date(day.getFullYear(), day.getMonth(), day.getDate());
-      const dayEnd = new Date(day.getFullYear(), day.getMonth(), day.getDate() + 1);
+      // Ziua terenului, în ora României.
+      const dayStart = instantInAppZone(ziCaText(day), 0)!;
+      const dayEnd = instantInAppZone(ziCaText(day), 24)!;
       const result = await getBookedSlots({
         fieldId,
         dayStart: dayStart.toISOString(),
@@ -92,7 +93,8 @@ export function BookingForm({
     if (!date) return set;
     const acum = new Date();
     for (let ora = openingHour; ora < closingHour; ora++) {
-      if (new Date(date.getFullYear(), date.getMonth(), date.getDate(), ora) <= acum) set.add(ora);
+      const momentul = instantInAppZone(ziCaText(date), ora);
+      if (momentul && momentul <= acum) set.add(ora);
     }
     return set;
   }, [date, openingHour, closingHour]);

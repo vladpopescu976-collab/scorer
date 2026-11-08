@@ -212,6 +212,21 @@ struct StareGoala: View {
 
 // MARK: - Formatări
 
+extension TimeZone {
+    /// Ora terenurilor. `NSTimeZone.default` schimbă calendarul, dar nu și
+    /// formatările de dată, care citesc fusul sistemului — de aceea îl dăm explicit.
+    static let aplicatie = TimeZone(identifier: "Europe/Bucharest")!
+}
+
+extension Date.FormatStyle {
+    /// Aceeași formatare, în ora României.
+    var inRomania: Date.FormatStyle {
+        var stil = self
+        stil.timeZone = .aplicatie
+        return stil
+    }
+}
+
 extension Locale {
     /// Aplicația e în română, indiferent de limba telefonului. Fără asta,
     /// zilele apar în engleză pe un telefon setat pe altă limbă.
@@ -220,24 +235,24 @@ extension Locale {
 
 extension Date {
     var ziScurta: String {
-        formatted(.dateTime.day().month(.abbreviated).locale(.aplicatie))
+        formatted(.dateTime.day().month(.abbreviated).locale(.aplicatie).inRomania)
     }
     var ziLunga: String {
-        formatted(.dateTime.weekday(.wide).day().month(.wide).locale(.aplicatie))
+        formatted(.dateTime.weekday(.wide).day().month(.wide).locale(.aplicatie).inRomania)
     }
     var oraScurta: String {
-        formatted(.dateTime.hour().minute().locale(.aplicatie))
+        formatted(.dateTime.hour().minute().locale(.aplicatie).inRomania)
     }
     var zileiPrescurtat: String {
-        formatted(.dateTime.weekday(.abbreviated).locale(.aplicatie))
+        formatted(.dateTime.weekday(.abbreviated).locale(.aplicatie).inRomania)
     }
     var numarZi: String {
-        formatted(.dateTime.day().locale(.aplicatie))
+        formatted(.dateTime.day().locale(.aplicatie).inRomania)
     }
 }
 
 enum ZiApi {
-    /// „2026-08-20” în fusul telefonului — exact ziua pe care o vede utilizatorul.
+    /// „2026-08-20” în ora României (fusul aplicației) — exact ziua pe care o vede utilizatorul.
     static func text(_ data: Date) -> String {
         let c = Calendar.current.dateComponents([.year, .month, .day], from: data)
         return String(format: "%04d-%02d-%02d", c.year ?? 0, c.month ?? 0, c.day ?? 0)

@@ -12,7 +12,14 @@
 const DATE_RE = /^(\d{4})-(\d{2})-(\d{2})$/;
 const TIME_RE = /^(\d{1,2}):(\d{2})$/;
 
-/** "2026-08-16" + "18:00" (ora locală a utilizatorului) → ISO cu fus explicit. */
+/**
+ * "2026-08-16" + "18:00" → momentul exact, ca ISO.
+ *
+ * Ora aleasă e ora terenului, adică ora României, indiferent de fusul
+ * browserului. Înainte o citeam în fusul browserului: pe un calculator setat
+ * pe CET (o oră în urmă), „20:00–22:00” pleca drept 21:00–23:00 și serverul
+ * răspundea că terenul e închis la 22:00.
+ */
 export function localDateTimeToIso(date: string, time: string): string | null {
   const d = DATE_RE.exec(date.trim());
   const t = TIME_RE.exec(time.trim());
@@ -20,30 +27,38 @@ export function localDateTimeToIso(date: string, time: string): string | null {
 
   const [year, month, day] = [Number(d[1]), Number(d[2]), Number(d[3])];
   const [hour, minute] = [Number(t[1]), Number(t[2])];
-  if (hour > 23 || minute > 59) return null;
+  if (hour > 24 || minute > 59 || (hour === 24 && minute > 0)) return null;
 
-  const value = new Date(year, month - 1, day, hour, minute, 0, 0);
-  if (Number.isNaN(value.getTime())) return null;
   // Verificăm că data chiar există (31 februarie ar fi alunecat în martie).
-  if (value.getFullYear() !== year || value.getMonth() !== month - 1 || value.getDate() !== day) {
+  const verificare = new Date(Date.UTC(year, month - 1, day));
+  if (verificare.getUTCFullYear() !== year || verificare.getUTCMonth() !== month - 1 || verificare.getUTCDate() !== day) {
     return null;
   }
-  return value.toISOString();
+  return instantInAppZone(date, hour, minute)?.toISOString() ?? null;
 }
 
-/** Data pentru un <input type="date">, citită în fusul utilizatorului. */
+/** Data pentru un <input type="date">, în ora României. */
 export function toDateInput(value: Date): string {
-  const year = value.getFullYear();
-  const month = String(value.getMonth() + 1).padStart(2, "0");
-  const day = String(value.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
+  // „en-CA” scrie datele exact ca AAAA-LL-ZZ.
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: APP_TIME_ZONE,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(value);
 }
 
-/** Ora pentru un <input type="time">, citită în același fus ca `toDateInput`. */
+/** Ora pentru un <input type="time">, în ora României. */
 export function toTimeInput(value: Date): string {
-  const hours = String(value.getHours()).padStart(2, "0");
-  const minutes = String(value.getMinutes()).padStart(2, "0");
-  return `${hours}:${minutes}`;
+  const { hour, minute } = clockInAppZone(value);
+  return `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
+}
+
+/** Ziua aleasă într-un calendar din pagină, ca text: „2026-08-16”. */
+export function ziCaText(value: Date): string {
+  const luna = String(value.getMonth() + 1).padStart(2, "0");
+  const zi = String(value.getDate()).padStart(2, "0");
+  return `${value.getFullYear()}-${luna}-${zi}`;
 }
 
 // Terenurile sunt în România, deci o „zi” înseamnă o zi de la noi. Pe server nu

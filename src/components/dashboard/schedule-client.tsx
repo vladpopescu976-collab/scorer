@@ -24,7 +24,7 @@ import { BlockSlotDialog } from "@/components/dashboard/block-slot-dialog";
 import { DayHeatPicker } from "@/components/dashboard/day-heat-picker";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { unblockSeries, unblockSlot } from "@/lib/actions/blocked-slots";
-import { toDateInput, toTimeInput } from "@/lib/datetime";
+import { clockInAppZone, toDateInput, toTimeInput } from "@/lib/datetime";
 import { sportMeta } from "@/lib/sports";
 import { clientulRezervarii } from "@/lib/client-rezervare";
 import {
@@ -68,7 +68,9 @@ type Booking = {
 };
 
 function hourOf(d: Date) {
-  return d.getHours() + d.getMinutes() / 60;
+  // Ora terenului (România), oricare ar fi fusul browserului.
+  const { hour, minute } = clockInAppZone(d);
+  return hour + minute / 60;
 }
 function isoDate(d: Date) {
   return new Date(d.getFullYear(), d.getMonth(), d.getDate()).toDateString();

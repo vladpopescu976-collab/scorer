@@ -111,7 +111,7 @@ struct ContView: View {
                     Label(u.rol == .business ? "Business" : "Personal",
                           systemImage: u.rol == .business ? "building.2.fill" : "person.fill")
                     if let din = u.membruDin {
-                        Text("· din \(din.formatted(.dateTime.month(.wide).year().locale(.aplicatie)))")
+                        Text("· din \(din.formatted(.dateTime.month(.wide).year().locale(.aplicatie).inRomania))")
                     }
                 }
                 .font(.caption.weight(.medium))

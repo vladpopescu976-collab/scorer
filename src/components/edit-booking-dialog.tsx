@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { getBookedSlots, updateBookingTime } from "@/lib/actions/bookings";
-import { localDateTimeToIso, toDateInput } from "@/lib/datetime";
+import { clockInAppZone, instantInAppZone, localDateTimeToIso, toDateInput } from "@/lib/datetime";
 import {
   busyHours,
   describeOccupied,
@@ -41,8 +41,9 @@ export function EditBookingDialog({
   onOpenChange: (open: boolean) => void;
 }) {
   const [date, setDate] = useState(() => toDateInput(currentStart));
-  const [start, setStart] = useState(() => `${String(currentStart.getHours()).padStart(2, "0")}:00`);
-  const [end, setEnd] = useState(() => `${String(currentEnd.getHours()).padStart(2, "0")}:00`);
+  // Orele terenului, în ora României, nu în fusul browserului.
+  const [start, setStart] = useState(() => `${String(clockInAppZone(currentStart).hour).padStart(2, "0")}:00`);
+  const [end, setEnd] = useState(() => `${String(clockInAppZone(currentEnd).hour || 24).padStart(2, "0")}:00`);
   const [error, setError] = useState("");
   const [isPending, startTransition] = useTransition();
 
@@ -64,11 +65,14 @@ export function EditBookingDialog({
     if (!parsed) return;
 
     let abandoned = false;
-    const dayEnd = new Date(parsed.getFullYear(), parsed.getMonth(), parsed.getDate() + 1);
+    // Ziua terenului, în ora României.
+    const dayStart = instantInAppZone(date, 0);
+    const dayEnd = instantInAppZone(date, 24);
+    if (!dayStart || !dayEnd) return;
 
     getBookedSlots({
       fieldId,
-      dayStart: parsed.toISOString(),
+      dayStart: dayStart.toISOString(),
       dayEnd: dayEnd.toISOString(),
       excludeBookingId: bookingId,
     }).then((result) => {
