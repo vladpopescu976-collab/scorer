@@ -21,6 +21,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { SemnScorer } from "@/components/semn-scorer";
 
 const roleLabel: Record<string, string> = {
   PERSONAL: "Cont Personal",
@@ -96,9 +97,9 @@ export function Navbar() {
           <motion.span
             whileHover={{ rotate: -6, scale: 1.05 }}
             transition={{ type: "spring", stiffness: 300, damping: 15 }}
-            className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-sm font-bold text-primary-foreground"
+            className="flex h-8 w-8 items-center justify-center rounded-[10px] bg-gradient-to-br from-[#0E6B3A] to-[#2FA560] text-white shadow-sm shadow-primary/30"
           >
-            S
+            <SemnScorer className="h-[22px] w-[22px]" />
           </motion.span>
           <span className="text-lg font-semibold tracking-tight">Scorer</span>
         </Link>

@@ -20,16 +20,58 @@ struct FundalAutentificare: View {
     }
 }
 
-/// Sigla „S", la fel ca pe site.
+/// Semnul Scorer: un „S" trasat pe liniile unui teren văzut de sus, la fel ca
+/// pe site și ca iconița aplicației. Coordonatele sunt cele din SVG
+/// (`public/brand/`), scalate la mărimea cerută.
+struct SemnScorer: View {
+    var culoare: Color = .white
+
+    var body: some View {
+        Canvas { context, marime in
+            // Cadrul SVG: 268 192 488 640.
+            let scara = min(marime.width / 488, marime.height / 640)
+            let dx = (marime.width - 488 * scara) / 2 - 268 * scara
+            let dy = (marime.height - 640 * scara) / 2 - 192 * scara
+            func p(_ x: CGFloat, _ y: CGFloat) -> CGPoint { CGPoint(x: dx + x * scara, y: dy + y * scara) }
+            let linie = 56 * scara
+
+            let teren = Path(roundedRect: CGRect(origin: p(300, 224), size: CGSize(width: 424 * scara, height: 576 * scara)),
+                             cornerRadius: 72 * scara, style: .circular)
+            context.stroke(teren, with: .color(culoare.opacity(0.22)), lineWidth: linie)
+
+            let cerc = Path(ellipseIn: CGRect(origin: p(408, 408), size: CGSize(width: 208 * scara, height: 208 * scara)))
+            context.stroke(cerc, with: .color(culoare.opacity(0.5)), lineWidth: 40 * scara)
+
+            var s = Path()
+            s.move(to: p(724, 224))
+            s.addLine(to: p(372, 224))
+            s.addArc(center: p(372, 296), radius: 72 * scara, startAngle: .degrees(-90), endAngle: .degrees(180), clockwise: true)
+            s.addLine(to: p(300, 440))
+            s.addArc(center: p(372, 440), radius: 72 * scara, startAngle: .degrees(180), endAngle: .degrees(90), clockwise: true)
+            s.addLine(to: p(652, 512))
+            s.addArc(center: p(652, 584), radius: 72 * scara, startAngle: .degrees(-90), endAngle: .degrees(0), clockwise: false)
+            s.addLine(to: p(724, 728))
+            s.addArc(center: p(652, 728), radius: 72 * scara, startAngle: .degrees(0), endAngle: .degrees(90), clockwise: false)
+            s.addLine(to: p(300, 800))
+            context.stroke(s, with: .color(culoare), style: StrokeStyle(lineWidth: linie, lineCap: .round, lineJoin: .round))
+        }
+        .accessibilityHidden(true)
+    }
+}
+
+/// Sigla pe plăcuța verde, la fel ca iconița aplicației.
 struct SiglaScorer: View {
     var marime: CGFloat = 56
 
     var body: some View {
-        Text("S")
-            .font(.system(size: marime * 0.5, weight: .semibold, design: .rounded))
-            .foregroundStyle(.white)
+        SemnScorer()
+            .frame(width: marime * 0.64, height: marime * 0.64)
             .frame(width: marime, height: marime)
-            .background(Tema.gradientAccent, in: .rect(cornerRadius: marime * 0.3, style: .continuous))
+            .background(
+                LinearGradient(colors: [Color(red: 0.055, green: 0.42, blue: 0.227), Color(red: 0.184, green: 0.647, blue: 0.376)],
+                               startPoint: .topLeading, endPoint: .bottomTrailing),
+                in: .rect(cornerRadius: marime * 0.3, style: .continuous)
+            )
             .shadow(color: Tema.accent.opacity(0.35), radius: 12, y: 6)
             .overlay {
                 RoundedRectangle(cornerRadius: marime * 0.3, style: .continuous)

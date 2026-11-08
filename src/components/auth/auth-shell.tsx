@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { SemnScorer } from "@/components/semn-scorer";
 
 /**
  * Fundalul și logo-ul paginilor de autentificare. Culorile sunt cele ale
@@ -21,8 +22,8 @@ export function AuthShell({ children }: { children: React.ReactNode }) {
 
       <div className="w-full max-w-lg space-y-6">
         <Link href="/" aria-label="Scorer, pagina principală" className="flex justify-center">
-          <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-primary to-primary/70 font-heading text-2xl font-semibold text-primary-foreground shadow-lg shadow-primary/30 ring-4 ring-background/70">
-            S
+          <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-[#0E6B3A] to-[#2FA560] text-white shadow-lg shadow-primary/30 ring-4 ring-background/70">
+            <SemnScorer className="h-9 w-9" />
           </span>
         </Link>
         {children}

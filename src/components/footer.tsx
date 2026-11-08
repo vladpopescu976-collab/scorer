@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Mail } from "lucide-react";
+import { SemnScorer } from "@/components/semn-scorer";
 
 const columns = [
   {
@@ -34,8 +35,8 @@ export function Footer() {
         <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-[1.4fr_1fr_1fr_1fr]">
           <div className="space-y-3">
             <Link href="/" className="flex items-center gap-2">
-              <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-sm font-bold text-primary-foreground">
-                S
+              <span className="flex h-8 w-8 items-center justify-center rounded-[10px] bg-gradient-to-br from-[#0E6B3A] to-[#2FA560] text-white">
+                <SemnScorer className="h-[22px] w-[22px]" />
               </span>
               <span className="text-lg font-semibold tracking-tight">Scorer</span>
             </Link>

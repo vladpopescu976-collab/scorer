@@ -16,6 +16,7 @@ import {
 
 import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { SemnScorer } from "@/components/semn-scorer";
 
 const NAV = [
   { href: "/dashboard/business", label: "Privire de ansamblu", icon: LayoutDashboard },
@@ -46,8 +47,8 @@ export function DashboardShell({
     <div className="flex min-h-screen bg-muted/20">
       <aside className="sticky top-0 hidden h-screen w-[248px] shrink-0 flex-col border-r bg-background md:flex">
         <div className="flex h-16 items-center gap-2.5 border-b px-4">
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary text-sm font-bold text-primary-foreground">
-            S
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[10px] bg-gradient-to-br from-[#0E6B3A] to-[#2FA560] text-white">
+            <SemnScorer className="h-[22px] w-[22px]" />
           </div>
           <div className="min-w-0 leading-tight">
             <p className="truncate text-[14px] font-semibold">Scorer</p>
