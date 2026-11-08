@@ -17,6 +17,8 @@ import { linkRezervare, tokenSemnat } from "@/lib/rezervari-vizitator";
  */
 export type EvenimentRezervare =
   | "cerere-noua"
+  /** Către vizitatorul fără cont, imediat după cerere: îi trimitem linkul. */
+  | "cerere-trimisa"
   | "confirmata-automat"
   | "aprobata"
   | "respinsa"
@@ -168,6 +170,19 @@ async function trimiteAnuntul(bookingId: string, eveniment: EvenimentRezervare) 
         { eticheta: "Total", valoare: `${Number(rezervare.totalPrice)} RON` },
       ],
       incheiere: "Până nu o aprobi, intervalul rămâne blocat pentru alți clienți.",
+    },
+    "cerere-trimisa": {
+      destinatar: catreClient,
+      subiect: `Cererea ta la ${field.name} a fost trimisă`,
+      titlu: "Cererea ta a ajuns la proprietar",
+      paragrafe: [
+        `Îți scriem imediat ce ${field.owner.name} răspunde. Până atunci, din linkul de mai jos îți vezi rezervarea sau o anulezi — fără cont.`,
+      ],
+      randuri: [
+        ...detalii,
+        { eticheta: "Total", valoare: `${Number(rezervare.totalPrice)} RON` },
+      ],
+      incheiere: "Păstrează emailul: linkul e felul în care îți regăsești rezervarea fără cont.",
     },
     "confirmata-automat": {
       destinatar: catreProprietar,

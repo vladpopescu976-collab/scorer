@@ -130,6 +130,8 @@ export async function POST(request: Request) {
       anuntaRezervare(rezervare.id, "aprobata");
     } else {
       anuntaRezervare(rezervare.id, "cerere-noua");
+      // Altfel vizitatorul avea linkul doar pe pagina de după rezervare.
+      if (rezervare.guestEmail) anuntaRezervare(rezervare.id, "cerere-trimisa");
     }
 
     return NextResponse.json(
