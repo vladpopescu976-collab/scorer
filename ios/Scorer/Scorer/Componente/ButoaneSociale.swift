@@ -31,7 +31,7 @@ struct ButoaneSociale: View {
                 .frame(height: 48)
                 .clipShape(.rect(cornerRadius: 14, style: .continuous))
 
-                if google.estePornit {
+                Group {
                     Button {
                         Task { await pornesteGoogle() }
                     } label: {

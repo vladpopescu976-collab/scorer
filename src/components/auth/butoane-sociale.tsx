@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { signIn } from "next-auth/react";
 import { Loader2 } from "lucide-react";
+import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import type { Role } from "@prisma/client";
@@ -10,10 +11,22 @@ import type { Role } from "@prisma/client";
 function Google() {
   return (
     <svg viewBox="0 0 24 24" className="h-4 w-4" aria-hidden>
-      <path fill="#4285F4" d="M23.5 12.3c0-.8-.1-1.6-.2-2.3H12v4.5h6.5a5.6 5.6 0 0 1-2.4 3.6v3h3.9c2.3-2.1 3.5-5.2 3.5-8.8z" />
-      <path fill="#34A853" d="M12 24c3.2 0 6-1.1 8-2.9l-3.9-3a7.2 7.2 0 0 1-10.7-3.8H1.4v3.1A12 12 0 0 0 12 24z" />
-      <path fill="#FBBC05" d="M5.4 14.3a7.2 7.2 0 0 1 0-4.6V6.6H1.4a12 12 0 0 0 0 10.8l4-3.1z" />
-      <path fill="#EA4335" d="M12 4.8c1.8 0 3.4.6 4.7 1.8l3.5-3.5A12 12 0 0 0 1.4 6.6l4 3.1A7.2 7.2 0 0 1 12 4.8z" />
+      <path
+        fill="#4285F4"
+        d="M23.5 12.3c0-.8-.1-1.6-.2-2.3H12v4.5h6.5a5.6 5.6 0 0 1-2.4 3.6v3h3.9c2.3-2.1 3.5-5.2 3.5-8.8z"
+      />
+      <path
+        fill="#34A853"
+        d="M12 24c3.2 0 6-1.1 8-2.9l-3.9-3a7.2 7.2 0 0 1-10.7-3.8H1.4v3.1A12 12 0 0 0 12 24z"
+      />
+      <path
+        fill="#FBBC05"
+        d="M5.4 14.3a7.2 7.2 0 0 1 0-4.6V6.6H1.4a12 12 0 0 0 0 10.8l4-3.1z"
+      />
+      <path
+        fill="#EA4335"
+        d="M12 4.8c1.8 0 3.4.6 4.7 1.8l3.5-3.5A12 12 0 0 0 1.4 6.6l4 3.1A7.2 7.2 0 0 1 12 4.8z"
+      />
     </svg>
   );
 }
@@ -40,9 +53,14 @@ export function ButoaneSociale({
   apple: boolean;
 }) {
   const [seIncarca, setSeIncarca] = useState<string | null>(null);
-  if (!google && !apple) return null;
-
   function porneste(furnizor: "google" | "apple") {
+    // Butoanele se văd mereu; până se pun cheile, apăsarea explică de ce nu merge.
+    if (!(furnizor === "google" ? google : apple)) {
+      toast.error(
+        `Autentificarea cu ${furnizor === "google" ? "Google" : "Apple"} nu este încă activată.`,
+      );
+      return;
+    }
     setSeIncarca(furnizor);
     document.cookie = `scorer_tip=${role === "BUSINESS" ? "business" : "personal"}; path=/; max-age=900; samesite=lax`;
     signIn(furnizor, { redirectTo: "/dupa-autentificare" });
@@ -55,19 +73,39 @@ export function ButoaneSociale({
         sau continuă cu
         <span className="h-px flex-1 bg-border" />
       </div>
-      <div className={`grid gap-3 ${google && apple ? "grid-cols-2" : "grid-cols-1"}`}>
-        {google && (
-          <Button type="button" variant="outline" className="h-11 rounded-xl bg-card/60" disabled={!!seIncarca} onClick={() => porneste("google")}>
-            {seIncarca === "google" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Google />}
+      <div className="grid grid-cols-2 gap-3">
+        {
+          <Button
+            type="button"
+            variant="outline"
+            className="h-11 rounded-xl bg-card/60"
+            disabled={!!seIncarca}
+            onClick={() => porneste("google")}
+          >
+            {seIncarca === "google" ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Google />
+            )}
             Google
           </Button>
-        )}
-        {apple && (
-          <Button type="button" variant="outline" className="h-11 rounded-xl bg-card/60" disabled={!!seIncarca} onClick={() => porneste("apple")}>
-            {seIncarca === "apple" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Apple />}
+        }
+        {
+          <Button
+            type="button"
+            variant="outline"
+            className="h-11 rounded-xl bg-card/60"
+            disabled={!!seIncarca}
+            onClick={() => porneste("apple")}
+          >
+            {seIncarca === "apple" ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Apple />
+            )}
             Apple
           </Button>
-        )}
+        }
       </div>
       <p className="text-center text-[11px] text-muted-foreground">
         Continuând, accepți termenii și politica de confidențialitate.
