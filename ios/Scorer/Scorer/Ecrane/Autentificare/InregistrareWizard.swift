@@ -435,7 +435,9 @@ private struct OptiuneCont: View {
                     ForEach(puncte, id: \.self) { punct in
                         Label(punct, systemImage: "checkmark")
                             .font(.footnote)
-                            .foregroundStyle(.secondary)
+                            // Pe fundalul colorat al opțiunii alese, gri-ul sistemului
+                            // se pierdea; textul rămâne închis și citibil.
+                            .foregroundStyle(ales ? Color.primary.opacity(0.85) : Color.secondary)
                             .labelStyle(.titleAndIcon)
                     }
                 }
@@ -443,7 +445,13 @@ private struct OptiuneCont: View {
             }
             .padding(16)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(ales ? Tema.accent.opacity(0.07) : Tema.fisa, in: .rect(cornerRadius: 18, style: .continuous))
+            // Fundal opac sub tentă: doar tenta, peste sticla formularului, spăla textul.
+            .background {
+                RoundedRectangle(cornerRadius: 18, style: .continuous).fill(Tema.fisa)
+                if ales {
+                    RoundedRectangle(cornerRadius: 18, style: .continuous).fill(Tema.accent.opacity(0.09))
+                }
+            }
             .overlay {
                 RoundedRectangle(cornerRadius: 18, style: .continuous)
                     .strokeBorder(ales ? Tema.accent : Color.primary.opacity(0.08), lineWidth: ales ? 1.5 : 1)
