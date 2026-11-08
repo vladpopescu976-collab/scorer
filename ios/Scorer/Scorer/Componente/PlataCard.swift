@@ -8,8 +8,8 @@ import PassKit
 enum MetodaPlata: String, CaseIterable, Identifiable {
     case applePay, teren
     var id: String { rawValue }
-    var titlu: String { self == .applePay ? "Apple Pay" : "La teren" }
-    var detaliu: String { self == .applePay ? "Plătești acum, rezervarea e garantată" : "Numerar sau card, la sosire" }
+    var titlu: String { self == .applePay ? "Plată cu cardul" : "La teren" }
+    var detaliu: String { self == .applePay ? "Prin Apple Pay, rezervarea e garantată" : "Numerar sau card, la sosire" }
     var simbol: String { self == .applePay ? "apple.logo" : "banknote.fill" }
 }
 
@@ -69,36 +69,117 @@ final class ApplePay: NSObject, PKPaymentAuthorizationControllerDelegate {
     }
 }
 
-struct AlegeMetodaPlata: View {
-    @Binding var metoda: MetodaPlata?
+/// Foaia „Cum dorești să rezervi?”: plată cu cardul (Apple Pay) sau la teren.
+/// Alegerea trăiește doar cât e deschisă foaia.
+struct FoaieMetodaPlata: View {
+    let suma: Double
+    let rezumat: String
+    let laApplePay: () -> Void
+    let laTeren: () -> Void
+
+    @State private var metoda: MetodaPlata?
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text("Cum dorești să rezervi?").font(.subheadline.weight(.medium))
-            HStack(spacing: 10) {
+        VStack(alignment: .leading, spacing: 18) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Cum dorești să rezervi?")
+                    .font(.title3.weight(.bold))
+                Text(rezumat)
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(2)
+            }
+
+            HStack {
+                Text("Total de plată")
+                    .font(.subheadline.weight(.medium))
+                    .foregroundStyle(.secondary)
+                Spacer()
+                Text("\(Int(suma)) RON")
+                    .font(.title2.weight(.bold))
+                    .monospacedDigit()
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+            .background(Tema.accent.opacity(0.08), in: .rect(cornerRadius: 16, style: .continuous))
+
+            VStack(spacing: 10) {
                 ForEach(MetodaPlata.allCases) { optiune in
-                    let ales = metoda == optiune
-                    Button { withAnimation(.snappy) { metoda = optiune } } label: {
-                        VStack(alignment: .leading, spacing: 6) {
-                            Image(systemName: optiune.simbol)
-                                .font(.system(size: 18))
-                                .foregroundStyle(ales ? Tema.accent : .secondary)
-                            Text(optiune.titlu).font(.subheadline.weight(.semibold))
-                            Text(optiune.detaliu).font(.caption).foregroundStyle(.secondary)
-                                .multilineTextAlignment(.leading).fixedSize(horizontal: false, vertical: true)
-                        }
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(14)
-                        .background(ales ? Tema.accent.opacity(0.08) : Tema.fisa, in: .rect(cornerRadius: 16, style: .continuous))
-                        .overlay {
-                            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                                .strokeBorder(ales ? Tema.accent : Color.primary.opacity(0.1), lineWidth: ales ? 1.5 : 1)
-                        }
-                    }
-                    .buttonStyle(.plain)
+                    rand(optiune)
                 }
             }
+
+            Spacer(minLength: 0)
+
+            if metoda == .applePay {
+                // Butonul oficial Apple Pay, cum îl recunoaște oricine.
+                PayWithApplePayButton(.book) { laApplePay() }
+                    .payWithApplePayButtonStyle(.black)
+                    .frame(height: 52)
+                    .clipShape(.rect(cornerRadius: 14, style: .continuous))
+                    .transition(.opacity)
+            } else {
+                ButonPrincipal(
+                    titlu: metoda == .teren ? "Trimite cererea" : "Alege o variantă",
+                    simbol: metoda == .teren ? "paperplane.fill" : nil,
+                    activ: metoda != nil,
+                    actiune: { if metoda == .teren { laTeren() } }
+                )
+                .transition(.opacity)
+            }
         }
-        .fisa()
+        .padding(Tema.spatiu)
+        .padding(.top, 14)
+        .animation(.snappy, value: metoda)
+        .presentationDetents([.height(440)])
+        .presentationDragIndicator(.visible)
+        .presentationCornerRadius(28)
+        .presentationBackground(Tema.fundal)
+    }
+
+    private func rand(_ optiune: MetodaPlata) -> some View {
+        let ales = metoda == optiune
+        return Button { metoda = optiune } label: {
+            HStack(spacing: 14) {
+                Group {
+                    if optiune == .applePay {
+                        HStack(spacing: 1) {
+                            Image(systemName: "apple.logo").font(.system(size: 13, weight: .semibold))
+                            Text("Pay").font(.system(size: 14, weight: .semibold))
+                        }
+                        .foregroundStyle(.white)
+                        .frame(width: 54, height: 38)
+                        .background(.black, in: .rect(cornerRadius: 9, style: .continuous))
+                    } else {
+                        Image(systemName: optiune.simbol)
+                            .font(.system(size: 17, weight: .semibold))
+                            .foregroundStyle(.white)
+                            .frame(width: 54, height: 38)
+                            .background(Tema.gradientAccent, in: .rect(cornerRadius: 9, style: .continuous))
+                    }
+                }
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(optiune.titlu).font(.body.weight(.semibold))
+                    Text(optiune.detaliu).font(.footnote).foregroundStyle(.secondary)
+                }
+                Spacer(minLength: 0)
+
+                ZStack {
+                    Circle().strokeBorder(ales ? Tema.accent : Color.secondary.opacity(0.35), lineWidth: 2)
+                    if ales { Circle().fill(Tema.accent).padding(5) }
+                }
+                .frame(width: 22, height: 22)
+            }
+            .padding(14)
+            .background(ales ? Tema.accent.opacity(0.07) : Tema.fisa, in: .rect(cornerRadius: 18, style: .continuous))
+            .overlay {
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .strokeBorder(ales ? Tema.accent : Color.primary.opacity(0.08), lineWidth: ales ? 1.5 : 1)
+            }
+            .contentShape(.rect)
+        }
+        .buttonStyle(.plain)
+        .accessibilityAddTraits(ales ? .isSelected : [])
     }
 }

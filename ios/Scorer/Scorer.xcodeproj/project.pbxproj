@@ -84,7 +84,7 @@
 				};
 			};
 			buildConfigurationList = 24BEDDBA78C6480385533825 /* Build configuration list for PBXProject "Scorer" */;
-			developmentRegion = en;
+			developmentRegion = ro;
 			hasScannedForEncodings = 0;
 			knownRegions = (
 				en,
