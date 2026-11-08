@@ -29,8 +29,8 @@ const roleLabel: Record<string, string> = {
 };
 
 const baseNavLinks = [
-  { href: "/", label: "Acasă" },
-  { href: "/#terenuri", label: "Terenuri" },
+  { href: "/cauta-terenuri", label: "Terenuri" },
+  { href: "/#cum-functioneaza", label: "Cum funcționează" },
 ];
 
 export function Navbar() {
@@ -61,10 +61,17 @@ export function Navbar() {
   const isPersonal = session?.user?.role === "PERSONAL";
   const actionNeeded = isPersonal ? fetchedActionNeeded : 0;
 
-  // Favoritele au sens doar pentru jucători, deci linkul apare doar la ei.
+  // Favoritele au sens doar pentru jucători, deci linkul apare doar la ei;
+  // „Pentru proprietari” doar pentru cine nu are încă un cont.
   const navLinks = isPersonal
     ? [...baseNavLinks, { href: "/favorite", label: "Favorite" }]
-    : baseNavLinks;
+    : !session?.user && status !== "loading"
+      ? [...baseNavLinks, { href: "/autentificare?tip=business", label: "Pentru proprietari" }]
+      : baseNavLinks;
+
+  // Pe prima pagină, sus, bara stă transparent peste partea verde și face
+  // corp comun cu ea; la derulare devine albă, ca pe celelalte pagini.
+  const peHero = pathname === "/" && !scrolled && !mobileOpen;
 
   useEffect(() => {
     if (!isPersonal) return;
@@ -81,49 +88,54 @@ export function Navbar() {
   }, [isPersonal, pathname]);
 
   return (
-    <motion.header
-      initial={{ y: -16, opacity: 0 }}
-      animate={{ y: 0, opacity: 1 }}
-      transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] as const }}
+    <header
       className={cn(
-        "sticky top-0 z-50 w-full transition-[background-color,box-shadow,border-color] duration-300",
-        scrolled
-          ? "border-b bg-background/80 shadow-sm backdrop-blur-lg supports-[backdrop-filter]:bg-background/70"
-          : "border-b border-transparent bg-background/40 backdrop-blur-sm"
+        "sticky top-0 z-50 w-full border-b transition-[background-color,border-color,color] duration-300",
+        peHero
+          ? "border-transparent bg-transparent text-white"
+          : "border-black/[0.06] bg-background/85 text-foreground backdrop-blur-xl supports-[backdrop-filter]:bg-background/70 dark:border-white/10"
       )}
     >
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4">
-        <Link href="/" className="group flex items-center gap-2">
-          <motion.span
-            whileHover={{ rotate: -6, scale: 1.05 }}
-            transition={{ type: "spring", stiffness: 300, damping: 15 }}
-            className="flex h-8 w-8 items-center justify-center rounded-[10px] bg-gradient-to-br from-[#0E6B3A] to-[#2FA560] text-white shadow-sm shadow-primary/30"
+        <Link href="/" className="flex items-center gap-2.5">
+          <span
+            className={cn(
+              "flex h-8 w-8 items-center justify-center rounded-[10px] text-white transition-colors duration-300",
+              peHero
+                ? "bg-white/10 ring-1 ring-inset ring-white/20"
+                : "bg-gradient-to-br from-[#0E6B3A] to-[#2FA560] shadow-sm shadow-[#0E6B3A]/25"
+            )}
           >
-            <SemnScorer className="h-[22px] w-[22px]" />
-          </motion.span>
-          <span className="text-lg font-semibold tracking-tight">Scorer</span>
+            <SemnScorer className="h-[21px] w-[21px]" />
+          </span>
+          <span className="text-[17px] font-semibold tracking-[-0.02em]">Scorer</span>
         </Link>
 
-        <nav className="hidden items-center gap-1 text-sm font-medium md:flex">
-          {navLinks.map((link) => (
-            <Link
-              key={link.href}
-              href={link.href}
-              className={cn(
-                "relative rounded-full px-4 py-2 text-muted-foreground transition-colors hover:text-foreground",
-                pathname === link.href && "text-foreground"
-              )}
-            >
-              {link.label}
-              {pathname === link.href && (
-                <motion.span
-                  layoutId="navbar-active-pill"
-                  className="absolute inset-0 -z-10 rounded-full bg-muted"
-                  transition={{ type: "spring", stiffness: 400, damping: 30 }}
-                />
-              )}
-            </Link>
-          ))}
+        <nav className="hidden items-center gap-0.5 text-[14px] font-medium md:flex">
+          {navLinks.map((link) => {
+            const activ = pathname === link.href;
+            return (
+              <Link
+                key={link.href}
+                href={link.href}
+                className={cn(
+                  "relative rounded-full px-3.5 py-2 transition-colors",
+                  peHero
+                    ? activ ? "text-white" : "text-white/70 hover:text-white"
+                    : activ ? "text-foreground" : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                {link.label}
+                {activ && (
+                  <motion.span
+                    layoutId="navbar-active-pill"
+                    className={cn("absolute inset-0 -z-10 rounded-full", peHero ? "bg-white/10" : "bg-muted")}
+                    transition={{ type: "spring", stiffness: 400, damping: 30 }}
+                  />
+                )}
+              </Link>
+            );
+          })}
         </nav>
 
         <div className="hidden items-center gap-3 md:flex">
@@ -132,14 +144,18 @@ export function Navbar() {
           ) : session?.user ? (
             <>
               <motion.div whileTap={{ scale: 0.96 }} className="relative">
-                <Button
-                  className="gap-1.5 rounded-full shadow-sm"
-                  nativeButton={false}
-                  render={<Link href={accountHref} />}
+                <Link
+                  href={accountHref}
+                  className={cn(
+                    "inline-flex h-9 items-center gap-1.5 rounded-full px-4 text-[14px] font-medium transition-colors",
+                    peHero
+                      ? "bg-white text-[#0B3D24] hover:bg-white/90"
+                      : "bg-[#0E6B3A] text-white shadow-sm shadow-[#0E6B3A]/25 hover:bg-[#0B5A30]"
+                  )}
                 >
                   <AccountIcon className="h-4 w-4" />
                   {accountLabel}
-                </Button>
+                </Link>
                 {actionNeeded > 0 && (
                   <span className="pointer-events-none absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-destructive px-1 text-[11px] font-bold text-white ring-2 ring-background">
                     {actionNeeded}
@@ -149,10 +165,18 @@ export function Navbar() {
 
               <DropdownMenu>
               <DropdownMenuTrigger
-                render={<Button variant="ghost" className="flex items-center gap-2 rounded-full px-2" />}
+                render={
+                  <Button
+                    variant="ghost"
+                    className={cn(
+                      "flex items-center gap-2 rounded-full px-2",
+                      peHero && "text-white hover:bg-white/10 hover:text-white aria-expanded:bg-white/10"
+                    )}
+                  />
+                }
               >
                 <Avatar className="h-8 w-8">
-                  <AvatarFallback className="bg-primary/10 text-primary">
+                  <AvatarFallback className={peHero ? "bg-white/15 text-white" : "bg-primary/10 text-primary"}>
                     {initials ?? <UserIcon className="h-4 w-4" />}
                   </AvatarFallback>
                 </Avatar>
@@ -197,18 +221,26 @@ export function Navbar() {
             </>
           ) : (
             <>
-              <Button variant="ghost" nativeButton={false} render={<Link href="/autentificare" />}>
+              <Link
+                href="/autentificare"
+                className={cn(
+                  "rounded-full px-3 py-2 text-[14px] font-medium transition-colors",
+                  peHero ? "text-white/80 hover:text-white" : "text-muted-foreground hover:text-foreground"
+                )}
+              >
                 Autentificare
-              </Button>
-              <motion.div whileTap={{ scale: 0.96 }}>
-                <Button
-                  className="rounded-full"
-                  nativeButton={false}
-                  render={<Link href="/autentificare?tip=personal&mod=inregistrare" />}
-                >
-                  Creează cont
-                </Button>
-              </motion.div>
+              </Link>
+              <Link
+                href="/autentificare?tip=personal&mod=inregistrare"
+                className={cn(
+                  "inline-flex h-9 items-center rounded-full px-4 text-[14px] font-medium transition-colors",
+                  peHero
+                    ? "bg-white text-[#0B3D24] hover:bg-white/90"
+                    : "bg-[#0E6B3A] text-white shadow-sm shadow-[#0E6B3A]/25 hover:bg-[#0B5A30]"
+                )}
+              >
+                Creează cont
+              </Link>
             </>
           )}
         </div>
@@ -221,9 +253,11 @@ export function Navbar() {
               title={accountLabel}
               className={cn(
                 "relative inline-flex h-9 items-center gap-1.5 rounded-full px-3 text-sm font-medium transition-colors",
-                pathname === accountHref
-                  ? "bg-primary text-primary-foreground"
-                  : "bg-primary/10 text-primary hover:bg-primary/15"
+                peHero
+                  ? "bg-white/10 text-white hover:bg-white/15"
+                  : pathname === accountHref
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-primary/10 text-primary hover:bg-primary/15"
               )}
             >
               <AccountIcon className="h-4 w-4 shrink-0" />
@@ -244,7 +278,9 @@ export function Navbar() {
                 "inline-flex h-9 w-9 items-center justify-center rounded-full transition-colors",
                 pathname === "/favorite"
                   ? "bg-rose-100 text-rose-600 dark:bg-rose-500/15 dark:text-rose-400"
-                  : "text-muted-foreground hover:text-rose-600"
+                  : peHero
+                    ? "text-white/80 hover:text-white"
+                    : "text-muted-foreground hover:text-rose-600"
               )}
             >
               <Heart className={cn("h-5 w-5", pathname === "/favorite" && "fill-current")} />
@@ -255,7 +291,10 @@ export function Navbar() {
             type="button"
             aria-label={mobileOpen ? "Închide meniul" : "Deschide meniul"}
             onClick={() => setMobileOpen((open) => !open)}
-            className="inline-flex h-9 w-9 items-center justify-center rounded-full text-foreground"
+            className={cn(
+              "inline-flex h-9 w-9 items-center justify-center rounded-full transition-colors",
+              peHero ? "text-white hover:bg-white/10" : "text-foreground hover:bg-muted"
+            )}
           >
             {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </button>
@@ -360,6 +399,6 @@ export function Navbar() {
           </motion.div>
         )}
       </AnimatePresence>
-    </motion.header>
+    </header>
   );
 }

@@ -42,7 +42,7 @@ export function HeroSearch() {
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.6, delay: 0.35, ease: [0.22, 1, 0.36, 1] as const }}
-      className="mx-auto flex w-full max-w-3xl flex-col gap-2 rounded-2xl border bg-card/80 p-2 shadow-xl shadow-black/5 backdrop-blur-md sm:flex-row sm:items-center sm:rounded-full"
+      className="flex w-full max-w-3xl flex-col gap-2 rounded-2xl bg-card p-2 text-foreground shadow-2xl shadow-black/30 ring-1 ring-black/5 sm:flex-row sm:items-center sm:rounded-full"
     >
       <div className="flex flex-1 items-center gap-2 rounded-xl px-3 py-2 sm:rounded-full">
         <Search className="h-4 w-4 shrink-0 text-muted-foreground" />
