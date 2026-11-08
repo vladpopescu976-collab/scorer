@@ -33,6 +33,12 @@ struct AcasaView: View {
         ScrollView {
             VStack(spacing: 0) {
                 hero
+                    // Verdele de deasupra blocului se mișcă odată cu el: la
+                    // tragerea în jos nu apare o margine albă, iar la derulare
+                    // nu rămâne o bandă verde fixă în spate.
+                    .background(alignment: .top) {
+                        Paleta.verdeSus.frame(height: 900).offset(y: -900)
+                    }
                 VStack(alignment: .leading, spacing: 36) {
                     if !terenuri.isEmpty { sectiuneRecomandate }
                     sectiunePasi
@@ -42,14 +48,7 @@ struct AcasaView: View {
                 .padding(.bottom, 36)
             }
         }
-        .background {
-            // La tragerea în jos, sus se vede tot verde, nu o margine albă.
-            VStack(spacing: 0) {
-                Paleta.verdeSus.frame(height: 420)
-                Tema.fundal
-            }
-            .ignoresSafeArea()
-        }
+        .background(Tema.fundal.ignoresSafeArea())
         .toolbar {
             ElementFaraFundal(placement: .topBarLeading) {
                 HStack(spacing: 9) {
