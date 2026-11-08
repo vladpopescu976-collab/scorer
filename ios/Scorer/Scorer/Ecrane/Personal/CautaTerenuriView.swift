@@ -7,6 +7,8 @@ struct CautaTerenuriView: View {
 
     @State private var oras = ""
     @State private var sportAles: Sport?
+    /// Dimensiunile alese („5+1”…), doar pentru sportul ales.
+    @State private var dimensiuni: Set<String> = []
     @State private var pretMax: Double = 0
     @State private var ziAleasa: Date?
     @State private var oraDeLa: Int?
@@ -15,7 +17,7 @@ struct CautaTerenuriView: View {
     @State private var derulat = false
 
     private var filtreActive: Int {
-        [!oras.isEmpty, pretMax > 0, ziAleasa != nil, sportAles != nil, oraDeLa != nil]
+        [!oras.isEmpty, pretMax > 0, ziAleasa != nil, sportAles != nil, oraDeLa != nil, !dimensiuni.isEmpty]
             .filter { $0 }.count
     }
 
@@ -31,6 +33,7 @@ struct CautaTerenuriView: View {
                 FiltreView(
                     oras: $oras,
                     sportAles: $sportAles,
+                    dimensiuni: $dimensiuni,
                     pretMax: $pretMax,
                     ziAleasa: $ziAleasa,
                     oraDeLa: $oraDeLa,
@@ -139,7 +142,10 @@ struct CautaTerenuriView: View {
 
     private var subtitluCautare: String {
         var bucati: [String] = []
-        if let sportAles { bucati.append(sportAles.eticheta) }
+        if let sportAles {
+            let alese = sportAles.formate.map(\.cod).filter { dimensiuni.contains($0) }
+            bucati.append(alese.isEmpty ? sportAles.eticheta : "\(sportAles.eticheta) \(alese.joined(separator: ", "))")
+        }
         if let ziAleasa { bucati.append(ziAleasa.ziScurta) }
         if let oraDeLa {
             bucati.append(String(format: "%02d–%02d", oraDeLa, oraDeLa + durataOre))
@@ -153,11 +159,13 @@ struct CautaTerenuriView: View {
             HStack(spacing: 26) {
                 Categorie(simbol: "square.grid.2x2", eticheta: "Toate", activ: sportAles == nil) {
                     sportAles = nil
+                    dimensiuni = []
                     Task { await incarca() }
                 }
                 ForEach(Sport.allCases, id: \.self) { sport in
                     Categorie(simbol: sport.simbol, eticheta: sport.eticheta, activ: sportAles == sport) {
                         sportAles = sportAles == sport ? nil : sport
+                        dimensiuni = []
                         Task { await incarca() }
                     }
                 }
@@ -230,7 +238,7 @@ struct CautaTerenuriView: View {
     }
 
     private func stergeFiltrele() {
-        oras = ""; sportAles = nil; pretMax = 0; ziAleasa = nil; oraDeLa = nil; durataOre = 1
+        oras = ""; sportAles = nil; dimensiuni = []; pretMax = 0; ziAleasa = nil; oraDeLa = nil; durataOre = 1
         Task { await incarca() }
     }
 
@@ -240,7 +248,11 @@ struct CautaTerenuriView: View {
 
         var parametri: [String: String] = [:]
         if !oras.trimmingCharacters(in: .whitespaces).isEmpty { parametri["oras"] = oras }
-        if let sportAles { parametri["sport"] = sportAles.rawValue }
+        if let sportAles {
+            parametri["sport"] = sportAles.rawValue
+            let alese = sportAles.formate.map(\.cod).filter { dimensiuni.contains($0) }
+            if !alese.isEmpty { parametri["dimensiune"] = alese.joined(separator: ",") }
+        }
         if pretMax > 0 { parametri["pretMax"] = String(Int(pretMax)) }
         if let ziAleasa { parametri["zi"] = ZiApi.text(ziAleasa) }
         if ziAleasa != nil, let oraDeLa {

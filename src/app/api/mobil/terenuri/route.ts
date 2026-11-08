@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { dayRangeInAppZone } from "@/lib/datetime";
 import { sportMeta } from "@/lib/sports";
 import { cheieOras } from "@/lib/orase";
+import { dimensiuniDinParametru } from "@/lib/formate-teren";
 import { eroareNeasteptata, raspuns, sesiuneDinCerere } from "@/lib/api/raspuns";
 import { serializeazaTeren } from "@/lib/api/serializare";
 
@@ -28,7 +29,12 @@ export async function GET(request: Request) {
       Number.isInteger(oraDeLa) && Number.isInteger(oraPanaLa) && oraPanaLa > oraDeLa;
 
     const where: Prisma.FieldWhereInput = { isActive: true };
-    if (esteSport(sport)) where.sportType = sport;
+    if (esteSport(sport)) {
+      where.sportType = sport;
+      // Terenul trebuie să aibă măcar una dintre dimensiunile alese („5+1,6+1”).
+      const dimensiuni = dimensiuniDinParametru(sport, url.searchParams.get("dimensiune"));
+      if (dimensiuni.length > 0) where.formate = { hasSome: dimensiuni };
+    }
     // Căutăm pe cheia fără diacritice, ca „Timișoara” să găsească și „timisoara”.
     if (oras) where.cityKey = cheieOras(oras);
     if (Number.isFinite(pretMax) && pretMax > 0) where.pricePerHour = { lte: pretMax };

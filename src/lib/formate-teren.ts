@@ -57,6 +57,18 @@ export function esteFormatValid(sport: SportType, cod: string): boolean {
   return formatePentru(sport).some((f) => f.cod === cod);
 }
 
+/**
+ * Filtrul din URL („5+1,6+1”) → doar codurile valide pentru sport. Un „+”
+ * nescăpat ajunge din URL ca spațiu, de aceea spațiile redevin „+”.
+ */
+export function dimensiuniDinParametru(sport: SportType, valoare: string | null | undefined): string[] {
+  if (!valoare) return [];
+  return valoare
+    .split(",")
+    .map((cod) => cod.trim().replace(/\s+/g, "+"))
+    .filter((cod) => esteFormatValid(sport, cod));
+}
+
 /** Formatele salvate, în ordinea din catalog, cu detaliile lor. */
 export function formateleTerenului(sport: SportType, coduri: string[]): FormatTeren[] {
   return formatePentru(sport).filter((f) => coduri.includes(f.cod));

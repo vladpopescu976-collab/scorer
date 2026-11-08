@@ -5,6 +5,7 @@ import SwiftUI
 struct FiltreView: View {
     @Binding var oras: String
     @Binding var sportAles: Sport?
+    @Binding var dimensiuni: Set<String>
     @Binding var pretMax: Double
     @Binding var ziAleasa: Date?
     @Binding var oraDeLa: Int?
@@ -22,6 +23,7 @@ struct FiltreView: View {
     var body: some View {
         Form {
             sectiuneSport
+            if let sportAles, !sportAles.formate.isEmpty { sectiuneDimensiune(sportAles) }
             sectiuneOras
             sectiuneCand
             sectiunePret
@@ -41,6 +43,10 @@ struct FiltreView: View {
                 }
                 .fontWeight(.semibold)
             }
+        }
+        .onChange(of: sportAles) {
+            // Dimensiunile țin de sport: „5+1” nu are sens la tenis.
+            dimensiuni = []
         }
         .task {
             orase = (try? await ApiClient.shared.cere("orase", ca: [OrasDisponibil].self)) ?? []
@@ -66,6 +72,39 @@ struct FiltreView: View {
                 }
             }
             .padding(.vertical, 4)
+        }
+    }
+
+    // MARK: - Dimensiune
+
+    private func sectiuneDimensiune(_ sport: Sport) -> some View {
+        Section {
+            LazyVGrid(columns: [.init(.adaptive(minimum: 96), spacing: 8)], spacing: 8) {
+                ForEach(sport.formate, id: \.cod) { format in
+                    let ales = dimensiuni.contains(format.cod)
+                    Button {
+                        if ales { dimensiuni.remove(format.cod) } else { dimensiuni.insert(format.cod) }
+                    } label: {
+                        VStack(spacing: 2) {
+                            Text(format.cod).font(.headline.monospacedDigit())
+                            Text("\(format.jucatori) jucători")
+                                .font(.caption2)
+                                .foregroundStyle(ales ? .white.opacity(0.85) : .secondary)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 9)
+                        .background(ales ? Tema.accent : Tema.fundal,
+                                    in: .rect(cornerRadius: Tema.razaMica, style: .continuous))
+                        .foregroundStyle(ales ? .white : .primary)
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .padding(.vertical, 4)
+        } header: {
+            Text("Dimensiune")
+        } footer: {
+            Text("Câți jucători. Poți alege mai multe.")
         }
     }
 
@@ -156,6 +195,7 @@ struct FiltreView: View {
         withAnimation {
             oras = ""
             sportAles = nil
+            dimensiuni = []
             pretMax = 0
             areZi = false
             ziAleasa = nil

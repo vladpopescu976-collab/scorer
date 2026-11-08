@@ -13,6 +13,7 @@ import { sportMeta } from "@/lib/sports";
 import { dayRangeInAppZone } from "@/lib/datetime";
 import { getFavoriteFieldIds } from "@/lib/favorites";
 import { cheieOras, normalizeazaOras } from "@/lib/orase";
+import { dimensiuniDinParametru } from "@/lib/formate-teren";
 
 // Baza Prisma Postgres se suspenda cand e inactiva, iar prima cerere
 // care o trezeste poate dura ~30s. Implicit Vercel taie functia la 10s,
@@ -23,7 +24,7 @@ export const metadata: Metadata = {
   title: "Caută terenuri — Scorer",
 };
 
-type SearchParams = { sport?: string; oras?: string; pretMax?: string; data?: string };
+type SearchParams = { sport?: string; oras?: string; pretMax?: string; data?: string; dimensiune?: string };
 
 function isSportType(value: string | undefined): value is SportType {
   return !!value && value in sportMeta;
@@ -46,11 +47,16 @@ function ResultsSkeleton() {
   );
 }
 
-async function Results({ sport, oras, pretMax, data }: SearchParams) {
+async function Results({ sport, oras, pretMax, data, dimensiune }: SearchParams) {
   const favoriteIds = await getFavoriteFieldIds();
   const where: Prisma.FieldWhereInput = { isActive: true };
 
-  if (isSportType(sport)) where.sportType = sport;
+  if (isSportType(sport)) {
+    where.sportType = sport;
+    // Terenul trebuie să aibă măcar una dintre dimensiunile alese.
+    const dimensiuni = dimensiuniDinParametru(sport, dimensiune);
+    if (dimensiuni.length > 0) where.formate = { hasSome: dimensiuni };
+  }
   // Pe cheia fără diacritice, ca „Timișoara” să găsească și „timisoara”.
   if (oras?.trim()) where.cityKey = { contains: cheieOras(oras), mode: "insensitive" };
 
@@ -157,7 +163,7 @@ export default async function CautaTerenuriPage({
   searchParams: Promise<SearchParams>;
 }) {
   const params = await searchParams;
-  const { sport = "", oras = "", pretMax = "", data = "" } = params;
+  const { sport = "", oras = "", pretMax = "", data = "", dimensiune = "" } = params;
 
   return (
     <div className="mx-auto w-full max-w-6xl px-4 py-10 sm:px-6 lg:px-8">
@@ -165,16 +171,16 @@ export default async function CautaTerenuriPage({
         <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">Caută terenuri</h1>
         <p className="mt-1.5 flex items-center gap-1.5 text-muted-foreground">
           <MapPin className="h-4 w-4" />
-          Filtrează după sport, oraș, preț și disponibilitate.
+          Filtrează după sport, dimensiune, oraș, preț și disponibilitate.
         </p>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-[260px_1fr] lg:gap-10">
-        <SearchFilters sport={sport} oras={oras} pretMax={pretMax} data={data} />
+        <SearchFilters sport={sport} oras={oras} pretMax={pretMax} data={data} dimensiune={dimensiune} />
 
         <div className="min-w-0">
-          <Suspense key={`${sport}|${oras}|${pretMax}|${data}`} fallback={<ResultsSkeleton />}>
-            <Results sport={sport} oras={oras} pretMax={pretMax} data={data} />
+          <Suspense key={`${sport}|${oras}|${pretMax}|${data}|${dimensiune}`} fallback={<ResultsSkeleton />}>
+            <Results sport={sport} oras={oras} pretMax={pretMax} data={data} dimensiune={dimensiune} />
           </Suspense>
         </div>
       </div>

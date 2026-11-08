@@ -13,17 +13,21 @@ import { Label } from "@/components/ui/label";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { sportOptions } from "@/lib/sports";
+import { FORMATE_PE_SPORT } from "@/lib/formate-teren";
 
 export function SearchFilters({
   sport,
   oras,
   pretMax,
   data,
+  dimensiune = "",
 }: {
   sport: string;
   oras: string;
   pretMax: string;
   data: string;
+  /** Dimensiunile alese, „5+1,6+1”. */
+  dimensiune?: string;
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -47,7 +51,17 @@ export function SearchFilters({
   }
 
   const selectedDate = data ? new Date(`${data}T00:00:00`) : undefined;
-  const activeCount = [sport, oras, pretMax, data].filter(Boolean).length;
+  const activeCount = [sport, oras, pretMax, data, dimensiune].filter(Boolean).length;
+  // Dimensiunile depind de sport: „5+1” e fotbal, „3x3” e baschet.
+  const formateSport = sport in FORMATE_PE_SPORT ? FORMATE_PE_SPORT[sport as keyof typeof FORMATE_PE_SPORT] : [];
+  const dimensiuniAlese = dimensiune.split(",").map((cod) => cod.trim()).filter(Boolean);
+
+  function comutaDimensiunea(cod: string) {
+    const noi = dimensiuniAlese.includes(cod)
+      ? dimensiuniAlese.filter((c) => c !== cod)
+      : [...dimensiuniAlese, cod];
+    apply({ dimensiune: noi.join(",") || undefined });
+  }
 
   const panel = (
     <div className="space-y-5">
@@ -56,7 +70,7 @@ export function SearchFilters({
         <div className="mt-2 flex flex-wrap gap-1.5">
           <button
             type="button"
-            onClick={() => apply({ sport: undefined })}
+            onClick={() => apply({ sport: undefined, dimensiune: undefined })}
             className={cn(
               "rounded-full px-3 py-1.5 text-[12.5px] font-medium transition-colors",
               !sport ? "bg-foreground text-background" : "bg-muted text-muted-foreground hover:text-foreground"
@@ -68,7 +82,9 @@ export function SearchFilters({
             <button
               key={option.value}
               type="button"
-              onClick={() => apply({ sport: sport === option.value ? undefined : option.value })}
+              onClick={() =>
+                apply({ sport: sport === option.value ? undefined : option.value, dimensiune: undefined })
+              }
               className={cn(
                 "rounded-full px-3 py-1.5 text-[12.5px] font-medium transition-colors",
                 sport === option.value
@@ -80,6 +96,38 @@ export function SearchFilters({
             </button>
           ))}
         </div>
+      </div>
+
+      <div>
+        <Label className="text-[12.5px] font-medium text-muted-foreground">Dimensiune</Label>
+        {formateSport.length > 0 ? (
+          <div className="mt-2 grid grid-cols-3 gap-1.5">
+            {formateSport.map((format) => {
+              const ales = dimensiuniAlese.includes(format.cod);
+              return (
+                <button
+                  key={format.cod}
+                  type="button"
+                  aria-pressed={ales}
+                  onClick={() => comutaDimensiunea(format.cod)}
+                  className={cn(
+                    "flex flex-col items-center rounded-xl border px-2 py-1.5 transition-colors",
+                    ales
+                      ? "border-foreground bg-foreground text-background"
+                      : "text-muted-foreground hover:border-foreground/30 hover:text-foreground"
+                  )}
+                >
+                  <span className="text-[14px] font-bold tabular-nums">{format.cod}</span>
+                  <span className="text-[10.5px]">{format.jucatori} jucători</span>
+                </button>
+              );
+            })}
+          </div>
+        ) : (
+          <p className="mt-1.5 text-[12.5px] text-muted-foreground">
+            {sport ? "Sportul ales nu are dimensiuni standard." : "Alege un sport ca să filtrezi după numărul de jucători."}
+          </p>
+        )}
       </div>
 
       <div>
