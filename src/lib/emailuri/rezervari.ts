@@ -5,6 +5,7 @@ import { clientulRezervarii } from "@/lib/client-rezervare";
 import { trimiteEmail, urlAplicatie } from "@/lib/email";
 import { sablon, type Rand } from "@/lib/emailuri/sablon";
 import { APP_TIME_ZONE } from "@/lib/datetime";
+import { linkRezervare, tokenSemnat } from "@/lib/rezervari-vizitator";
 
 /**
  * Anunțurile despre rezervări.
@@ -135,7 +136,9 @@ async function trimiteAnuntul(bookingId: string, eveniment: EvenimentRezervare) 
   const catreClient = {
     catre: client.email,
     salut: client.nume,
-    link: `${baza}/rezervarile-mele`,
+    // Fără cont, „Rezervările mele” ar cere autentificare; vizitatorul primește
+    // linkul propriei rezervări.
+    link: rezervare.customerId ? `${baza}/rezervarile-mele` : linkRezervare(tokenSemnat(rezervare.id)),
     textLink: "Vezi rezervarea",
   };
 

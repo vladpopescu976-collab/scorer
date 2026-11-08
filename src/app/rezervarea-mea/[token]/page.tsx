@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { StatusBadge } from "@/components/dashboard/status-badge";
 import { AnuleazaRezervarea } from "@/components/rezervare/anuleaza-rezervarea";
+import { RaspunsMutare } from "@/components/rezervare/raspuns-mutare";
 import { rezervareaDinToken } from "@/lib/rezervari-vizitator";
 import { APP_TIME_ZONE } from "@/lib/datetime";
 import { normalizeazaOras } from "@/lib/orase";
@@ -123,6 +124,18 @@ export default async function RezervareaMeaPage({
               acceptată — păstrează-l, e singurul mod de a-ți regăsi rezervarea fără cont.
             </p>
           )}
+
+          {rezervare.status === "RESCHEDULE_PROPOSED" &&
+            rezervare.proposedStartTime &&
+            rezervare.proposedEndTime && (
+              <RaspunsMutare
+                token={token}
+                propunere={`${(() => {
+                  const z = formatZi.format(rezervare.proposedStartTime);
+                  return z.charAt(0).toUpperCase() + z.slice(1);
+                })()}, ${formatOra.format(rezervare.proposedStartTime)} – ${formatOra.format(rezervare.proposedEndTime)}`}
+              />
+            )}
 
           {sePoateAnula && <AnuleazaRezervarea token={token} />}
         </CardContent>

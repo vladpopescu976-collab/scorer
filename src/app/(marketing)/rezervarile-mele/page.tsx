@@ -1,10 +1,9 @@
-import { redirect } from "next/navigation";
-
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { expiraRezervarile } from "@/lib/rezervari-expirate";
 import { MyBookingsClient } from "@/components/dashboard/my-bookings-client";
 import { normalizeazaOras } from "@/lib/orase";
+import { RezervariFaraCont } from "@/components/rezervare/rezervari-fara-cont";
 
 // Baza Prisma Postgres se suspenda cand e inactiva, iar prima cerere
 // care o trezeste poate dura ~30s. Implicit Vercel taie functia la 10s,
@@ -13,8 +12,10 @@ export const maxDuration = 60;
 
 export default async function MyBookingsPage() {
   const session = await auth();
+  // Fără cont nu mai trimitem direct la autentificare: cine a rezervat ca
+  // vizitator își poate primi linkurile pe email.
   if (!session?.user) {
-    redirect("/autentificare?tip=personal");
+    return <RezervariFaraCont />;
   }
 
   await expiraRezervarile({ customerId: session.user.id });

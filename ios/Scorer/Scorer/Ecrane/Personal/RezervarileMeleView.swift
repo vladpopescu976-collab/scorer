@@ -21,6 +21,10 @@ struct RezervarileMeleView: View {
                             detaliu: "Conectează-te ca să rezervi terenuri și să îți urmărești cererile."
                         )
                         .fisa()
+
+                        // Fără cont, rezervarea făcută ca vizitator se vede tot aici.
+                        RezervariFaraCont()
+                            .padding(.top, 8)
                     } else if seIncarca {
                         ForEach(0..<2, id: \.self) { _ in ScheletFisa(inaltime: 150) }
                     } else if rezervari.isEmpty {
