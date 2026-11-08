@@ -21,7 +21,7 @@ export type MetodaPlata = "card" | "teren";
 
 export function AlegeMetodaPlata({ metoda, alege }: { metoda: MetodaPlata; alege: (m: MetodaPlata) => void }) {
   const optiuni: { id: MetodaPlata; titlu: string; detaliu: string; Icoana: typeof CreditCard }[] = [
-    { id: "card", titlu: "Card online", detaliu: "Plătești acum, rezervarea e garantată", Icoana: CreditCard },
+    { id: "card", titlu: "Online", detaliu: "Apple Pay sau card, rezervarea e garantată", Icoana: CreditCard },
     { id: "teren", titlu: "La teren", detaliu: "Numerar sau card, la sosire", Icoana: Banknote },
   ];
   return (
@@ -166,6 +166,28 @@ export function DialogPlataCard({
         </div>
 
         <AnimatePresence mode="wait">
+          {stare === "formular" && (
+            <motion.div key="applepay" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-4">
+              <ButonApplePay
+                onClick={() => {
+                  // Demonstrativ, ca și cardul: nimic nu se debitează.
+                  setStare("procesare");
+                  setTimeout(() => {
+                    setStare("gata");
+                    setTimeout(() => {
+                      laPlata();
+                      laInchidere();
+                    }, 1100);
+                  }, 1400);
+                }}
+              />
+              <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                <span className="h-px flex-1 bg-border" />
+                sau cu cardul
+                <span className="h-px flex-1 bg-border" />
+              </div>
+            </motion.div>
+          )}
           {stare === "formular" ? (
             <motion.form
               key="formular"
@@ -256,5 +278,27 @@ export function DialogPlataCard({
         </AnimatePresence>
       </DialogContent>
     </Dialog>
+  );
+}
+
+/**
+ * Butonul Apple Pay. În Safari se desenează butonul oficial al sistemului
+ * (`-apple-pay-button`); în celelalte browsere, unul negru care arată la fel.
+ */
+function ButonApplePay({ onClick }: { onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label="Plătește cu Apple Pay"
+      className="buton-apple-pay flex h-12 w-full items-center justify-center gap-1.5 rounded-xl bg-black text-[17px] font-medium text-white transition-opacity hover:opacity-90"
+    >
+      <span className="eticheta-apple-pay flex items-center gap-1">
+        <svg viewBox="0 0 24 24" className="h-[18px] w-[18px] fill-current -mt-0.5" aria-hidden>
+          <path d="M16.4 12.6c0-2.4 2-3.5 2.1-3.6a4.5 4.5 0 0 0-3.5-1.9c-1.5-.2-2.9.9-3.7.9s-1.9-.8-3.1-.8a4.6 4.6 0 0 0-3.9 2.4c-1.7 2.9-.4 7.2 1.2 9.5.8 1.2 1.7 2.4 3 2.4s1.7-.8 3.1-.8 1.9.8 3.1.8 2.1-1.2 2.9-2.3a10 10 0 0 0 1.3-2.7 4.2 4.2 0 0 1-2.5-3.9zM14 5.5A4.1 4.1 0 0 0 15 2.4a4.2 4.2 0 0 0-2.7 1.4 3.9 3.9 0 0 0-1 3A3.5 3.5 0 0 0 14 5.5z" />
+        </svg>
+        Pay
+      </span>
+    </button>
   );
 }

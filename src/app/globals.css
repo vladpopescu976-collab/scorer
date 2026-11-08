@@ -143,3 +143,15 @@
     animation: none;
   }
 }
+
+/* Butonul Apple Pay oficial, unde browserul îl știe desena (Safari). */
+@supports (-webkit-appearance: -apple-pay-button) {
+  .buton-apple-pay {
+    -webkit-appearance: -apple-pay-button;
+    -apple-pay-button-type: book;
+    -apple-pay-button-style: black;
+  }
+  .buton-apple-pay .eticheta-apple-pay {
+    display: none;
+  }
+}
