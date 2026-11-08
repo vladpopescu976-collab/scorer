@@ -17,21 +17,27 @@ struct BusinessTabView: View {
         TabView(selection: $tabAles) {
             Tab("Ansamblu", systemImage: "chart.bar", value: "ansamblu") {
                 NavigationStack { AnsambluView() }
+                    .intrarePagina(.ridicare)
             }
             Tab("Calendar", systemImage: "calendar", value: "calendar") {
                 NavigationStack { CalendarView() }
+                    .intrarePagina(.apropiere)
             }
             Tab("Rezervări", systemImage: "list.clipboard", value: "rezervari") {
                 NavigationStack { RezervariBusinessView() }
+                    .intrarePagina(.glisare)
             }
             Tab("Terenuri", systemImage: "sportscourt", value: "terenuri") {
                 NavigationStack { TerenuriBusinessView() }
+                    .intrarePagina(.ridicare)
             }
             Tab("Recenzii", systemImage: "star", value: "recenzii") {
                 NavigationStack { RecenziiBusinessView() }
+                    .intrarePagina(.apropiere)
             }
             Tab("Cont", systemImage: "person", value: "cont") {
                 NavigationStack { ContView() }
+                    .intrarePagina(.clarificare)
             }
         }
     }

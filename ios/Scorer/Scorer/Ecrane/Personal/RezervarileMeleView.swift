@@ -35,7 +35,7 @@ struct RezervarileMeleView: View {
                         )
                         .fisa()
                     } else {
-                        ForEach(rezervari) { rezervare in
+                        ForEach(Array(rezervari.enumerated()), id: \.element.id) { index, rezervare in
                             CardRezervarePersonal(
                                 rezervare: rezervare,
                                 muta: { deMutat = rezervare },
@@ -45,6 +45,7 @@ struct RezervarileMeleView: View {
                                 recenzeaza: { deRecenzat = rezervare }
                             )
                             .fisa()
+                            .intrareElement(index)
                         }
                     }
                 }

@@ -28,9 +28,10 @@ struct FavoriteView: View {
                         )
                         .fisa()
                     } else {
-                        ForEach(terenuri) { teren in
+                        ForEach(Array(terenuri.enumerated()), id: \.element.id) { index, teren in
                             NavigationLink(value: teren.id) { CardTeren(teren: teren) }
                                 .buttonStyle(.plain)
+                                .intrareElement(index)
                         }
                     }
                 }

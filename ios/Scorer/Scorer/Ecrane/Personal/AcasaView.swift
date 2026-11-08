@@ -77,10 +77,11 @@ struct AcasaView: View {
         .sheet(isPresented: $arataAutentificarea) { AutentificareView() }
         .task { await incarca() }
         .refreshable { await incarca() }
+        // Intrarea se reia de fiecare dată când revii pe Acasă.
         .onAppear {
-            guard !aparut else { return }
             if faraMiscare { aparut = true } else { withAnimation { aparut = true } }
         }
+        .onDisappear { aparut = false }
     }
 
     // MARK: - Blocul de stadion
@@ -416,9 +417,14 @@ private struct FundalStadion: View {
         }
         .allowsHitTesting(false)
         .onChange(of: animat, initial: true) { _, acum in
-            guard acum, desenat == 0 else { return }
+            guard acum else {
+                desenat = 0
+                return
+            }
             withAnimation(.easeInOut(duration: 2.6).delay(0.3)) { desenat = 1 }
-            withAnimation(.easeInOut(duration: 4).repeatForever(autoreverses: true)) { respira = true }
+            if !respira {
+                withAnimation(.easeInOut(duration: 4).repeatForever(autoreverses: true)) { respira = true }
+            }
         }
     }
 

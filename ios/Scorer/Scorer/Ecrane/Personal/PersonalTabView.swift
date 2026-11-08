@@ -26,18 +26,23 @@ struct PersonalTabView: View {
                         tab = .cauta
                     }
                 }
+                .intrarePagina(.clarificare)
             }
             Tab("Caută", systemImage: "magnifyingglass", value: TabAles.cauta) {
                 NavigationStack { CautaTerenuriView(cerere: $cerereCautare) }
+                    .intrarePagina(.ridicare)
             }
             Tab("Favorite", systemImage: "heart", value: TabAles.favorite) {
                 NavigationStack { FavoriteView() }
+                    .intrarePagina(.apropiere)
             }
             Tab("Rezervări", systemImage: "calendar", value: TabAles.rezervari) {
                 NavigationStack { RezervarileMeleView() }
+                    .intrarePagina(.glisare)
             }
             Tab("Cont", systemImage: "person", value: TabAles.cont) {
                 NavigationStack { ContView() }
+                    .intrarePagina(.clarificare)
             }
         }
         #if DEBUG
