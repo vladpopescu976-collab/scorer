@@ -6,8 +6,8 @@ import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { CampParola } from "@/components/auth/camp-parola";
 import { PutereaParolei } from "@/components/auth/puterea-parolei";
 
 export function FormularParolaNoua({ token }: { token: string }) {
@@ -51,9 +51,8 @@ export function FormularParolaNoua({ token }: { token: string }) {
     <form onSubmit={trimite} className="space-y-4">
       <div className="space-y-2">
         <Label htmlFor="parola-noua">Parolă nouă</Label>
-        <Input
+        <CampParola
           id="parola-noua"
-          type="password"
           placeholder="Minim 8 caractere"
           autoComplete="new-password"
           value={parola}
@@ -64,9 +63,8 @@ export function FormularParolaNoua({ token }: { token: string }) {
 
       <div className="space-y-2">
         <Label htmlFor="parola-confirmare">Confirmă parola</Label>
-        <Input
+        <CampParola
           id="parola-confirmare"
-          type="password"
           placeholder="••••••••"
           autoComplete="new-password"
           value={confirmare}

@@ -32,6 +32,7 @@ struct AutentificareView: View {
         .sheet(isPresented: $arataSetari) {
             NavigationStack { SetariServerView() }
         }
+        .background { FundalAutentificare() }
         // Conectarea se face dintr-o foaie deschisă peste aplicație; odată
         // reușită, foaia nu mai are ce arăta.
         .onChange(of: sesiune.esteConectat) { _, conectat in
@@ -44,39 +45,40 @@ private struct AlegereRol: View {
     let alege: (Rol) -> Void
 
     var body: some View {
-        VStack(spacing: 24) {
+        VStack(spacing: 28) {
             Spacer()
 
-            VStack(spacing: 8) {
-                Image(systemName: "sportscourt.fill")
-                    .font(.system(size: 44))
-                    .foregroundStyle(Tema.accent)
-                Text("Scorer")
-                    .font(.largeTitle.bold())
-                Text("Închiriază terenuri sportive în câteva secunde.")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                    .multilineTextAlignment(.center)
+            VStack(spacing: 14) {
+                SiglaScorer(marime: 64)
+                VStack(spacing: 6) {
+                    Text("Bine ai venit pe Scorer")
+                        .font(.title.bold())
+                        .multilineTextAlignment(.center)
+                    Text("Alege tipul de cont ca să continui.")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
+                }
             }
 
             VStack(spacing: 12) {
                 CardRol(
                     titlu: "Cont Personal",
-                    descriere: "Caută terenuri și fă rezervări.",
+                    descriere: "Caută terenuri și fă rezervări în câteva secunde.",
                     simbol: "figure.run"
                 ) { alege(.personal) }
 
                 CardRol(
                     titlu: "Cont Business",
-                    descriere: "Administrează-ți terenurile și rezervările.",
+                    descriere: "Administrează-ți terenurile și cererile primite.",
                     simbol: "building.2"
                 ) { alege(.business) }
             }
-            .padding(.horizontal)
 
             Spacer()
         }
-        .padding()
+        .padding(.horizontal, 20)
+        .padding(.bottom, 20)
     }
 }
 
@@ -90,12 +92,12 @@ private struct CardRol: View {
         Button(action: actiune) {
             HStack(spacing: 14) {
                 Image(systemName: simbol)
-                    .font(.title2)
+                    .font(.title3)
                     .foregroundStyle(Tema.accent)
-                    .frame(width: 44, height: 44)
-                    .background(Tema.accent.opacity(0.12), in: .rect(cornerRadius: 12))
+                    .frame(width: 48, height: 48)
+                    .background(Tema.accent.opacity(0.12), in: .rect(cornerRadius: 14, style: .continuous))
 
-                VStack(alignment: .leading, spacing: 2) {
+                VStack(alignment: .leading, spacing: 3) {
                     Text(titlu).font(.headline)
                     Text(descriere)
                         .font(.caption)
@@ -103,13 +105,14 @@ private struct CardRol: View {
                         .multilineTextAlignment(.leading)
                 }
 
-                Spacer()
-                Image(systemName: "chevron.right").foregroundStyle(.tertiary)
+                Spacer(minLength: 4)
+                Image(systemName: "chevron.right")
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(.tertiary)
             }
-            .padding()
-            .background(.background.secondary, in: .rect(cornerRadius: 16))
+            .sticlaAuth()
         }
-        .buttonStyle(.plain)
+        .apasabil()
     }
 }
 
@@ -231,129 +234,149 @@ private struct FormularAutentificare: View {
     }
 
     private var formular: some View {
-        Form {
-            Section {
-                Picker("Mod", selection: $modInregistrare) {
-                    Text("Autentificare").tag(false)
-                    Text("Înregistrare").tag(true)
+        ScrollView {
+            VStack(spacing: 20) {
+                VStack(spacing: 12) {
+                    SiglaScorer(marime: 52)
+                    VStack(spacing: 5) {
+                        Text(modInregistrare ? "Creează un cont" : "Bine ai revenit")
+                            .font(.title2.bold())
+                        Text(modInregistrare
+                             ? (rol == .business ? "Pentru terenurile tale." : "Pentru rezervări rapide.")
+                             : "Intră în cont ca să continui.")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                    }
                 }
-                .pickerStyle(.segmented)
-                .listRowBackground(Color.clear)
-                .listRowInsets(.init())
-            }
+                .padding(.top, 4)
 
-            Section {
-                if modInregistrare {
-                    TextField(rol == .business ? "Persoană de contact" : "Nume", text: $nume)
-                        .textContentType(.name)
-                }
+                VStack(spacing: 16) {
+                    ComutatorAuth(inregistrare: $modInregistrare)
 
-                TextField("Email", text: $email)
-                    .textContentType(.emailAddress)
-                    .keyboardType(.emailAddress)
-                    .textInputAutocapitalization(.never)
-                    .autocorrectionDisabled()
-
-                SecureField("Parolă", text: $parola)
-                    .textContentType(modInregistrare ? .newPassword : .password)
-
-                if modInregistrare {
-                    SecureField("Confirmă parola", text: $confirmareParola)
-                        .textContentType(.newPassword)
-
-                    TextField("Telefon", text: $telefon)
-                        .textContentType(.telephoneNumber)
-                        .keyboardType(.phonePad)
-
-                    TextField("Oraș", text: $oras)
-                        .textContentType(.addressCity)
-                }
-            } footer: {
-                if modInregistrare {
-                    VStack(alignment: .leading, spacing: 4) {
-                        // Scris cât tastezi, nu abia la trimitere.
-                        if !confirmareParola.isEmpty && confirmareParola != parola {
-                            Text("Parolele nu coincid.").foregroundStyle(.red)
+                    VStack(spacing: 12) {
+                        if modInregistrare {
+                            CampAuth(
+                                titlu: rol == .business ? "Persoană de contact" : "Nume complet",
+                                simbol: "person", text: $nume, tipContinut: .name
+                            )
                         }
-                        Text("Parola trebuie să aibă cel puțin 8 caractere, dintre care o literă și o cifră.")
-                    }
-                }
-            }
 
-            if modInregistrare && rol == .business {
-                Section("Datele firmei") {
-                    TextField("Denumirea firmei", text: $numeFirma)
-                        .textContentType(.organizationName)
-                    TextField("Site (opțional)", text: $site)
-                        .textContentType(.URL)
-                        .keyboardType(.URL)
-                        .textInputAutocapitalization(.never)
-                        .autocorrectionDisabled()
-                }
-            }
+                        CampAuth(
+                            titlu: "Adresă de email", simbol: "envelope", text: $email,
+                            tipTastatura: .emailAddress, tipContinut: .emailAddress,
+                            faraMajuscule: true
+                        )
 
-            if !modInregistrare {
-                Section {
-                    Button(parolaCeruta ? "Link trimis pe email" : "Am uitat parola") {
-                        cereParolaNoua()
-                    }
-                    .font(.footnote)
-                    .disabled(parolaCeruta || seTrimite)
-                } footer: {
-                    if parolaCeruta {
-                        Text("Dacă adresa are un cont, linkul de schimbare a parolei e pe drum. Este valabil o oră.")
-                    }
-                }
-            }
+                        CampAuth(
+                            titlu: "Parolă", simbol: "lock", text: $parola, parola: true,
+                            tipContinut: modInregistrare ? .newPassword : .password
+                        )
+                        if modInregistrare { PutereaParolei(parola: parola) }
 
-            if contulEGata {
-                Section {
-                    Label("Contul a fost creat. Autentifică-te cu datele lui.", systemImage: "checkmark.circle.fill")
-                        .font(.footnote)
-                        .foregroundStyle(Tema.accent)
-                }
-            }
+                        if modInregistrare {
+                            CampAuth(
+                                titlu: "Confirmă parola", simbol: "lock.rotation",
+                                text: $confirmareParola, parola: true, tipContinut: .newPassword,
+                                // Scris cât tastezi, nu abia la trimitere.
+                                eroare: !confirmareParola.isEmpty && confirmareParola != parola
+                                    ? "Parolele nu coincid." : nil
+                            )
+                            CampAuth(
+                                titlu: "Telefon", simbol: "phone", text: $telefon,
+                                tipTastatura: .phonePad, tipContinut: .telephoneNumber
+                            )
+                            CampAuth(
+                                titlu: "Oraș", simbol: "mappin.and.ellipse", text: $oras,
+                                tipContinut: .addressCity
+                            )
 
-            if let eroare {
-                Section {
-                    Text(eroare)
-                        .font(.footnote)
-                        .foregroundStyle(.red)
-                    Button("Schimbă adresa serverului") { arataSetariServer = true }
-                        .font(.footnote)
-                } footer: {
-                    Text("Server: \(Config.textServer)")
-                }
-            }
+                            if rol == .business {
+                                CampAuth(
+                                    titlu: "Denumirea firmei", simbol: "building.2",
+                                    text: $numeFirma, tipContinut: .organizationName
+                                )
+                                CampAuth(
+                                    titlu: "Site (opțional)", simbol: "globe", text: $site,
+                                    tipTastatura: .URL, tipContinut: .URL, faraMajuscule: true
+                                )
+                            }
 
-            Section {
-                Button(action: trimite) {
-                    HStack {
-                        Spacer()
-                        if seTrimite {
-                            ProgressView().tint(.white)
-                        } else {
-                            Text(modInregistrare ? "Creează contul" : "Autentificare")
-                                .fontWeight(.semibold)
+                            Text("Parola trebuie să aibă cel puțin 8 caractere, dintre care o literă și o cifră.")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .padding(.horizontal, 4)
                         }
-                        Spacer()
                     }
-                }
-                .disabled(seTrimite)
-                .listRowBackground(Tema.accent)
-                .foregroundStyle(.white)
-            } footer: {
-                VStack(alignment: .leading, spacing: 8) {
+
+                    if !modInregistrare {
+                        HStack {
+                            Spacer()
+                            Button(parolaCeruta ? "Link trimis pe email" : "Ai uitat parola?") {
+                                cereParolaNoua()
+                            }
+                            .font(.footnote.weight(.medium))
+                            .foregroundStyle(Tema.accent)
+                            .disabled(parolaCeruta || seTrimite)
+                        }
+                        if parolaCeruta {
+                            Text("Dacă adresa are un cont, linkul de schimbare a parolei e pe drum. Este valabil o oră.")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                        }
+                    }
+
+                    if contulEGata {
+                        Label("Contul a fost creat. Autentifică-te cu datele lui.", systemImage: "checkmark.circle.fill")
+                            .font(.footnote)
+                            .foregroundStyle(Tema.accent)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+
+                    if let eroare {
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text(eroare)
+                                .font(.footnote)
+                                .foregroundStyle(Tema.ocupat)
+                            Button("Schimbă adresa serverului") { arataSetariServer = true }
+                                .font(.footnote)
+                            Text("Server: \(Config.textServer)")
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(12)
+                        .background(Tema.ocupat.opacity(0.08), in: .rect(cornerRadius: 12, style: .continuous))
+                    }
+
+                    ButonPrincipal(
+                        titlu: modInregistrare ? "Creează contul" : "Autentificare",
+                        seIncarca: seTrimite,
+                        actiune: trimite
+                    )
+
                     if seTrimite {
                         Text("Prima autentificare după o pauză poate dura până la un minut, cât pornește serverul.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .multilineTextAlignment(.center)
                     }
                     if modInregistrare {
                         // Acceptarea prin acțiune, notată pe server ca dată.
                         Text("Creând contul accepți termenii și condițiile și politica de confidențialitate, disponibile pe scorer.ro.")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                            .multilineTextAlignment(.center)
                     }
                 }
+                .sticlaAuth()
             }
+            .padding(.horizontal, 20)
+            .padding(.bottom, 24)
         }
+        .scrollDismissesKeyboard(.interactively)
+        .scrollIndicators(.hidden)
     }
 
     private func cereParolaNoua() {

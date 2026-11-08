@@ -4,6 +4,7 @@ import type { Role } from "@prisma/client";
 
 import { AuthChooser } from "@/components/auth/auth-chooser";
 import { AuthPanel } from "@/components/auth/auth-panel";
+import { AuthShell } from "@/components/auth/auth-shell";
 
 export const metadata: Metadata = {
   title: "Autentificare — Scorer",
@@ -30,7 +31,7 @@ export default async function AutentificarePage({
   const role = parseRole(tip) ?? parseRole(dinCookie);
 
   return (
-    <div className="flex flex-1 items-center justify-center px-4 py-12">
+    <AuthShell>
       {role ? (
         <AuthPanel
           role={role}
@@ -41,6 +42,6 @@ export default async function AutentificarePage({
       ) : (
         <AuthChooser />
       )}
-    </div>
+    </AuthShell>
   );
 }

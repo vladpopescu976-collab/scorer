@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
+import { CARD_AUTH } from "@/components/auth/auth-shell";
 import { LoginForm } from "@/components/auth/login-form";
 import { RegisterWizard } from "@/components/auth/register-wizard";
 import type { Role } from "@prisma/client";
@@ -50,7 +51,7 @@ export function AuthPanel({
   }, []);
 
   return (
-    <div className="w-full max-w-lg space-y-4">
+    <div className="w-full space-y-4">
       <Button
         variant="ghost"
         size="sm"
@@ -62,12 +63,12 @@ export function AuthPanel({
         Înapoi
       </Button>
 
-      <Card>
-        <CardHeader>
+      <Card className={CARD_AUTH}>
+        <CardHeader className="text-center">
           {/* La înregistrare, tipul contului se alege în primul pas al
               formularului, deci antetul nu poate pretinde că îl știe: spunea
               „Cont Personal” și după ce alegeai Business. */}
-          <CardTitle>{mod === "register" ? "Cont nou" : copy[role].title}</CardTitle>
+          <CardTitle className="text-xl font-semibold tracking-tight">{mod === "register" ? "Cont nou" : copy[role].title}</CardTitle>
           <CardDescription>
             {mod === "register"
               ? "Îți faci cont în patru pași. Poți reveni oricând la pasul dinainte."
@@ -76,14 +77,14 @@ export function AuthPanel({
         </CardHeader>
         <CardContent>
           <Tabs value={mod} onValueChange={(valoare) => setMod(valoare as "login" | "register")}>
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="login">Autentificare</TabsTrigger>
-              <TabsTrigger value="register">Înregistrare</TabsTrigger>
+            <TabsList className="grid h-11 w-full grid-cols-2 rounded-xl bg-muted/70 p-1">
+              <TabsTrigger value="login" className="rounded-lg text-sm">Autentificare</TabsTrigger>
+              <TabsTrigger value="register" className="rounded-lg text-sm">Înregistrare</TabsTrigger>
             </TabsList>
-            <TabsContent value="login" className="pt-4">
+            <TabsContent value="login" className="pt-5">
               <LoginForm role={role} error={error} code={code} />
             </TabsContent>
-            <TabsContent value="register" className="pt-4">
+            <TabsContent value="register" className="pt-5">
               <RegisterWizard role={role} />
             </TabsContent>
           </Tabs>

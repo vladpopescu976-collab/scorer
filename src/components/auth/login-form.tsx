@@ -18,6 +18,7 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
+import { CampParola } from "@/components/auth/camp-parola";
 import { RetrimiteConfirmarea } from "@/components/auth/retrimite-confirmarea";
 import { loginSchema, type LoginInput } from "@/lib/validations/auth";
 import type { Role } from "@prisma/client";
@@ -145,9 +146,8 @@ export function LoginForm({
             <FormItem>
               <FormLabel>Parolă</FormLabel>
               <FormControl>
-                <Input
+                <CampParola
                   placeholder="••••••••"
-                  type="password"
                   autoComplete="current-password"
                   {...field}
                 />
@@ -157,7 +157,7 @@ export function LoginForm({
           )}
         />
 
-        <Button type="submit" className="w-full" disabled={isLoading}>
+        <Button type="submit" className="h-11 w-full rounded-xl text-[15px] shadow-md shadow-primary/25" disabled={isLoading}>
           {isLoading && <Loader2 className="h-4 w-4 animate-spin" />}
           {isLoading ? "Se verifică…" : "Autentificare"}
         </Button>

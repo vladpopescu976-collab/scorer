@@ -128,3 +128,18 @@
     @apply font-sans;
   }
 }
+/* Fundalul paginilor de autentificare: pete de culoare care se mișcă încet.
+   Doar culorile temei, ca să arate ca restul site-ului. */
+@keyframes auth-drift {
+  to {
+    transform: translate(48px, -32px) scale(1.1);
+  }
+}
+.auth-blob {
+  animation: auth-drift 18s ease-in-out infinite alternate;
+}
+@media (prefers-reduced-motion: reduce) {
+  .auth-blob {
+    animation: none;
+  }
+}

@@ -29,6 +29,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { RetrimiteConfirmarea } from "@/components/auth/retrimite-confirmarea";
+import { CampParola } from "@/components/auth/camp-parola";
 import { PutereaParolei } from "@/components/auth/puterea-parolei";
 import {
   intervalValues,
@@ -401,9 +402,8 @@ function PasDate({ form }: { form: FormularInregistrare }) {
           <FormItem>
             <FormLabel>Parolă</FormLabel>
             <FormControl>
-              <Input
+              <CampParola
                 placeholder="Minim 8 caractere"
-                type="password"
                 autoComplete="new-password"
                 {...field}
               />
@@ -421,9 +421,8 @@ function PasDate({ form }: { form: FormularInregistrare }) {
           <FormItem>
             <FormLabel>Confirmă parola</FormLabel>
             <FormControl>
-              <Input
+              <CampParola
                 placeholder="••••••••"
-                type="password"
                 autoComplete="new-password"
                 {...field}
               />
