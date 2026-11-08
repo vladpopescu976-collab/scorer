@@ -9,6 +9,7 @@ struct TerenuriBusinessView: View {
     @State private var deEditat: Teren?
     @State private var optiuniPentru: Teren?
     @State private var adaugaTeren = false
+    @State private var oreBlocatePentru: Teren?
 
     var body: some View {
         List {
@@ -47,40 +48,29 @@ struct TerenuriBusinessView: View {
                             }
                         }
 
-                        Button("Modifică terenul", systemImage: "pencil") {
-                            deEditat = teren
+                        // Acțiunile, scurte, pe un singur rând.
+                        HStack(spacing: 8) {
+                            actiune("Editează", "pencil") { deEditat = teren }
+                            actiune("Opțiuni", "plus.circle") { optiuniPentru = teren }
+                            actiune("Blochează", "lock") { deBlocatPeTeren = teren }
                         }
-                        .font(.footnote)
+                        .listRowInsets(.init(top: 4, leading: 16, bottom: 8, trailing: 16))
 
-                        Button("Opțiuni și tarife în plus", systemImage: "plus.circle") {
-                            optiuniPentru = teren
-                        }
-                        .font(.footnote)
-
-                        Button("Blochează ore", systemImage: "lock") {
-                            deBlocatPeTeren = teren
-                        }
-                        .font(.footnote)
-
-                        ForEach(blocari.filter { $0.terenId == teren.id }) { blocare in
-                            HStack {
-                                VStack(alignment: .leading, spacing: 1) {
-                                    Label(
-                                        blocare.clientNume ?? blocare.motiv ?? "Blocat",
-                                        systemImage: blocare.clientNume == nil ? "lock.fill" : "phone.fill"
-                                    )
-                                    .font(.subheadline)
-                                    Text("\(blocare.inceput.ziScurta) · \(blocare.inceput.oraScurta)–\(blocare.sfarsit.oraScurta)")
-                                        .font(.caption).foregroundStyle(.secondary)
-                                }
+                        // În loc de lista întreagă: un rezumat, iar detaliile la cerere.
+                        Button { oreBlocatePentru = teren } label: {
+                            HStack(spacing: 10) {
+                                Image(systemName: "calendar.badge.clock")
+                                    .foregroundStyle(Tema.accent)
+                                Text("Ore blocate").foregroundStyle(.primary)
                                 Spacer()
-                                Button(role: .destructive) {
-                                    Task { await deblocheaza(blocare) }
-                                } label: {
-                                    Image(systemName: "trash").font(.caption)
-                                }
-                                .buttonStyle(.borderless)
+                                Text(rezumatBlocari(teren))
+                                    .font(.footnote)
+                                    .foregroundStyle(.secondary)
+                                Image(systemName: "chevron.right")
+                                    .font(.footnote.weight(.semibold))
+                                    .foregroundStyle(.tertiary)
                             }
+                            .font(.subheadline)
                         }
                     }
                 }
@@ -117,6 +107,14 @@ struct TerenuriBusinessView: View {
                 OptiuniTerenView(teren: teren) { Task { await incarca() } }
             }
         }
+        .sheet(item: $oreBlocatePentru) { teren in
+            NavigationStack {
+                OreBlocateView(teren: teren, blocari: blocari) {
+                    await incarca()
+                    return blocari
+                }
+            }
+        }
         .sheet(item: $deBlocatPeTeren) { teren in
             NavigationStack {
                 BlocheazaOreView(terenuri: [teren], terenInitial: teren) { Task { await incarca() } }
@@ -137,14 +135,25 @@ struct TerenuriBusinessView: View {
         seIncarca = false
     }
 
-    private func deblocheaza(_ blocare: Blocare) async {
-        do {
-            try await ApiClient.shared.cereFaraRaspuns(
-                "business/blocari/\(blocare.id)", metoda: "DELETE"
-            )
-            await incarca()
-        } catch {
-            eroare = error.localizedDescription
+    private func actiune(_ titlu: String, _ simbol: String, _ fa: @escaping () -> Void) -> some View {
+        Button(action: fa) {
+            Label(titlu, systemImage: simbol)
+                .font(.footnote.weight(.medium))
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 9)
+                .background(Tema.accent.opacity(0.1), in: .capsule)
+                .foregroundStyle(Tema.accent)
         }
+        .buttonStyle(.borderless)
+    }
+
+    /// „3 săptămâna asta“ sau „Niciuna“, ca să vezi dintr-o privire.
+    private func rezumatBlocari(_ teren: Teren) -> String {
+        let acum = Date()
+        let viitoare = blocari.filter { $0.terenId == teren.id && $0.sfarsit > acum }
+        guard !viitoare.isEmpty else { return "Niciuna" }
+        let peste7 = Calendar.current.date(byAdding: .day, value: 7, to: acum) ?? acum
+        let saptamana = viitoare.filter { $0.inceput < peste7 }.count
+        return saptamana > 0 ? "\(saptamana) în 7 zile" : "\(viitoare.count) viitoare"
     }
 }
