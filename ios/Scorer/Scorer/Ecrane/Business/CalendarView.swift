@@ -877,10 +877,15 @@ private struct DetaliuEveniment: View {
                         Text(String(format: "%02d:00", ora)).tag(ora)
                     }
                 }
-                Stepper(
-                    "Durată: \(durataNoua) \(durataNoua == 1 ? "oră" : "ore")",
-                    value: $durataNoua, in: 1...maximDurata
-                )
+                // Proprietarul alege direct ora de final, nu o durată de socotit.
+                Picker("Se termină la", selection: Binding(
+                    get: { oraNoua + durataNoua },
+                    set: { durataNoua = $0 - oraNoua }
+                )) {
+                    ForEach((oraNoua + 1)...(oraNoua + maximDurata), id: \.self) { ora in
+                        Text(String(format: "%02d:00", ora)).tag(ora)
+                    }
+                }
                 LabeledContent(
                     "Devine",
                     value: String(format: "%02d:00 – %02d:00", oraNoua, oraNoua + durataNoua)
@@ -1085,7 +1090,14 @@ private struct IntervalNou: View {
                 }
                 .pickerStyle(.segmented)
 
-                Stepper("Durată: \(durata) \(durata == 1 ? "oră" : "ore")", value: $durata, in: 1...maximOre)
+                Picker("Se termină la", selection: Binding(
+                    get: { ora + durata },
+                    set: { durata = $0 - ora }
+                )) {
+                    ForEach((ora + 1)...(ora + maximOre), id: \.self) { final in
+                        Text(String(format: "%02d:00", final)).tag(final)
+                    }
+                }
             } footer: {
                 Text(mod == .rezervare
                      ? "Pentru cererile primite la telefon."
