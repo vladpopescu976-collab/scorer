@@ -36,6 +36,7 @@ export default async function BusinessFieldsPage() {
           price: Number(e.price),
           pricing: e.pricing,
           autoLaIntuneric: e.autoLaIntuneric,
+          autoLaFrig: e.autoLaFrig,
         })),
         isActive: f.isActive,
         contactPhone: f.contactPhone,

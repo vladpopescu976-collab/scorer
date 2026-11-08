@@ -27,6 +27,7 @@ const schema = z.object({
   price: z.number().positive("Prețul trebuie să fie mai mare decât 0."),
   pricing: z.enum(["PER_HOUR", "PER_BOOKING"]),
   autoLaIntuneric: z.boolean(),
+  autoLaFrig: z.boolean().optional().default(false),
 });
 
 export async function adaugaOptiune(input: z.infer<typeof schema>): Promise<ActionResult> {
@@ -37,6 +38,9 @@ export async function adaugaOptiune(input: z.infer<typeof schema>): Promise<Acti
 
     // O opțiune care se pune singură la întuneric se taxează pe oră; „o dată
     // pe rezervare” n-ar avea ce înmulți cu orele de după apus.
+    if (date.autoLaIntuneric && date.autoLaFrig) {
+      return fail("Alege o singură regulă automată: la întuneric sau în sezonul rece.");
+    }
     if (date.autoLaIntuneric && date.pricing !== "PER_HOUR") {
       return fail("O opțiune care se adaugă la întuneric se taxează pe oră.");
     }
@@ -48,6 +52,7 @@ export async function adaugaOptiune(input: z.infer<typeof schema>): Promise<Acti
         price: date.price,
         pricing: date.pricing,
         autoLaIntuneric: date.autoLaIntuneric,
+        autoLaFrig: date.autoLaFrig,
       },
     });
 

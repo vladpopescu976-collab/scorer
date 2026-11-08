@@ -57,6 +57,7 @@ export type EditableField = {
     price: number;
     pricing: "PER_HOUR" | "PER_BOOKING";
     autoLaIntuneric: boolean;
+    autoLaFrig?: boolean;
   }[];
 };
 

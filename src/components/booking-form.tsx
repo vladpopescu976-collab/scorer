@@ -372,7 +372,7 @@ export function BookingForm({
         <div className="space-y-2">
           <p className="text-[12.5px] font-medium text-muted-foreground">În plus</p>
           {optiuni
-            .filter((o) => !o.autoLaIntuneric)
+            .filter((o) => !o.autoLaIntuneric && !o.autoLaFrig)
             .map((optiune) => (
               <label
                 key={optiune.id}
@@ -401,7 +401,7 @@ export function BookingForm({
 
           {/* Nocturna nu se bifează: se pune singură, pentru orele fără lumină. */}
           {optiuni
-            .filter((o) => o.autoLaIntuneric)
+            .filter((o) => o.autoLaIntuneric || o.autoLaFrig)
             .map((optiune) => {
               const linie = pret?.linii.find((l) => l.id === optiune.id);
               return (
@@ -411,9 +411,11 @@ export function BookingForm({
                 >
                   <span className="block font-medium">{optiune.name}</span>
                   <span className="block text-[11.5px] text-muted-foreground">
-                    {optiune.price} RON / oră, se adaugă singură pentru orele de după apus
+                    {optiune.autoLaFrig
+                      ? `${optiune.price} RON ${optiune.pricing === "PER_HOUR" ? "/ oră" : "o dată"}, se adaugă singură în sezonul rece (oct–apr)`
+                      : `${optiune.price} RON / oră, se adaugă singură pentru orele de după apus`}
                     {linie ? ` — ${linie.unitati} ${linie.unitati === 1 ? "oră" : "ore"} la intervalul ales` : ""}
-                    {pret && !linie ? " — intervalul ales e pe lumină" : ""}
+                    {pret && !linie ? (optiune.autoLaFrig ? " — data aleasă e în afara sezonului rece" : " — intervalul ales e pe lumină") : ""}
                   </span>
                 </div>
               );

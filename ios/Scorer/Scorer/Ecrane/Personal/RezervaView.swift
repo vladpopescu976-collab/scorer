@@ -345,7 +345,7 @@ struct RezervaView: View {
         VStack(alignment: .leading, spacing: 10) {
             Text("În plus").font(.subheadline.weight(.medium))
 
-            ForEach(optiuni.filter { !$0.automatLaIntuneric }) { optiune in
+            ForEach(optiuni.filter { !$0.automata }) { optiune in
                 Button {
                     if optiuniAlese.contains(optiune.id) {
                         optiuniAlese.remove(optiune.id)
@@ -369,10 +369,10 @@ struct RezervaView: View {
                 .buttonStyle(.plain)
             }
 
-            ForEach(optiuni.filter(\.automatLaIntuneric)) { optiune in
+            ForEach(optiuni.filter(\.automata)) { optiune in
                 let linie = liniiDePlata.first { $0.id == optiune.id }
                 HStack(spacing: 10) {
-                    Image(systemName: "moon.stars")
+                    Image(systemName: optiune.laFrig ? "thermometer.sun" : "moon.stars")
                         .foregroundStyle(linie != nil ? Tema.accent : .secondary)
                     VStack(alignment: .leading, spacing: 1) {
                         Text(optiune.nume).font(.subheadline.weight(.medium))
@@ -390,9 +390,13 @@ struct RezervaView: View {
         _ optiune: OptiuneTeren,
         linie: (id: String, nume: String, unitati: Int, total: Double)?
     ) -> String {
-        let baza = "\(Int(optiune.pret)) RON / oră, se adaugă singură după apus"
+        let baza = optiune.laFrig
+            ? "\(Int(optiune.pret)) RON \(optiune.peOra ? "/ oră" : "o dată"), se adaugă singură în sezonul rece"
+            : "\(Int(optiune.pret)) RON / oră, se adaugă singură după apus"
         guard oraStart != nil else { return baza }
-        guard let linie else { return baza + " — intervalul ales e pe lumină" }
+        guard let linie else {
+            return baza + (optiune.laFrig ? " — data aleasă e în afara sezonului" : " — intervalul ales e pe lumină")
+        }
         return baza + " — \(linie.unitati) \(linie.unitati == 1 ? "oră" : "ore") la intervalul ales"
     }
 
@@ -568,13 +572,14 @@ struct RezervaView: View {
         let ore = max(0, (oraSfarsit ?? 0) - (oraStart ?? 0))
 
         return optiuni.compactMap { optiune in
-            let automat = optiune.automatLaIntuneric
-            guard automat || optiuniAlese.contains(optiune.id) else { return nil }
+            // Încălzirea automată intră doar în sezonul rece.
+            if optiune.laFrig && !SezonRece.cuprinde(interval.inceput) { return nil }
+            guard optiune.automata || optiuniAlese.contains(optiune.id) else { return nil }
 
             let unitati: Int
             if !optiune.peOra {
                 unitati = 1
-            } else if automat {
+            } else if optiune.automatLaIntuneric {
                 unitati = Soare.oreDeIntuneric(
                     inceput: interval.inceput, sfarsit: interval.sfarsit, oras: teren.oras
                 )

@@ -30,6 +30,7 @@ export type TerenApi = {
     pret: number;
     peOra: boolean;
     automatLaIntuneric: boolean;
+    autoLaFrig?: boolean;
   }[];
 };
 
@@ -61,6 +62,7 @@ export function serializeazaTeren(
       pret: Number(optiune.price),
       peOra: optiune.pricing === "PER_HOUR",
       automatLaIntuneric: optiune.autoLaIntuneric,
+      automatLaFrig: optiune.autoLaFrig ?? false,
     })),
   };
 }

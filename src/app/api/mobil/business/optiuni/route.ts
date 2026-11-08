@@ -15,6 +15,7 @@ const creeazaSchema = z.object({
   pret: z.number({ message: "Prețul este obligatoriu." }).positive("Prețul trebuie să fie mai mare decât 0."),
   peOra: z.boolean().optional().default(true),
   automatLaIntuneric: z.boolean().optional().default(false),
+  automatLaFrig: z.boolean().optional().default(false),
 });
 
 /** Adaugă o opțiune plătită pe un teren al proprietarului. */
@@ -35,6 +36,9 @@ export async function POST(request: Request) {
 
     // O opțiune care se pune singură la întuneric se taxează pe oră; „o dată
     // pe rezervare” n-ar avea ce înmulți cu orele de după apus.
+    if (date.automatLaIntuneric && date.automatLaFrig) {
+      return eroare("Alege o singură regulă automată: la întuneric sau în sezonul rece.", 422);
+    }
     if (date.automatLaIntuneric && !date.peOra) {
       return eroare("O opțiune care se adaugă la întuneric se taxează pe oră.", 422);
     }
@@ -46,6 +50,7 @@ export async function POST(request: Request) {
         price: date.pret,
         pricing: date.peOra ? "PER_HOUR" : "PER_BOOKING",
         autoLaIntuneric: date.automatLaIntuneric,
+        autoLaFrig: date.automatLaFrig,
       },
     });
 
@@ -56,6 +61,7 @@ export async function POST(request: Request) {
         pret: Number(optiune.price),
         peOra: optiune.pricing === "PER_HOUR",
         automatLaIntuneric: optiune.autoLaIntuneric,
+        automatLaFrig: optiune.autoLaFrig,
       },
       201
     );

@@ -1,4 +1,5 @@
 import { oreDeIntuneric } from "@/lib/soare";
+import { APP_TIME_ZONE } from "@/lib/datetime";
 
 /**
  * Cât costă o rezervare: ora terenului plus opțiunile alese.
@@ -13,7 +14,18 @@ export type OptiuneTeren = {
   price: number;
   pricing: "PER_HOUR" | "PER_BOOKING";
   autoLaIntuneric: boolean;
+  /** Se pune singură în sezonul rece (octombrie–aprilie): încălzire balon. */
+  autoLaFrig?: boolean;
 };
+
+/** Lunile în care încălzirea balonului se adaugă singură: octombrie–aprilie. */
+export const LUNI_SEZON_RECE = [10, 11, 12, 1, 2, 3, 4];
+
+/** Rezervarea începe în sezonul rece? Luna se citește în ora României. */
+export function esteSezonRece(data: Date): boolean {
+  const luna = Number(new Intl.DateTimeFormat("en-US", { timeZone: APP_TIME_ZONE, month: "numeric" }).format(data));
+  return LUNI_SEZON_RECE.includes(luna);
+}
 
 export type LinieDePlata = {
   id: string;
@@ -58,13 +70,21 @@ export function calculeazaPretul(input: {
   const linii: LinieDePlata[] = [];
 
   for (const optiune of input.optiuni) {
-    const automat = optiune.autoLaIntuneric;
+    // Două reguli automate: nocturna după apus, încălzirea în sezonul rece.
+    // În afara lor, opțiunea intră doar dacă a bifat-o clientul.
+    const laFrig = !!optiune.autoLaFrig;
+    if (laFrig && !esteSezonRece(input.inceput)) continue;
+    const automat = optiune.autoLaIntuneric || laFrig;
     if (!automat && !input.alese.includes(optiune.id)) continue;
 
-    // O opțiune de nocturnă se taxează doar pentru orele fără lumină, nu
-    // pentru toată rezervarea.
+    // Nocturna se taxează doar pentru orele fără lumină; încălzirea, pentru
+    // toate orele rezervării.
     const unitati =
-      optiune.pricing === "PER_BOOKING" ? 1 : automat ? oreIntunecate() : Math.round(ore);
+      optiune.pricing === "PER_BOOKING"
+        ? 1
+        : optiune.autoLaIntuneric
+          ? oreIntunecate()
+          : Math.round(ore);
 
     if (unitati <= 0) continue;
 

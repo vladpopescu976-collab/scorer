@@ -305,6 +305,10 @@ model FieldExtra {
   /// din orasul terenului. Tipic pentru nocturna.
   autoLaIntuneric Boolean @default(false)
 
+  /// Se adauga singura pe toate orele rezervarilor din sezonul rece
+  /// (octombrie–aprilie). Tipic pentru incalzirea unui teren cu balon.
+  autoLaFrig Boolean @default(false)
+
   createdAt DateTime @default(now())
 
   @@index([fieldId])

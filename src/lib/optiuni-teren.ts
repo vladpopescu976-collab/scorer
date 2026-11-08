@@ -10,6 +10,7 @@ export function optiuneDinTeren(extra: FieldExtra): OptiuneTeren {
     price: Number(extra.price),
     pricing: extra.pricing,
     autoLaIntuneric: extra.autoLaIntuneric,
+    autoLaFrig: extra.autoLaFrig,
   };
 }
 

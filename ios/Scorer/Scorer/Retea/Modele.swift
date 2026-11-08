@@ -85,6 +85,20 @@ struct OptiuneTeren: Codable, Identifiable, Sendable, Hashable {
     let peOra: Bool
     /// Se adaugă singură pe orele fără lumină naturală.
     let automatLaIntuneric: Bool
+    /// Se adaugă singură în sezonul rece (oct–apr): încălzire balon.
+    /// Opțional, ca aplicația să meargă și cu un server mai vechi.
+    var automatLaFrig: Bool?
+
+    var laFrig: Bool { automatLaFrig ?? false }
+    var automata: Bool { automatLaIntuneric || laFrig }
+}
+
+/// Lunile în care încălzirea balonului se adaugă singură — aceleași ca pe server.
+enum SezonRece {
+    static let luni: Set<Int> = [10, 11, 12, 1, 2, 3, 4]
+    static func cuprinde(_ data: Date) -> Bool {
+        luni.contains(Calendar.current.component(.month, from: data))
+    }
 }
 
 struct Utilizator: Codable, Identifiable, Sendable {

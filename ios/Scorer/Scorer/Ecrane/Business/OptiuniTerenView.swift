@@ -14,6 +14,7 @@ struct OptiuniTerenView: View {
     @State private var pret = ""
     @State private var peOra = true
     @State private var laIntuneric = false
+    @State private var laFrig = false
     @State private var eroare: String?
     @State private var seTrimite = false
     @State private var deSters: OptiuneTeren?
@@ -67,14 +68,25 @@ struct OptiuniTerenView: View {
                     }
                 }
 
-                Toggle("Se adaugă singură după apus", isOn: $laIntuneric.animation(.snappy))
+                // Două reguli automate, care se exclud: nocturna după apus și
+                // încălzirea în sezonul rece. Fără ele, clientul o bifează singur.
+                Toggle("Automat după apus (nocturnă)", isOn: Binding(
+                    get: { laIntuneric },
+                    set: { valoare in withAnimation(.snappy) { laIntuneric = valoare; if valoare { laFrig = false } } }
+                ))
+                Toggle("Automat în sezonul rece (încălzire balon)", isOn: Binding(
+                    get: { laFrig },
+                    set: { valoare in withAnimation(.snappy) { laFrig = valoare; if valoare { laIntuneric = false } } }
+                ))
             } header: {
                 Text("Adaugă o opțiune")
             } footer: {
                 if laIntuneric {
                     Text("Se pune singură, doar pe orele fără lumină naturală. Apusul se calculează din dată și din orașul terenului, deci la 18:00 în decembrie intră, iar în iunie nu. Se taxează pe oră.")
+                } else if laFrig {
+                    Text("Se pune singură pe rezervările din octombrie până în aprilie. Pe oră, se taxează toate orele rezervării.")
                 } else {
-                    Text("Clientul o vede la rezervare și o poate bifa.")
+                    Text("Manual: clientul o vede la rezervare și o poate bifa.")
                 }
             }
 
@@ -123,7 +135,9 @@ struct OptiuniTerenView: View {
 
     private func descriere(_ optiune: OptiuneTeren) -> String {
         let baza = "\(Int(optiune.pret)) RON \(optiune.peOra ? "/ oră" : "o dată")"
-        return optiune.automatLaIntuneric ? baza + " · se adaugă singură după apus" : baza
+        if optiune.automatLaIntuneric { return baza + " · automat după apus" }
+        if optiune.laFrig { return baza + " · automat în sezonul rece" }
+        return baza + " · manual"
     }
 
     private func adauga() {
@@ -140,6 +154,7 @@ struct OptiuniTerenView: View {
             let pret: Double
             let peOra: Bool
             let automatLaIntuneric: Bool
+            let automatLaFrig: Bool
         }
 
         eroare = nil
@@ -155,7 +170,8 @@ struct OptiuniTerenView: View {
                         nume: nume.trimmingCharacters(in: .whitespaces),
                         pret: valoare,
                         peOra: laIntuneric ? true : peOra,
-                        automatLaIntuneric: laIntuneric
+                        automatLaIntuneric: laIntuneric,
+                        automatLaFrig: laFrig
                     ),
                     ca: OptiuneTeren.self
                 )
@@ -163,6 +179,7 @@ struct OptiuniTerenView: View {
                 nume = ""
                 pret = ""
                 laIntuneric = false
+                laFrig = false
                 laFinal()
             } catch {
                 eroare = error.localizedDescription

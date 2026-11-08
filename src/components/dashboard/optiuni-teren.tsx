@@ -16,6 +16,7 @@ export type OptiuneSalvata = {
   price: number;
   pricing: "PER_HOUR" | "PER_BOOKING";
   autoLaIntuneric: boolean;
+  autoLaFrig?: boolean;
 };
 
 const MODURI: Record<string, string> = {
@@ -39,6 +40,7 @@ export function OptiuniTeren({
   const [pret, setPret] = useState("");
   const [mod, setMod] = useState<"PER_HOUR" | "PER_BOOKING">("PER_HOUR");
   const [laIntuneric, setLaIntuneric] = useState(false);
+  const [laFrig, setLaFrig] = useState(false);
   const [isPending, startTransition] = useTransition();
 
   function adauga() {
@@ -59,6 +61,7 @@ export function OptiuniTeren({
         price: valoare,
         pricing: laIntuneric ? "PER_HOUR" : mod,
         autoLaIntuneric: laIntuneric,
+        autoLaFrig: laFrig,
       });
       if (!rezultat.ok) {
         toast.error(rezultat.error);
@@ -68,6 +71,7 @@ export function OptiuniTeren({
       setNume("");
       setPret("");
       setLaIntuneric(false);
+      setLaFrig(false);
     });
   }
 
@@ -93,6 +97,7 @@ export function OptiuniTeren({
                 <p className="text-[11.5px] text-muted-foreground">
                   {optiune.price} RON {MODURI[optiune.pricing]}
                   {optiune.autoLaIntuneric && " · se adaugă singură după apus"}
+                  {optiune.autoLaFrig && " · se adaugă singură în sezonul rece (oct–apr)"}
                 </p>
               </div>
               <button
@@ -152,12 +157,31 @@ export function OptiuniTeren({
           <input
             type="checkbox"
             checked={laIntuneric}
-            onChange={(e) => setLaIntuneric(e.target.checked)}
+            onChange={(e) => {
+              setLaIntuneric(e.target.checked);
+              if (e.target.checked) setLaFrig(false);
+            }}
             className="mt-0.5 h-4 w-4 shrink-0 accent-primary"
           />
           <span className="text-muted-foreground">
             Se adaugă singură pe orele fără lumină naturală. Apusul se calculează din dată și din
             orașul terenului, deci la 18:00 în decembrie intră, iar în iunie nu.
+          </span>
+        </label>
+
+        <label className="flex cursor-pointer items-start gap-2.5 text-[12.5px]">
+          <input
+            type="checkbox"
+            checked={laFrig}
+            onChange={(e) => {
+              setLaFrig(e.target.checked);
+              if (e.target.checked) setLaIntuneric(false);
+            }}
+            className="mt-0.5 h-4 w-4 shrink-0 accent-primary"
+          />
+          <span className="text-muted-foreground">
+            Se adaugă singură în sezonul rece, octombrie–aprilie, pe toate orele. Potrivit pentru
+            încălzirea balonului.
           </span>
         </label>
 
