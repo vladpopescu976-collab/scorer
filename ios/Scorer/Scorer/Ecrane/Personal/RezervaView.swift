@@ -24,6 +24,8 @@ struct RezervaView: View {
     @State private var seIncarcaOre = true
     @State private var seTrimite = false
     @State private var eroare: String?
+    @State private var metodaPlata = MetodaPlata.card
+    @State private var arataPlata = false
 
     private var esteMutare: Bool { rezervareExistenta != nil }
     private var ore: [Int] { Array(teren.oraDeschidere..<teren.oraInchidere) }
@@ -41,6 +43,7 @@ struct RezervaView: View {
                     grilaOre
                     if !esteMutare && !optiuni.isEmpty { sectiuneOptiuni }
                     if !esteMutare { campObservatii }
+                    if !esteMutare && oraStart != nil { AlegeMetodaPlata(metoda: $metodaPlata) }
                     if let eroare { casetaEroare(eroare) }
                     Color.clear.frame(height: 130)
                 }
@@ -49,6 +52,9 @@ struct RezervaView: View {
             }
 
             bataieDeSubsol
+        }
+        .sheet(isPresented: $arataPlata) {
+            NavigationStack { PlataCardView(suma: totalDePlata) { trimite() } }
         }
         .navigationTitle(esteMutare ? "Modifică rezervarea" : "Rezervă")
         .navigationBarTitleDisplayMode(.inline)
@@ -448,11 +454,12 @@ struct RezervaView: View {
             }
 
             ButonPrincipal(
-                titlu: esteMutare ? "Salvează modificarea" : "Trimite cererea",
-                simbol: esteMutare ? "checkmark" : "paperplane.fill",
+                titlu: esteMutare ? "Salvează modificarea"
+                    : metodaPlata == .card ? "Plătește \(Int(totalDePlata)) RON" : "Trimite cererea",
+                simbol: esteMutare ? "checkmark" : metodaPlata == .card ? "creditcard.fill" : "paperplane.fill",
                 seIncarca: seTrimite,
                 activ: oraStart != nil && oraSfarsit != nil,
-                actiune: trimite
+                actiune: { if !esteMutare && metodaPlata == .card { arataPlata = true } else { trimite() } }
             )
         }
         .padding(Tema.spatiu)

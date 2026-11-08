@@ -16,6 +16,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { createBookingRequest, getBookedSlots } from "@/lib/actions/bookings";
+import { AlegeMetodaPlata, DialogPlataCard, type MetodaPlata } from "@/components/plata/plata-card";
 import { instantInAppZone, localDateTimeToIso, ziCaText } from "@/lib/datetime";
 import {
   busyHours,
@@ -57,6 +58,8 @@ export function BookingForm({
   const [telefon, setTelefon] = useState("");
   const [emailVizitator, setEmailVizitator] = useState("");
   const [optiuniAlese, setOptiuniAlese] = useState<string[]>([]);
+  const [metodaPlata, setMetodaPlata] = useState<MetodaPlata>("card");
+  const [plataDeschisa, setPlataDeschisa] = useState(false);
   const [error, setError] = useState("");
   const [isPending, startTransition] = useTransition();
 
@@ -162,22 +165,28 @@ export function BookingForm({
 
   const total = pret?.total ?? 0;
 
-  function submit() {
+  /** Verificările de dinainte de trimitere; rulează și înainte de plată. */
+  function verifica(): boolean {
     setError("");
     if (!date || !start || !end) {
       setError("Alege data și intervalul orar.");
-      return;
+      return false;
     }
     if (!isAuthenticated) {
       if (nume.trim().length < 2) {
         setError("Scrie numele tău, ca proprietarul să știe cine vine.");
-        return;
+        return false;
       }
       if (telefon.trim().length < 7) {
         setError("Scrie un număr de telefon la care poți fi sunat.");
-        return;
+        return false;
       }
     }
+    return true;
+  }
+
+  function submit() {
+    if (!verifica() || !date) return;
     // Momentul exact e calculat aici, în fusul clientului, nu pe server —
     // altfel rezervarea ajungea în baza de date cu altă oră decât cea aleasă.
     const day = format(date, "yyyy-MM-dd");
@@ -456,11 +465,34 @@ export function BookingForm({
         </div>
       )}
 
+      {pret && <AlegeMetodaPlata metoda={metodaPlata} alege={setMetodaPlata} />}
+
       {error && <p className="text-[12.5px] text-destructive">{error}</p>}
 
-      <Button className="w-full" onClick={submit} disabled={isPending}>
-        {isPending ? "Se trimite…" : "Trimite cererea de rezervare"}
+      <Button
+        className="w-full"
+        onClick={() => {
+          // Plata se deschide doar după ce rezervarea e completă, ca să nu
+          // „plătești” și apoi să afli că lipsește numele.
+          if (metodaPlata === "card" && pret) {
+            if (verifica()) setPlataDeschisa(true);
+          } else submit();
+        }}
+        disabled={isPending}
+      >
+        {isPending
+          ? "Se trimite…"
+          : metodaPlata === "card" && pret
+            ? `Plătește ${total} RON și rezervă`
+            : "Trimite cererea de rezervare"}
       </Button>
+
+      <DialogPlataCard
+        deschis={plataDeschisa}
+        laInchidere={() => setPlataDeschisa(false)}
+        suma={total}
+        laPlata={submit}
+      />
     </div>
   );
 }
