@@ -70,6 +70,7 @@ export function dimensiuniDinParametru(sport: SportType, valoare: string | null 
 }
 
 /** Formatele salvate, în ordinea din catalog, cu detaliile lor. */
-export function formateleTerenului(sport: SportType, coduri: string[]): FormatTeren[] {
-  return formatePentru(sport).filter((f) => coduri.includes(f.cod));
+export function formateleTerenului(sport: SportType, coduri: string[] | null | undefined): FormatTeren[] {
+  const alese = coduri ?? [];
+  return formatePentru(sport).filter((f) => alese.includes(f.cod));
 }
