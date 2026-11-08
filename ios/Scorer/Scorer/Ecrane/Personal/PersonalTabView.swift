@@ -11,18 +11,32 @@ struct PersonalTabView: View {
         ProcessInfo.processInfo.environment["SCORER_AUTENTIFICARE"] == "1"
     #endif
 
+    enum TabAles: Hashable { case acasa, cauta, favorite, rezervari, cont }
+
+    @State private var tab = TabAles.acasa
+    /// Ce a cerut „Acasă” de la Caută: un sport sau filtrele deschise.
+    @State private var cerereCautare: CerereCautare?
+
     var body: some View {
-        TabView {
-            Tab("Caută", systemImage: "magnifyingglass") {
-                NavigationStack { CautaTerenuriView() }
+        TabView(selection: $tab) {
+            Tab("Acasă", systemImage: "house", value: TabAles.acasa) {
+                NavigationStack {
+                    AcasaView { cerere in
+                        cerereCautare = cerere
+                        tab = .cauta
+                    }
+                }
             }
-            Tab("Favorite", systemImage: "heart") {
+            Tab("Caută", systemImage: "magnifyingglass", value: TabAles.cauta) {
+                NavigationStack { CautaTerenuriView(cerere: $cerereCautare) }
+            }
+            Tab("Favorite", systemImage: "heart", value: TabAles.favorite) {
                 NavigationStack { FavoriteView() }
             }
-            Tab("Rezervări", systemImage: "calendar") {
+            Tab("Rezervări", systemImage: "calendar", value: TabAles.rezervari) {
                 NavigationStack { RezervarileMeleView() }
             }
-            Tab("Cont", systemImage: "person") {
+            Tab("Cont", systemImage: "person", value: TabAles.cont) {
                 NavigationStack { ContView() }
             }
         }

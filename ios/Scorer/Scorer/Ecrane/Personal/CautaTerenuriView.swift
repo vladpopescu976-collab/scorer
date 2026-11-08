@@ -1,6 +1,9 @@
 import SwiftUI
 
 struct CautaTerenuriView: View {
+    /// Venită din „Acasă”: un sport ales sau cererea de a deschide filtrele.
+    var cerere: Binding<CerereCautare?> = .constant(nil)
+
     @State private var terenuri: [Teren] = []
     @State private var seIncarca = true
     @State private var eroare: String?
@@ -43,7 +46,15 @@ struct CautaTerenuriView: View {
             .presentationDetents([.large])
         }
         .refreshable { await incarca() }
+        .onChange(of: cerere.wrappedValue) { _, noua in
+            guard let noua else { return }
+            aplica(noua)
+        }
         .task {
+            if let noua = cerere.wrappedValue {
+                aplica(noua)
+                return
+            }
             await incarca()
             #if DEBUG
             // Deschide panoul de filtre la pornire, pentru verificări automate.
@@ -235,6 +246,14 @@ struct CautaTerenuriView: View {
                     .buttonStyle(.plain)
             }
         }
+    }
+
+    private func aplica(_ noua: CerereCautare) {
+        sportAles = noua.sport
+        dimensiuni = []
+        if noua.deschideFiltre { arataFiltre = true }
+        cerere.wrappedValue = nil
+        Task { await incarca() }
     }
 
     private func stergeFiltrele() {
