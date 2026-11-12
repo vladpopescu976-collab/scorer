@@ -20,7 +20,7 @@ export default async function ContulMeuPage() {
       name: true, email: true, role: true, phone: true, city: true, sports: true,
       birthDate: true, skillLevel: true, preferredTimes: true,
       companyName: true, website: true,
-      marketingOptIn: true, createdAt: true,
+      marketingOptIn: true, createdAt: true, image: true,
       _count: { select: { bookings: true, fields: true, reviews: true } },
     },
   });

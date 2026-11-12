@@ -1,4 +1,5 @@
 import SwiftUI
+import PhotosUI
 
 struct PersonalTabView: View {
     #if DEBUG
@@ -76,15 +77,29 @@ struct ContView: View {
 
     @State private var arataStergerea = false
     @State private var deSchimbat: SchimbareCont?
+    @State private var pozaAleasa: PhotosPickerItem?
+    @State private var arataAlegerea = false
+    @State private var arataOptiuniPoza = false
+    @State private var seIncarcaPoza = false
+    @State private var eroarePoza: String?
+    @State private var pozaSchimbata = 0
 
     var body: some View {
         ZStack {
             Tema.fundal.ignoresSafeArea()
             ScrollView {
-                VStack(spacing: 18) {
+                VStack(spacing: 30) {
                     if let utilizator = sesiune.utilizator {
                         antet(utilizator)
-                        securitate(utilizator)
+                        sectiune("Date de contact") {
+                            rand("Email", u: utilizator.email, simbol: "envelope.fill") { deSchimbat = .email }
+                            separator
+                            rand("Telefon", u: (utilizator.telefon?.isEmpty == false) ? utilizator.telefon! : "Adaugă un număr",
+                                 simbol: "phone.fill") { deSchimbat = .telefon }
+                        }
+                        sectiune("Securitate", nota: "Orice schimbare cere parola actuală și un cod primit pe email.") {
+                            rand("Parolă", u: "••••••••••", simbol: "lock.fill") { deSchimbat = .parola }
+                        }
                         profil(utilizator)
                         actiuni
                     } else {
@@ -96,12 +111,25 @@ struct ContView: View {
                         .fisa()
                     }
                 }
-                .padding(.horizontal, Tema.spatiu)
-                .padding(.vertical, 8)
-                .padding(.bottom, 24)
+                .padding(.horizontal, 20)
+                .padding(.top, 8)
+                .padding(.bottom, 40)
             }
         }
         .navigationTitle("Contul meu")
+        .navigationBarTitleDisplayMode(.inline)
+        .photosPicker(isPresented: $arataAlegerea, selection: $pozaAleasa, matching: .images)
+        .confirmationDialog("Poza de profil", isPresented: $arataOptiuniPoza, titleVisibility: .visible) {
+            Button("Alege din galerie") { arataAlegerea = true }
+            if sesiune.utilizator?.poza != nil {
+                Button("Scoate poza", role: .destructive) { scoatePoza() }
+            }
+        }
+        .onChange(of: pozaAleasa) { _, noua in
+            guard let noua else { return }
+            incarca(noua)
+        }
+        .sensoryFeedback(.success, trigger: pozaSchimbata)
         .sheet(isPresented: $arataStergerea) {
             NavigationStack { StergeContulView() }
                 .presentationDetents([.height(380)])
@@ -114,149 +142,212 @@ struct ContView: View {
     // MARK: Antet
 
     private func antet(_ u: Utilizator) -> some View {
-        let initiale = u.nume.split(separator: " ").prefix(2).compactMap(\.first).map { String($0).uppercased() }.joined()
-        return HStack(spacing: 16) {
-            Text(initiale.isEmpty ? "?" : initiale)
-                .font(.system(size: 26, weight: .semibold, design: .rounded))
-                .foregroundStyle(.white)
-                .frame(width: 68, height: 68)
-                .background(.white.opacity(0.16), in: .rect(cornerRadius: 20, style: .continuous))
-                .overlay { RoundedRectangle(cornerRadius: 20, style: .continuous).strokeBorder(.white.opacity(0.3)) }
+        VStack(spacing: 14) {
+            Button {
+                if u.poza == nil { arataAlegerea = true } else { arataOptiuniPoza = true }
+            } label: {
+                ZStack(alignment: .bottomTrailing) {
+                    AvatarUtilizator(utilizator: u, marime: 112)
+                        .overlay {
+                            if seIncarcaPoza {
+                                Circle().fill(.black.opacity(0.35))
+                                ProgressView().tint(.white)
+                            }
+                        }
+                        .overlay { Circle().strokeBorder(.white, lineWidth: 4) }
+                        .shadow(color: .black.opacity(0.08), radius: 2, y: 1)
+                        .shadow(color: Tema.accent.opacity(0.25), radius: 18, y: 10)
 
-            VStack(alignment: .leading, spacing: 5) {
-                Text(u.nume).font(.title3.weight(.semibold)).lineLimit(1)
-                Text(u.email).font(.subheadline).opacity(0.85).lineLimit(1)
-                HStack(spacing: 6) {
-                    Label(u.rol == .business ? "Business" : "Personal",
-                          systemImage: u.rol == .business ? "building.2.fill" : "person.fill")
-                    if let din = u.membruDin {
-                        Text("· din \(din.formatted(.dateTime.month(.wide).year().locale(.aplicatie).inRomania))")
-                    }
+                    Image(systemName: "camera.fill")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(.white)
+                        .frame(width: 34, height: 34)
+                        .background(Tema.gradientAccent, in: .circle)
+                        .overlay { Circle().strokeBorder(Tema.fundal, lineWidth: 3) }
+                        .offset(x: 2, y: 2)
                 }
-                .font(.caption.weight(.medium))
-                .opacity(0.9)
-                .padding(.top, 2)
             }
-            Spacer(minLength: 0)
-        }
-        .foregroundStyle(.white)
-        .padding(20)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background {
-            RoundedRectangle(cornerRadius: 26, style: .continuous)
-                .fill(LinearGradient(colors: [Color(red: 0.055, green: 0.42, blue: 0.227), Color(red: 0.184, green: 0.647, blue: 0.376)],
-                                     startPoint: .topLeading, endPoint: .bottomTrailing))
-                .overlay(alignment: .topTrailing) {
-                    Circle().fill(.white.opacity(0.1)).frame(width: 160).blur(radius: 30).offset(x: 50, y: -60)
-                }
-                .clipShape(.rect(cornerRadius: 26, style: .continuous))
-        }
-        .shadow(color: Tema.accent.opacity(0.25), radius: 18, y: 10)
-    }
+            .buttonStyle(.plain)
+            .disabled(seIncarcaPoza)
+            .accessibilityLabel(u.poza == nil ? "Adaugă o poză de profil" : "Schimbă poza de profil")
 
-    // MARK: Contact și securitate
+            VStack(spacing: 5) {
+                Text(u.nume)
+                    .font(.system(size: 26, weight: .bold))
+                    .tracking(-0.5)
+                    .multilineTextAlignment(.center)
+                Text(u.email)
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+            }
 
-    private func securitate(_ u: Utilizator) -> some View {
-        VStack(alignment: .leading, spacing: 0) {
             HStack(spacing: 8) {
-                Image(systemName: "checkmark.shield.fill").foregroundStyle(Tema.accent)
-                Text("Contact și securitate")
-            }
-            .font(.headline)
-                .padding(.bottom, 4)
-            Text("Orice schimbare cere parola actuală și un cod primit pe email.")
-                .font(.footnote).foregroundStyle(.secondary)
-                .padding(.bottom, 10)
-
-            rand("Email", u.email, "envelope.fill", .email)
-            Divider().padding(.leading, 56)
-            rand("Telefon", (u.telefon?.isEmpty == false) ? u.telefon! : "Nesetat", "phone.fill", .telefon)
-            Divider().padding(.leading, 56)
-            rand("Parolă", "••••••••••", "key.fill", .parola)
-        }
-        .fisa()
-    }
-
-    private func rand(_ eticheta: String, _ valoare: String, _ simbol: String, _ tip: SchimbareCont) -> some View {
-        Button { deSchimbat = tip } label: {
-            HStack(spacing: 14) {
-                Image(systemName: simbol)
-                    .font(.system(size: 15, weight: .semibold))
-                    .foregroundStyle(Tema.accent)
-                    .frame(width: 42, height: 42)
-                    .background(Tema.accent.opacity(0.12), in: .rect(cornerRadius: 12, style: .continuous))
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(eticheta).font(.footnote).foregroundStyle(.secondary)
-                    Text(valoare).font(.body.weight(.medium)).foregroundStyle(.primary).lineLimit(1)
+                Label(u.rol == .business ? "Cont Business" : "Cont Personal",
+                      systemImage: u.rol == .business ? "building.2.fill" : "person.fill")
+                if let din = u.membruDin {
+                    Text("·")
+                    Text("din \(din.formatted(.dateTime.month(.wide).year().locale(.aplicatie).inRomania))")
                 }
-                Spacer(minLength: 8)
-                Text("Schimbă")
-                    .font(.footnote.weight(.semibold))
-                    .foregroundStyle(Tema.accent)
-                    .padding(.horizontal, 12).padding(.vertical, 7)
-                    .background(Tema.accent.opacity(0.1), in: .capsule)
             }
-            .padding(.vertical, 10)
-            .contentShape(.rect)
+            .font(.caption.weight(.semibold))
+            .foregroundStyle(Tema.accent)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 7)
+            .background(Tema.accent.opacity(0.1), in: .capsule)
+
+            if u.poza == nil && !seIncarcaPoza {
+                Text("Atinge cercul ca să-ți pui o poză.")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            }
+            if let eroarePoza {
+                Text(eroarePoza)
+                    .font(.footnote)
+                    .foregroundStyle(Tema.ocupat)
+                    .multilineTextAlignment(.center)
+            }
         }
-        .buttonStyle(.plain)
+        .frame(maxWidth: .infinity)
+        .padding(.top, 10)
     }
 
-    // MARK: Profil
+    // MARK: Secțiuni
+
+    private func sectiune<Continut: View>(
+        _ titlu: String, nota: String? = nil, @ViewBuilder continut: () -> Continut
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text(titlu.uppercased())
+                .font(.caption.weight(.semibold))
+                .tracking(0.8)
+                .foregroundStyle(.secondary)
+                .padding(.leading, 6)
+            VStack(spacing: 0) { continut() }
+                .padding(.horizontal, 16)
+                .background(Tema.fisa, in: .rect(cornerRadius: 22, style: .continuous))
+                .shadow(color: .black.opacity(0.03), radius: 1, y: 1)
+                .shadow(color: .black.opacity(0.05), radius: 14, y: 6)
+            if let nota {
+                Text(nota)
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                    .padding(.horizontal, 6)
+            }
+        }
+    }
+
+    private var separator: some View {
+        Divider().padding(.leading, 54)
+    }
+
+    private func rand(_ eticheta: String, u valoare: String, simbol: String, actiune: (() -> Void)? = nil) -> some View {
+        let continut = HStack(spacing: 14) {
+            Image(systemName: simbol)
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundStyle(Tema.accent)
+                .frame(width: 40, height: 40)
+                .background(Tema.accent.opacity(0.1), in: .rect(cornerRadius: 12, style: .continuous))
+            VStack(alignment: .leading, spacing: 2) {
+                Text(eticheta).font(.footnote).foregroundStyle(.secondary)
+                Text(valoare).font(.body.weight(.medium)).foregroundStyle(.primary).lineLimit(1)
+            }
+            Spacer(minLength: 8)
+            if actiune != nil {
+                Image(systemName: "chevron.right")
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(.tertiary)
+            }
+        }
+        .padding(.vertical, 14)
+        .contentShape(.rect)
+
+        return Group {
+            if let actiune {
+                Button(action: actiune) { continut }.buttonStyle(.plain)
+            } else {
+                continut
+            }
+        }
+    }
 
     @ViewBuilder
     private func profil(_ u: Utilizator) -> some View {
-        let randuri: [(String, String)] = [
-            ("Oraș", u.oras ?? ""),
-            ("Firmă", u.numeFirma ?? ""),
-            ("Sporturi", (u.sporturi ?? []).map(\.eticheta).joined(separator: ", ")),
+        let randuri: [(String, String, String)] = [
+            ("Oraș", u.oras ?? "", "mappin.and.ellipse"),
+            ("Firmă", u.numeFirma ?? "", "building.2.fill"),
+            ("Sporturi", (u.sporturi ?? []).map(\.eticheta).joined(separator: ", "), "figure.run"),
         ].filter { !$0.1.isEmpty }
         if !randuri.isEmpty {
-            VStack(alignment: .leading, spacing: 14) {
-                Text("Profil").font(.headline)
-                ForEach(randuri, id: \.0) { eticheta, valoare in
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(eticheta).font(.footnote).foregroundStyle(.secondary)
-                        Text(valoare).font(.body.weight(.medium))
-                    }
+            sectiune("Profil") {
+                ForEach(Array(randuri.enumerated()), id: \.offset) { index, rand in
+                    if index > 0 { separator }
+                    self.rand(rand.0, u: rand.1, simbol: rand.2)
                 }
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .fisa()
         }
     }
 
     // MARK: Acțiuni
 
     private var actiuni: some View {
-        VStack(spacing: 12) {
+        VStack(spacing: 18) {
             Button {
                 Task { await sesiune.deconecteaza() }
                 inchide()
             } label: {
                 Label("Deconectare", systemImage: "rectangle.portrait.and.arrow.right")
                     .font(.body.weight(.semibold))
+                    .foregroundStyle(.primary)
                     .frame(maxWidth: .infinity)
-                    .frame(height: 52)
-                    .background(Tema.fisa, in: .rect(cornerRadius: 16, style: .continuous))
-                    .overlay { RoundedRectangle(cornerRadius: 16, style: .continuous).strokeBorder(Color.primary.opacity(0.08)) }
+                    .frame(height: 54)
+                    .background(Tema.fisa, in: .rect(cornerRadius: 18, style: .continuous))
+                    .shadow(color: .black.opacity(0.05), radius: 12, y: 5)
             }
             .buttonStyle(.plain)
 
-            VStack(alignment: .leading, spacing: 8) {
-                Text("Zonă periculoasă").font(.footnote.weight(.semibold)).foregroundStyle(Tema.ocupat)
-                Text(sesiune.esteBusiness
-                     ? "Se șterg definitiv contul, terenurile publicate și istoricul rezervărilor."
-                     : "Se șterg definitiv contul, rezervările, favoritele și recenziile tale.")
-                    .font(.footnote).foregroundStyle(.secondary)
-                Button("Șterge contul", role: .destructive) { arataStergerea = true }
-                    .font(.subheadline.weight(.semibold))
-                    .padding(.top, 2)
+            Button("Șterge contul") { arataStergerea = true }
+                .font(.footnote.weight(.medium))
+                .foregroundStyle(Tema.ocupat)
+        }
+        .padding(.top, 4)
+    }
+
+    // MARK: Poza
+
+    private func incarca(_ element: PhotosPickerItem) {
+        eroarePoza = nil
+        seIncarcaPoza = true
+        Task {
+            defer {
+                seIncarcaPoza = false
+                pozaAleasa = nil
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(16)
-            .background(Tema.ocupat.opacity(0.06), in: .rect(cornerRadius: 16, style: .continuous))
-            .overlay { RoundedRectangle(cornerRadius: 16, style: .continuous).strokeBorder(Tema.ocupat.opacity(0.2)) }
+            do {
+                guard let date = try await element.loadTransferable(type: Data.self),
+                      let pregatita = PozaProfil.pregateste(date)
+                else {
+                    eroarePoza = "Poza nu a putut fi citită. Încearcă alta."
+                    return
+                }
+                try await sesiune.schimbaPoza(pregatita)
+                pozaSchimbata += 1
+            } catch {
+                eroarePoza = error.localizedDescription
+            }
+        }
+    }
+
+    private func scoatePoza() {
+        eroarePoza = nil
+        seIncarcaPoza = true
+        Task {
+            defer { seIncarcaPoza = false }
+            do {
+                try await sesiune.stergePoza()
+            } catch {
+                eroarePoza = error.localizedDescription
+            }
         }
     }
 }

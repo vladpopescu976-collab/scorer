@@ -1,11 +1,12 @@
 import Link from "next/link";
-import { ArrowLeft, Building2, CalendarDays, KeyRound, Mail, MapPin, Phone, ShieldCheck, UserRound } from "lucide-react";
+import { ArrowLeft, Building2, CalendarDays, KeyRound, Mail, Phone, UserRound } from "lucide-react";
 import type { PreferredTime, Role, SkillLevel, SportType } from "@prisma/client";
 
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ZonaPericuloasa } from "@/components/cont/zona-periculoasa";
 import { SchimbaDate } from "@/components/cont/schimba-date";
+import { PozaProfil } from "@/components/cont/poza-profil";
 import { sportMeta } from "@/lib/sports";
 
 const NIVELURI: Record<string, string> = {
@@ -37,6 +38,7 @@ export type DateCont = {
   website: string | null;
   marketingOptIn: boolean;
   createdAt: Date;
+  image: string | null;
   _count: { bookings: number; fields: number; reviews: number };
 };
 
@@ -74,12 +76,6 @@ export function PaginaCont({ user }: { user: DateCont }) {
     valoare: user.marketingOptIn ? "Acceptate" : "Refuzate",
   });
 
-  const initiale = user.name
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((bucata) => bucata[0]?.toUpperCase())
-    .join("");
   const membruDin = user.createdAt.toLocaleDateString("ro-RO", { month: "long", year: "numeric" });
 
   const securitate: { eticheta: string; valoare: string; pictograma: typeof Mail; tip: "email" | "telefon" | "parola" }[] = [
@@ -89,11 +85,11 @@ export function PaginaCont({ user }: { user: DateCont }) {
   ];
 
   return (
-    <div className="mx-auto w-full max-w-2xl px-4 py-10">
+    <div className="mx-auto w-full max-w-2xl px-4 py-10 sm:py-14">
       <Button
         variant="ghost"
         size="sm"
-        className="-ml-2 mb-4"
+        className="-ml-2 mb-6 text-muted-foreground"
         nativeButton={false}
         render={<Link href={esteBusiness ? "/dashboard/business" : "/"} />}
       >
@@ -101,87 +97,79 @@ export function PaginaCont({ user }: { user: DateCont }) {
         {esteBusiness ? "Înapoi la panou" : "Înapoi pe site"}
       </Button>
 
-      <div className="space-y-5">
-        {/* Antet: cine ești, dintr-o privire. */}
-        <section className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#0E6B3A] to-[#2FA560] p-6 text-white shadow-xl shadow-primary/20 sm:p-8">
-          <div aria-hidden className="pointer-events-none absolute -right-16 -top-16 h-56 w-56 rounded-full bg-white/10 blur-2xl" />
-          <div className="relative flex items-center gap-4 sm:gap-5">
-            <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-white/15 text-2xl font-semibold ring-1 ring-white/30 backdrop-blur sm:h-20 sm:w-20 sm:text-3xl">
-              {initiale || <UserRound className="h-8 w-8" />}
-            </div>
-            <div className="min-w-0 space-y-1">
-              <h1 className="truncate text-2xl font-semibold tracking-tight sm:text-3xl">{user.name}</h1>
-              <p className="truncate text-sm text-white/80">{user.email}</p>
-              <div className="flex flex-wrap items-center gap-2 pt-1.5">
-                <span className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1 text-xs font-medium ring-1 ring-white/25">
-                  {esteBusiness ? <Building2 className="h-3.5 w-3.5" /> : <UserRound className="h-3.5 w-3.5" />}
-                  {esteBusiness ? "Cont Business" : "Cont Personal"}
-                </span>
-                <span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1 text-xs text-white/85">
-                  <CalendarDays className="h-3.5 w-3.5" />
-                  Membru din {membruDin}
-                </span>
-              </div>
-            </div>
+      <div className="space-y-12">
+        {/* Antet: poza, numele și tipul contului, centrate și aerisite. */}
+        <section className="flex flex-col items-center text-center">
+          <PozaProfil nume={user.name} poza={user.image} />
+          <h1 className="mt-6 text-[28px] font-semibold tracking-[-0.03em] sm:text-[34px]">{user.name}</h1>
+          <p className="mt-1 text-[15px] text-muted-foreground">{user.email}</p>
+          <div className="mt-4 flex flex-wrap items-center justify-center gap-2 text-[13px]">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-3.5 py-1.5 font-medium text-primary">
+              {esteBusiness ? <Building2 className="h-3.5 w-3.5" /> : <UserRound className="h-3.5 w-3.5" />}
+              {esteBusiness ? "Cont Business" : "Cont Personal"}
+            </span>
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-muted px-3.5 py-1.5 text-muted-foreground">
+              <CalendarDays className="h-3.5 w-3.5" />
+              Membru din {membruDin}
+            </span>
           </div>
         </section>
 
         {/* Date de contact și securitate: fiecare se schimbă cu confirmare. */}
-        <section className="rounded-3xl border bg-card p-2 shadow-sm">
-          <div className="flex items-center gap-2 px-4 pb-2 pt-4">
-            <ShieldCheck className="h-5 w-5 text-primary" />
-            <h2 className="text-base font-semibold">Contact și securitate</h2>
-          </div>
-          <p className="px-4 pb-3 text-sm text-muted-foreground">
-            Orice schimbare cere parola actuală și un cod primit pe email.
-          </p>
+        <Sectiune titlu="Contact și securitate" nota="Orice schimbare cere parola actuală și un cod primit pe email.">
           <ul className="divide-y">
             {securitate.map((rand) => (
-              <li key={rand.tip} className="flex items-center gap-4 px-4 py-4">
-                <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+              <li key={rand.tip} className="flex items-center gap-4 px-5 py-5">
+                <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary">
                   <rand.pictograma className="h-5 w-5" />
                 </span>
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm text-muted-foreground">{rand.eticheta}</p>
+                  <p className="text-[13px] text-muted-foreground">{rand.eticheta}</p>
                   <p className="truncate text-[15px] font-medium">{rand.valoare}</p>
                 </div>
                 <SchimbaDate tip={rand.tip} nume={user.name} email={user.email} />
               </li>
             ))}
           </ul>
-        </section>
+        </Sectiune>
 
-        {/* Profil */}
-        <section className="rounded-3xl border bg-card p-6 shadow-sm">
-          <h2 className="text-base font-semibold">Profil</h2>
-          <dl className="mt-4 grid gap-x-6 gap-y-5 sm:grid-cols-2">
+        <Sectiune titlu="Profil">
+          <dl className="grid gap-x-8 gap-y-6 p-6 sm:grid-cols-2">
             {randuri.map((rand) => (
               <div key={rand.eticheta} className="space-y-1">
-                <dt className="flex items-center gap-1.5 text-sm text-muted-foreground">
-                  {rand.eticheta === "Oraș" && <MapPin className="h-3.5 w-3.5" />}
-                  {rand.eticheta}
-                </dt>
+                <dt className="text-[13px] text-muted-foreground">{rand.eticheta}</dt>
                 <dd className="text-[15px] font-medium">{rand.valoare}</dd>
               </div>
             ))}
-          </dl>
-
-          {!esteBusiness && user.sports.length > 0 && (
-            <div className="mt-6 space-y-2.5">
-              <p className="text-sm text-muted-foreground">Sporturi preferate</p>
-              <div className="flex flex-wrap gap-2">
-                {user.sports.map((sport) => (
-                  <Badge key={sport} variant="secondary" className="rounded-full px-3 py-1 text-sm">
-                    {sportMeta[sport].label}
-                  </Badge>
-                ))}
+            {!esteBusiness && user.sports.length > 0 && (
+              <div className="space-y-2 sm:col-span-2">
+                <dt className="text-[13px] text-muted-foreground">Sporturi preferate</dt>
+                <dd className="flex flex-wrap gap-2">
+                  {user.sports.map((sport) => (
+                    <Badge key={sport} variant="secondary" className="rounded-full px-3 py-1 text-sm">
+                      {sportMeta[sport].label}
+                    </Badge>
+                  ))}
+                </dd>
               </div>
-            </div>
-          )}
-        </section>
+            )}
+          </dl>
+        </Sectiune>
 
         <ZonaPericuloasa esteBusiness={esteBusiness} />
       </div>
     </div>
+  );
+}
+
+function Sectiune({ titlu, nota, children }: { titlu: string; nota?: string; children: React.ReactNode }) {
+  return (
+    <section className="space-y-3">
+      <h2 className="px-1 text-[12px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">{titlu}</h2>
+      <div className="overflow-hidden rounded-3xl border border-black/[0.06] bg-card shadow-[0_1px_2px_rgba(0,0,0,0.04),0_12px_32px_-12px_rgba(0,0,0,0.08)] dark:border-white/10">
+        {children}
+      </div>
+      {nota && <p className="px-1 text-[13px] text-muted-foreground">{nota}</p>}
+    </section>
   );
 }

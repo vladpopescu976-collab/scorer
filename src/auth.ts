@@ -114,16 +114,18 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         token.id = user.id as string;
         token.role = user.role;
       }
-      // După schimbarea emailului din „Contul meu”, pagina cere o actualizare
-      // a sesiunii, ca peste tot să apară adresa nouă.
-      if (trigger === "update" && token.id) {
+      // După schimbarea emailului sau a pozei din „Contul meu”, pagina cere o
+      // actualizare a sesiunii, ca peste tot să apară datele noi. La
+      // autentificare citim și poza, ca iconița din bară să apară imediat.
+      if ((trigger === "update" || user) && token.id) {
         const actual = await prisma.user.findUnique({
           where: { id: token.id as string },
-          select: { email: true, name: true },
+          select: { email: true, name: true, image: true },
         });
         if (actual) {
           token.email = actual.email;
           token.name = actual.name;
+          token.picture = actual.image;
         }
       }
       return token;
@@ -132,6 +134,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       if (session.user) {
         session.user.id = token.id;
         session.user.role = token.role;
+        session.user.image = (token.picture as string | null | undefined) ?? null;
       }
       return session;
     },

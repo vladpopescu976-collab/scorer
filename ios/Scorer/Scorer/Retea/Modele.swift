@@ -161,6 +161,8 @@ struct Utilizator: Codable, Identifiable, Sendable {
     var sporturi: [Sport]?
     var numeFirma: String?
     var membruDin: Date?
+    /// Poza de profil; lipsă = se arată inițialele.
+    var poza: String?
 }
 
 struct RaspunsAutentificare: Codable, Sendable {

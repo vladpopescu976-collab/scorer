@@ -414,6 +414,15 @@ private struct FundalStadion: View {
 
             // Vignetă doar jos și pe margini, ca sus să se lege curat de bară.
             LinearGradient(colors: [.clear, .black.opacity(0.32)], startPoint: UnitPoint(x: 0.5, y: 0.45), endPoint: .bottom)
+
+            // Sus, exact culoarea barei: luminile și granulația se estompează
+            // spre margine, ca bara și blocul să pară o singură suprafață.
+            LinearGradient(
+                stops: [.init(color: Paleta.verdeSus, location: 0), .init(color: Paleta.verdeSus.opacity(0), location: 1)],
+                startPoint: .top, endPoint: .bottom
+            )
+            .frame(height: 90)
+            .frame(maxHeight: .infinity, alignment: .top)
         }
         .allowsHitTesting(false)
         .onChange(of: animat, initial: true) { _, acum in

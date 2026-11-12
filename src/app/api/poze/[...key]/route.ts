@@ -9,7 +9,8 @@ import { isStorageConfigured, storageBucket, storageClient } from "@/lib/storage
 export const maxDuration = 60;
 
 // Bucket-ul este privat, deci pozele încărcate sunt servite prin acest proxy.
-// Cheile sunt generate de noi (terenuri/<userId>/<uuid>.<ext>), iar prefixul
+// Cheile sunt generate de noi (terenuri/<userId>/<uuid>.<ext> sau, pentru
+// pozele de profil, profil/<userId>/<uuid>.<ext>), iar prefixul
 // este verificat mai jos ca să nu poată fi cerut alt conținut din bucket.
 export async function GET(
   _request: Request,
@@ -18,7 +19,7 @@ export async function GET(
   const { key: segments } = await params;
   const key = segments.join("/");
 
-  if (!key.startsWith("terenuri/") || key.includes("..")) {
+  if (!(key.startsWith("terenuri/") || key.startsWith("profil/")) || key.includes("..")) {
     return NextResponse.json({ error: "Resursă invalidă." }, { status: 400 });
   }
 

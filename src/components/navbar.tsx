@@ -5,13 +5,13 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut, useSession } from "next-auth/react";
 import { AnimatePresence, motion, useMotionValueEvent, useScroll } from "framer-motion";
-import { CalendarCheck, Heart, LayoutDashboard, LogOut, Menu, Settings, User as UserIcon, X } from "lucide-react";
+import { CalendarCheck, Heart, LayoutDashboard, LogOut, Menu, Settings, X } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { AvatarCont } from "@/components/cont/poza-profil";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -44,12 +44,6 @@ export function Navbar() {
     setScrolled(latest > 8);
   });
 
-  const initials = session?.user?.name
-    ?.split(" ")
-    .map((part) => part[0])
-    .slice(0, 2)
-    .join("")
-    .toUpperCase();
 
   const isBusiness = session?.user?.role === "BUSINESS";
   const accountHref = isBusiness ? "/dashboard/business" : "/rezervarile-mele";
@@ -175,11 +169,12 @@ export function Navbar() {
                   />
                 }
               >
-                <Avatar className="h-8 w-8">
-                  <AvatarFallback className={peHero ? "bg-white/15 text-white" : "bg-primary/10 text-primary"}>
-                    {initials ?? <UserIcon className="h-4 w-4" />}
-                  </AvatarFallback>
-                </Avatar>
+                <AvatarCont
+                  nume={session.user.name}
+                  poza={session.user.image}
+                  className={cn("h-8 w-8 ring-2", peHero ? "ring-white/30" : "ring-background")}
+                  textClassName="text-xs"
+                />
                 <span className="text-sm font-medium">{session.user.name}</span>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56">
@@ -328,11 +323,7 @@ export function Navbar() {
                 ) : session?.user ? (
                   <>
                     <div className="flex items-center gap-3 rounded-lg px-3 py-2">
-                      <Avatar className="h-9 w-9">
-                        <AvatarFallback className="bg-primary/10 text-primary">
-                          {initials ?? <UserIcon className="h-4 w-4" />}
-                        </AvatarFallback>
-                      </Avatar>
+                      <AvatarCont nume={session.user.name} poza={session.user.image} className="h-9 w-9" textClassName="text-xs" />
                       <div className="flex flex-col">
                         <span className="text-sm font-medium">{session.user.name}</span>
                         <span className="text-xs text-muted-foreground">

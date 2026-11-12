@@ -168,6 +168,20 @@ final class Sesiune {
         }
     }
 
+    /// Încarcă o poză nouă de profil (deja tăiată la pătrat) și reîncarcă profilul.
+    func schimbaPoza(_ date: Data) async throws {
+        _ = try await ApiClient.shared.incarcaPoze(
+            [(nume: "profil.jpg", tip: "image/jpeg", date: date)], cale: "eu/poza"
+        )
+        await reincarcaProfil()
+    }
+
+    func stergePoza() async throws {
+        try await ApiClient.shared.cereFaraRaspuns("eu/poza", metoda: "DELETE")
+        await reincarcaProfil()
+    }
+
+
     func deconecteaza() async {
         Keychain.sterge(cheieToken)
         await ApiClient.shared.seteazaToken(nil)

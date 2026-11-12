@@ -151,7 +151,7 @@ actor ApiClient {
     /// Trimite poze ca multipart/form-data, exact ce așteaptă /mobil/upload.
     /// URLSession nu construiește singur un astfel de corp, așa că îl scriem
     /// noi: fiecare poză între delimitatori, cu numele și tipul ei.
-    func incarcaPoze(_ poze: [(nume: String, tip: String, date: Data)]) async throws -> [String] {
+    func incarcaPoze(_ poze: [(nume: String, tip: String, date: Data)], cale: String = "upload") async throws -> [String] {
         struct Raspuns: Decodable { let poze: [String] }
 
         let delimitator = "Limita-\(UUID().uuidString)"
@@ -170,7 +170,7 @@ actor ApiClient {
         }
         adauga("--\(delimitator)--\r\n")
 
-        var cerere = URLRequest(url: baza.appendingPathComponent("upload"))
+        var cerere = URLRequest(url: baza.appendingPathComponent(cale))
         cerere.httpMethod = "POST"
         cerere.setValue("multipart/form-data; boundary=\(delimitator)", forHTTPHeaderField: "Content-Type")
         if let token {

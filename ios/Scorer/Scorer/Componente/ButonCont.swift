@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 /// Iconița de cont din colțul din dreapta sus. Fără cont, deschide
 /// autentificarea; conectat, arată inițialele și opțiunile contului.
@@ -11,11 +12,8 @@ struct ButonCont: View {
             arataFoaia = true
         } label: {
             if let utilizator = sesiune.utilizator {
-                Text(initiale(utilizator.nume))
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(.white)
-                    .frame(width: 38, height: 38)
-                    .background(Tema.gradientAccent, in: .circle)
+                AvatarUtilizator(utilizator: utilizator, marime: 38)
+                    .overlay { Circle().strokeBorder(.white.opacity(0.7), lineWidth: 1.5) }
             } else {
                 Image(systemName: "person.crop.circle")
                     .font(.system(size: 20, weight: .regular))
@@ -27,20 +25,26 @@ struct ButonCont: View {
         .buttonStyle(.plain)
         .shadow(color: .black.opacity(0.08), radius: 8, x: 0, y: 3)
         .sheet(isPresented: $arataFoaia) {
-            if sesiune.esteConectat {
-                NavigationStack { ContView() }
-                    .presentationDetents([.medium])
-            } else {
-                AutentificareView()
+            Group {
+                if sesiune.esteConectat {
+                    NavigationStack { ContView() }
+                        .presentationDetents([.large])
+                        .presentationCornerRadius(28)
+                } else {
+                    AutentificareView()
+                }
             }
+            // Pe Acasă, butonul stă într-o bară întunecată, iar foaia moștenea
+            // tema închisă: text alb pe cadrane albe. Foaia urmează tema telefonului.
+            .environment(\.colorScheme, Self.temaTelefonului)
         }
     }
+}
 
-    private func initiale(_ nume: String) -> String {
-        nume.split(separator: " ").prefix(2)
-            .compactMap { $0.first.map(String.init) }
-            .joined()
-            .uppercased()
+extension ButonCont {
+    static var temaTelefonului: ColorScheme {
+        let scena = UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }.first
+        return scena?.traitCollection.userInterfaceStyle == .dark ? .dark : .light
     }
 }
 
