@@ -107,7 +107,13 @@ model User {
   favorites Favorite[] @relation("UserFavorites")
   reviews   Review[]   @relation("UserReviews")
 
-  tokenuriEmail EmailVerificationToken[]
+  // „Găsește meci”: anunțurile puse și meciurile la care s-a alăturat.
+  anunturiMeci     AnuntMeci[]   @relation("AnunturiAutor")
+  meciuriJucate    JucatorMeci[] @relation("MeciuriJucator")
+  /// Apare în „Caută jucători”. Implicit nu: nimeni nu e listat fără să vrea.
+  vizibilInCautare Boolean       @default(false)
+
+  tokenuriEmail  EmailVerificationToken[]
   tokenuriParola PasswordResetToken[]
 
   @@map("users")
@@ -206,22 +212,22 @@ model VerificationToken {
 }
 
 model Field {
-  id          String    @id @default(cuid())
-  name        String
-  description String?   @db.Text
-  sportType   SportType
-  city        String
+  id           String    @id @default(cuid())
+  name         String
+  description  String?   @db.Text
+  sportType    SportType
+  city         String
   // Orașul fără diacritice și cu litere mici. Căutarea se face pe el, altfel
   // „Timișoara” nu ar găsi terenurile scrise „timisoara”.
-  cityKey     String   @default("")
-  address     String
-  pricePerHour Decimal  @db.Decimal(10, 2)
-  images      String[]
-  amenities   String[]
+  cityKey      String    @default("")
+  address      String
+  pricePerHour Decimal   @db.Decimal(10, 2)
+  images       String[]
+  amenities    String[]
   /// Dimensiunea în jucători: „5+1”, „7+1” la fotbal, „3x3” la baschet etc.
   /// Coduri din `src/lib/formate-teren.ts`; pot fi mai multe.
-  formate     String[]  @default([])
-  isActive    Boolean   @default(true)
+  formate      String[]  @default([])
+  isActive     Boolean   @default(true)
   contactPhone String?
 
   openingHour Int @default(8)
@@ -272,9 +278,9 @@ model Booking {
   customerId String?
   customer   User?   @relation("CustomerBookings", fields: [customerId], references: [id], onDelete: Cascade)
 
-  guestName  String?
-  guestEmail String?
-  guestPhone String?
+  guestName      String?
+  guestEmail     String?
+  guestPhone     String?
   /// Amprenta linkului prin care vizitatorul isi vede si isi anuleaza
   /// rezervarea. Tokenul in clar exista doar in link, ca la confirmarea
   /// contului.
@@ -409,4 +415,51 @@ model BlockedSlot {
   @@index([fieldId])
   @@index([serieId])
   @@map("blocked_slots")
+}
+
+/// Un anunț „mai avem nevoie de jucători”: cine organizează, ce sport, unde
+/// și când, câți mai lipsesc.
+model AnuntMeci {
+  id String @id @default(cuid())
+
+  autorId String
+  autor   User   @relation("AnunturiAutor", fields: [autorId], references: [id], onDelete: Cascade)
+
+  sport            SportType
+  oras             String
+  /// Orașul fără diacritice, cu litere mici, pentru căutare.
+  orasCheie        String
+  inceput          DateTime
+  /// Terenul sau adresa, scrise liber.
+  locatie          String?
+  /// Dimensiunea („5+1”), dacă e cazul.
+  format           String?
+  /// Câți jucători mai caută organizatorul.
+  jucatoriNecesari Int
+  nivel            SkillLevel?
+  descriere        String?     @db.Text
+  /// Telefonul organizatorului se arată celor care s-au alăturat.
+  arataTelefon     Boolean     @default(true)
+
+  jucatori JucatorMeci[]
+
+  createdAt DateTime @default(now())
+
+  @@index([orasCheie, inceput])
+  @@index([inceput])
+  @@map("anunturi_meci")
+}
+
+model JucatorMeci {
+  anuntId String
+  anunt   AnuntMeci @relation(fields: [anuntId], references: [id], onDelete: Cascade)
+
+  userId String
+  user   User   @relation("MeciuriJucator", fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@id([anuntId, userId])
+  @@index([userId])
+  @@map("jucatori_meci")
 }

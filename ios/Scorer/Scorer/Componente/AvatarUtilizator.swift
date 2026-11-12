@@ -1,6 +1,30 @@
 import SwiftUI
 import UIKit
 
+/// Poza oricui (organizator, jucător), după nume și poză.
+struct AvatarPersoana: View {
+    let nume: String
+    let poza: String?
+    var marime: CGFloat = 32
+
+    var body: some View {
+        ZStack {
+            Circle().fill(Tema.gradientAccent)
+            Text(AvatarUtilizator.initiale(nume))
+                .font(.system(size: marime * 0.36, weight: .semibold, design: .rounded))
+                .foregroundStyle(.white)
+            if let poza, let url = Config.urlPoza(poza) {
+                AsyncImage(url: url) { faza in
+                    if case .success(let imagine) = faza { imagine.resizable().scaledToFill() }
+                }
+            }
+        }
+        .frame(width: marime, height: marime)
+        .clipShape(.circle)
+        .accessibilityLabel(nume)
+    }
+}
+
 /// Poza de profil, rotundă. Fără poză: inițialele pe verdele aplicației.
 struct AvatarUtilizator: View {
     let utilizator: Utilizator?

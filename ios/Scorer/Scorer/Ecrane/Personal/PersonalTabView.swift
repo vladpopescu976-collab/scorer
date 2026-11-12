@@ -12,7 +12,7 @@ struct PersonalTabView: View {
         ProcessInfo.processInfo.environment["SCORER_AUTENTIFICARE"] == "1"
     #endif
 
-    enum TabAles: Hashable { case acasa, cauta, favorite, rezervari, cont }
+    enum TabAles: Hashable { case acasa, cauta, meciuri, rezervari, cont }
 
     @State private var tab = TabAles.acasa
     /// Ce a cerut „Acasă” de la Caută: un sport sau filtrele deschise.
@@ -33,8 +33,9 @@ struct PersonalTabView: View {
                 NavigationStack { CautaTerenuriView(cerere: $cerereCautare) }
                     .intrarePagina(.ridicare)
             }
-            Tab("Favorite", systemImage: "heart", value: TabAles.favorite) {
-                NavigationStack { FavoriteView() }
+            // Favoritele s-au mutat în Cont, ca bara de jos să aibă loc de Meciuri.
+            Tab("Meciuri", systemImage: "figure.run", value: TabAles.meciuri) {
+                NavigationStack { MeciuriView() }
                     .intrarePagina(.apropiere)
             }
             Tab("Rezervări", systemImage: "calendar", value: TabAles.rezervari) {
@@ -100,6 +101,27 @@ struct ContView: View {
                         }
                         sectiune("Securitate", nota: "Orice schimbare cere parola actuală și un cod primit pe email.") {
                             rand("Parolă", u: "••••••••••", simbol: "lock.fill") { deSchimbat = .parola }
+                        }
+                        if !sesiune.esteBusiness {
+                            sectiune("Activitate") {
+                                NavigationLink { FavoriteView() } label: {
+                                    HStack(spacing: 14) {
+                                        Image(systemName: "heart.fill")
+                                            .font(.system(size: 15, weight: .semibold))
+                                            .foregroundStyle(.pink)
+                                            .frame(width: 40, height: 40)
+                                            .background(Color.pink.opacity(0.1), in: .rect(cornerRadius: 12, style: .continuous))
+                                        Text("Terenuri favorite").font(.body.weight(.medium)).foregroundStyle(.primary)
+                                        Spacer(minLength: 8)
+                                        Image(systemName: "chevron.right")
+                                            .font(.footnote.weight(.semibold))
+                                            .foregroundStyle(.tertiary)
+                                    }
+                                    .padding(.vertical, 14)
+                                    .contentShape(.rect)
+                                }
+                                .buttonStyle(.plain)
+                            }
                         }
                         profil(utilizator)
                         actiuni

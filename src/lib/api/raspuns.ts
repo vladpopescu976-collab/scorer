@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
+import { ActionError } from "@/lib/actions/result";
+
 import { prisma } from "@/lib/prisma";
 import { citesteToken, type TokenPayload } from "@/lib/api/token";
 
@@ -17,6 +19,8 @@ export function eroareNeasteptata(context: string, error: unknown) {
   if (error instanceof z.ZodError) {
     return eroare(error.issues[0]?.message ?? "Date invalide.", 422);
   }
+  // Mesajele scrise de noi pentru utilizator („Meciul a început deja.”).
+  if (error instanceof ActionError) return eroare(error.message, 409);
   console.error(`[api:${context}]`, error);
   return eroare("A apărut o eroare. Încearcă din nou.", 500);
 }

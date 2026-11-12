@@ -30,6 +30,7 @@ const roleLabel: Record<string, string> = {
 
 const baseNavLinks = [
   { href: "/cauta-terenuri", label: "Terenuri" },
+  { href: "/gaseste-meci", label: "Găsește meci" },
   { href: "/#cum-functioneaza", label: "Cum funcționează" },
 ];
 

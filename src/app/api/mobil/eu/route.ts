@@ -16,7 +16,7 @@ export async function GET(request: Request) {
       where: { id: sesiune.userId },
       select: {
         id: true, name: true, email: true, role: true, phone: true,
-        city: true, sports: true, companyName: true, createdAt: true, image: true,
+        city: true, sports: true, companyName: true, createdAt: true, image: true, vizibilInCautare: true,
       },
     });
     if (!user) return raspuns(null, 401);
@@ -32,6 +32,7 @@ export async function GET(request: Request) {
       numeFirma: user.companyName,
       membruDin: user.createdAt,
       poza: user.image,
+      vizibilInCautare: user.vizibilInCautare,
     });
   } catch (error) {
     return eroareNeasteptata("eu", error);

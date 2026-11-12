@@ -163,6 +163,59 @@ struct Utilizator: Codable, Identifiable, Sendable {
     var membruDin: Date?
     /// Poza de profil; lipsă = se arată inițialele.
     var poza: String?
+    /// Apare în „Caută jucători”.
+    var vizibilInCautare: Bool?
+}
+
+/// Cineva arătat pe scurt: nume și poză.
+struct PersoanaScurta: Codable, Identifiable, Sendable, Hashable {
+    let id: String
+    let nume: String
+    let poza: String?
+}
+
+/// Un anunț din „Găsește meci”: cineva mai caută jucători.
+struct Meci: Codable, Identifiable, Sendable {
+    let id: String
+    let sport: Sport
+    let oras: String
+    let inceput: Date
+    let locatie: String?
+    let format: String?
+    let jucatoriNecesari: Int
+    let jucatoriAlaturati: Int
+    let nivel: String?
+    let descriere: String?
+    let organizator: PersoanaScurta
+    /// Doar pentru cei alăturați, dacă organizatorul l-a arătat.
+    let telefonOrganizator: String?
+    let esteAlMeu: Bool
+    let mAmAlaturat: Bool
+    let jucatori: [PersoanaScurta]
+
+    var ramase: Int { max(0, jucatoriNecesari - jucatoriAlaturati) }
+}
+
+/// Un jucător care a ales să apară în căutare. Fără email sau telefon.
+struct JucatorPublic: Codable, Identifiable, Sendable {
+    let id: String
+    let nume: String
+    let poza: String?
+    let oras: String?
+    let sporturi: [Sport]
+    let nivel: String?
+}
+
+enum NivelJoc {
+    static func eticheta(_ cod: String?) -> String? {
+        switch cod {
+        case "INCEPATOR": "Începători"
+        case "MEDIU": "Nivel mediu"
+        case "AVANSAT": "Avansați"
+        case "COMPETITIV": "Competitiv"
+        default: nil
+        }
+    }
 }
 
 struct RaspunsAutentificare: Codable, Sendable {
