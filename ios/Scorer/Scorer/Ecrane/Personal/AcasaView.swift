@@ -24,6 +24,8 @@ struct AcasaView: View {
     @Environment(Sesiune.self) private var sesiune
     @Environment(\.accessibilityReduceMotion) private var faraMiscare
     @State private var terenuri: [Teren] = []
+    @State private var seIncarcaTerenuri = true
+    @State private var eroareTerenuri = false
     @State private var arataAutentificarea = false
     @State private var aparut = false
     /// Cât de înalt e blocul verde și dacă bara a trecut deja de el.
@@ -47,7 +49,7 @@ struct AcasaView: View {
                         Paleta.verdeSus.frame(height: 900).offset(y: -900)
                     }
                 VStack(alignment: .leading, spacing: 36) {
-                    if !terenuri.isEmpty { sectiuneRecomandate }
+                    sectiuneRecomandate
                     sectiunePasi
                     if !sesiune.esteConectat { cardProprietari }
                 }
@@ -142,6 +144,19 @@ struct AcasaView: View {
             sporturiRapide
                 .padding(.top, 26)
                 .intrare(aparut, intarziere: 0.42)
+
+            VStack(alignment: .leading, spacing: 11) {
+                avantaj("Rezervi și fără cont")
+                avantaj("Plătești cu Apple Pay sau la teren")
+                avantaj("Vezi orele libere pe loc")
+            }
+            .padding(.top, 28)
+            .intrare(aparut, intarziere: 0.5)
+
+            PrevizualizareRezervare()
+                .padding(.top, 30)
+                .padding(.bottom, 52)
+                .intrare(aparut, intarziere: 0.58)
         }
         .padding(.horizontal, 22)
         .padding(.top, 22 + margineSus)
@@ -191,6 +206,19 @@ struct AcasaView: View {
             .shadow(color: .black.opacity(0.35), radius: 34, y: 24)
         }
         .buttonStyle(ApasarePremium())
+    }
+
+    private func avantaj(_ text: String) -> some View {
+        HStack(spacing: 12) {
+            Image(systemName: "checkmark")
+                .font(.system(size: 11, weight: .bold))
+                .foregroundStyle(Paleta.verdeJos)
+                .frame(width: 22, height: 22)
+                .background(Color(red: 0.36, green: 0.85, blue: 0.52), in: .circle)
+            Text(text)
+                .font(.system(size: 15, weight: .medium))
+                .foregroundStyle(Paleta.creta.opacity(0.82))
+        }
     }
 
     private var sporturiRapide: some View {
@@ -248,6 +276,14 @@ struct AcasaView: View {
 
             ScrollView(.horizontal, showsIndicators: false) {
                 LazyHStack(spacing: 14) {
+                    if terenuri.isEmpty && seIncarcaTerenuri {
+                        ForEach(0..<3, id: \.self) { _ in
+                            RoundedRectangle(cornerRadius: 26, style: .continuous)
+                                .fill(Color.primary.opacity(0.06))
+                                .frame(width: 272, height: 340)
+                                .overlay { ProgressView() }
+                        }
+                    }
                     ForEach(terenuri.prefix(8)) { teren in
                         NavigationLink(value: teren.id) { CardTerenMare(teren: teren) }
                             .buttonStyle(ApasarePremium())
@@ -263,6 +299,18 @@ struct AcasaView: View {
             .contentMargins(.horizontal, 20, for: .scrollContent)
             .scrollTargetBehavior(.viewAligned)
             .scrollClipDisabled()
+
+            if eroareTerenuri {
+                HStack(spacing: 10) {
+                    Image(systemName: "wifi.exclamationmark").foregroundStyle(.secondary)
+                    Text("Terenurile nu s-au putut încărca.").font(.subheadline).foregroundStyle(.secondary)
+                    Spacer()
+                    Button("Reîncearcă") { Task { await incarca() } }
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(Tema.accent)
+                }
+                .padding(.horizontal, 20)
+            }
         }
     }
 
@@ -335,8 +383,14 @@ struct AcasaView: View {
     }
 
     private func incarca() async {
-        if let toate = try? await ApiClient.shared.cere("terenuri", ca: [Teren].self) {
+        seIncarcaTerenuri = true
+        defer { seIncarcaTerenuri = false }
+        do {
+            let toate = try await ApiClient.shared.cere("terenuri", ca: [Teren].self)
+            eroareTerenuri = false
             withAnimation(.smooth) { terenuri = toate }
+        } catch {
+            eroareTerenuri = terenuri.isEmpty
         }
     }
 }
@@ -568,5 +622,88 @@ private struct LiniiTeren: Shape {
         p.addRect(r(570, 110, 100, 220))
         p.addRect(r(632, 165, 38, 110))
         return p
+    }
+}
+
+/// Ilustrație: cum arată o rezervare în Scorer. Nu sunt date reale.
+private struct PrevizualizareRezervare: View {
+    private let ore: [(String, Int)] = [("17:00", 0), ("18:00", 0), ("19:00", 1), ("20:00", 1), ("21:00", 2), ("22:00", 2)]
+    private let menta = Color(red: 0.36, green: 0.85, blue: 0.52)
+    private let verde = Color(red: 0.043, green: 0.29, blue: 0.176)
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack(alignment: .top) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Teren sintetic · 5+1").font(.subheadline.weight(.semibold))
+                    Text("Azi · alege orele").font(.caption).foregroundStyle(.white.opacity(0.5))
+                }
+                Spacer()
+                Text("4 ore libere")
+                    .font(.caption.weight(.medium))
+                    .foregroundStyle(menta)
+                    .padding(.horizontal, 10).padding(.vertical, 5)
+                    .background(menta.opacity(0.15), in: .capsule)
+            }
+
+            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 3), spacing: 8) {
+                ForEach(ore, id: \.0) { ora, stare in
+                    Text(ora)
+                        .font(.footnote.weight(stare == 1 ? .semibold : .regular).monospacedDigit())
+                        .strikethrough(stare == 0)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 10)
+                        .foregroundStyle(stare == 1 ? verde : .white.opacity(stare == 0 ? 0.25 : 0.8))
+                        .background(stare == 1 ? Color.white : .white.opacity(0.03),
+                                    in: .rect(cornerRadius: 11, style: .continuous))
+                        .overlay {
+                            if stare == 2 {
+                                RoundedRectangle(cornerRadius: 11, style: .continuous)
+                                    .strokeBorder(.white.opacity(0.15), lineWidth: 1)
+                            }
+                        }
+                }
+            }
+
+            HStack {
+                VStack(alignment: .leading, spacing: 1) {
+                    Text("19:00 – 21:00").font(.caption).foregroundStyle(.white.opacity(0.45))
+                    Text("340 RON").font(.title3.weight(.semibold).monospacedDigit())
+                }
+                Spacer()
+                Text("Rezervă")
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(verde)
+                    .padding(.horizontal, 16).padding(.vertical, 9)
+                    .background(.white, in: .capsule)
+            }
+            .padding(.top, 14)
+            .overlay(alignment: .top) { Rectangle().fill(.white.opacity(0.1)).frame(height: 1) }
+        }
+        .foregroundStyle(.white)
+        .padding(18)
+        .background(.white.opacity(0.06), in: .rect(cornerRadius: 26, style: .continuous))
+        .shadow(color: .black.opacity(0.25), radius: 24, y: 14)
+        .overlay {
+            RoundedRectangle(cornerRadius: 26, style: .continuous)
+                .strokeBorder(.white.opacity(0.1), lineWidth: 1)
+        }
+        .overlay(alignment: .bottomLeading) {
+            HStack(spacing: 10) {
+                Image(systemName: "checkmark.circle.fill")
+                    .font(.system(size: 20))
+                    .foregroundStyle(Tema.accent)
+                VStack(alignment: .leading, spacing: 1) {
+                    Text("Rezervare confirmată").font(.footnote.weight(.semibold))
+                    Text("Azi, 19:00 – 21:00").font(.caption2).foregroundStyle(.secondary)
+                }
+            }
+            .foregroundStyle(.black)
+            .padding(.horizontal, 14).padding(.vertical, 11)
+            .background(.white, in: .rect(cornerRadius: 16, style: .continuous))
+            .shadow(color: .black.opacity(0.3), radius: 18, y: 8)
+            .offset(x: 14, y: 40)
+        }
+        .accessibilityHidden(true)
     }
 }
