@@ -107,6 +107,7 @@ struct FoaieMetodaPlata: View {
                 ForEach(MetodaPlata.allCases) { optiune in
                     rand(optiune)
                 }
+                randInCurand
             }
 
             Spacer(minLength: 0)
@@ -131,10 +132,38 @@ struct FoaieMetodaPlata: View {
         .padding(Tema.spatiu)
         .padding(.top, 14)
         .animation(.snappy, value: metoda)
-        .presentationDetents([.height(440)])
+        .presentationDetents([.height(530)])
         .presentationDragIndicator(.visible)
         .presentationCornerRadius(28)
         .presentationBackground(Tema.fundal)
+    }
+
+    /// Împărțirea plății între prieteni: se vede, dar nu se poate alege încă.
+    private var randInCurand: some View {
+        HStack(spacing: 14) {
+            Image(systemName: "person.3.fill")
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundStyle(.secondary)
+                .frame(width: 54, height: 38)
+                .background(Color.primary.opacity(0.06), in: .rect(cornerRadius: 9, style: .continuous))
+            VStack(alignment: .leading, spacing: 3) {
+                Text("Split the bill").font(.body.weight(.semibold)).foregroundStyle(.secondary)
+                Text("ÎN CURÂND")
+                    .font(.caption2.weight(.bold))
+                    .tracking(1.2)
+                    .foregroundStyle(Tema.accent)
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(14)
+        .background(Tema.fisa.opacity(0.6), in: .rect(cornerRadius: 18, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .strokeBorder(style: StrokeStyle(lineWidth: 1, dash: [5, 4]))
+                .foregroundStyle(Color.primary.opacity(0.15))
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("Split the bill, în curând")
     }
 
     private func rand(_ optiune: MetodaPlata) -> some View {

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { ArrowLeft, Banknote, CheckCircle2, ChevronRight, CreditCard, Loader2, Lock, ShieldCheck } from "lucide-react";
+import { ArrowLeft, Banknote, CheckCircle2, ChevronRight, CreditCard, Loader2, Lock, ShieldCheck, Users } from "lucide-react";
 
 import { Apple, Google } from "@/components/auth/butoane-sociale";
 
@@ -235,6 +235,20 @@ export function DialogPlataCard({
                     </button>
                   );
                 })}
+
+                {/* Împărțirea plății între prieteni: se vede, dar nu se poate alege încă. */}
+                <div
+                  aria-disabled
+                  className="flex w-full cursor-not-allowed items-center gap-4 rounded-2xl border border-dashed bg-muted/30 p-3.5 pr-4"
+                >
+                  <span className="flex h-10 w-14 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground">
+                    <Users className="h-5 w-5" />
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-[15px] font-semibold text-muted-foreground">Split the bill</span>
+                    <span className="block text-[11px] font-bold tracking-[0.14em] text-primary">ÎN CURÂND</span>
+                  </span>
+                </div>
               </div>
 
               {metoda === "applePay" ? (
