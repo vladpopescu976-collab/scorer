@@ -26,13 +26,20 @@ struct AcasaView: View {
     @State private var terenuri: [Teren] = []
     @State private var arataAutentificarea = false
     @State private var aparut = false
+    /// Cât de înalt e blocul verde și dacă bara a trecut deja de el.
+    @State private var inaltimeHero: CGFloat = 600
+    @State private var pesteHero = false
 
     private let sporturi: [Sport] = [.fotbal, .baschet, .tenis, .padel, .volei, .handbal, .badminton]
 
     var body: some View {
+        // Blocul verde urcă sub bara de sus, iar bara e transparentă: arată
+        // exact culorile prin care trece, fără o nuanță a ei.
+        GeometryReader { geometrie in
         ScrollView {
             VStack(spacing: 0) {
-                hero
+                hero(margineSus: geometrie.safeAreaInsets.top)
+                    .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { inaltimeHero = $0 }
                     // Verdele de deasupra blocului se mișcă odată cu el: la
                     // tragerea în jos nu apare o margine albă, iar la derulare
                     // nu rămâne o bandă verde fixă în spate.
@@ -48,30 +55,40 @@ struct AcasaView: View {
                 .padding(.bottom, 36)
             }
         }
+        .ignoresSafeArea(edges: .top)
+        .onScrollGeometryChange(for: Bool.self) { g in
+            g.contentOffset.y > inaltimeHero - geometrie.safeAreaInsets.top - 8
+        } action: { _, acum in
+            withAnimation(.easeOut(duration: 0.2)) { pesteHero = acum }
+        }
+        }
         .background(Tema.fundal.ignoresSafeArea())
         .toolbar {
             ElementFaraFundal(placement: .topBarLeading) {
                 HStack(spacing: 9) {
-                    SemnScorer(culoare: Paleta.creta)
+                    SemnScorer(culoare: pesteHero ? Tema.accent : Paleta.creta)
                         .frame(width: 19, height: 19)
                         .frame(width: 32, height: 32)
-                        .background(.white.opacity(0.08), in: .rect(cornerRadius: 10, style: .continuous))
+                        .background((pesteHero ? Tema.accent : .white).opacity(pesteHero ? 0.1 : 0.08),
+                                    in: .rect(cornerRadius: 10, style: .continuous))
                         .overlay {
                             RoundedRectangle(cornerRadius: 10, style: .continuous)
-                                .strokeBorder(.white.opacity(0.16), lineWidth: 1)
+                                .strokeBorder((pesteHero ? Tema.accent : .white).opacity(0.16), lineWidth: 1)
                         }
                     Text("Scorer")
                         .font(.system(size: 18, weight: .semibold))
                         .tracking(-0.3)
-                        .foregroundStyle(Paleta.creta)
+                        .foregroundStyle(pesteHero ? Color.primary : Paleta.creta)
                 }
                 .fixedSize()
             }
             ElementFaraFundal(placement: .topBarTrailing) { ButonCont() }
         }
-        .toolbarBackground(Paleta.verdeSus, for: .navigationBar)
-        .toolbarBackgroundVisibility(.visible, for: .navigationBar)
-        .toolbarColorScheme(.dark, for: .navigationBar)
+        // Bara rămâne transparentă tot timpul; doar sigla și ceasul își schimbă
+        // culoarea, ca să se citească și peste partea albă.
+        .toolbarBackgroundVisibility(.hidden, for: .navigationBar)
+        .toolbarColorScheme(pesteHero ? nil : .dark, for: .navigationBar)
+        .modifier(FaraUmbraLaMargine())
         .navigationBarTitleDisplayMode(.inline)
         .navigationDestination(for: String.self) { DetaliuTerenView(terenId: $0) }
         .sheet(isPresented: $arataAutentificarea) { AutentificareView() }
@@ -86,7 +103,7 @@ struct AcasaView: View {
 
     // MARK: - Blocul de stadion
 
-    private var hero: some View {
+    private func hero(margineSus: CGFloat) -> some View {
         VStack(alignment: .leading, spacing: 0) {
             HStack(spacing: 9) {
                 PunctViu()
@@ -127,7 +144,7 @@ struct AcasaView: View {
                 .intrare(aparut, intarziere: 0.42)
         }
         .padding(.horizontal, 22)
-        .padding(.top, 22)
+        .padding(.top, 22 + margineSus)
         .padding(.bottom, 34)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background { FundalStadion(animat: aparut && !faraMiscare) }
@@ -414,15 +431,6 @@ private struct FundalStadion: View {
 
             // Vignetă doar jos și pe margini, ca sus să se lege curat de bară.
             LinearGradient(colors: [.clear, .black.opacity(0.32)], startPoint: UnitPoint(x: 0.5, y: 0.45), endPoint: .bottom)
-
-            // Sus, exact culoarea barei: luminile și granulația se estompează
-            // spre margine, ca bara și blocul să pară o singură suprafață.
-            LinearGradient(
-                stops: [.init(color: Paleta.verdeSus, location: 0), .init(color: Paleta.verdeSus.opacity(0), location: 1)],
-                startPoint: .top, endPoint: .bottom
-            )
-            .frame(height: 90)
-            .frame(maxHeight: .infinity, alignment: .top)
         }
         .allowsHitTesting(false)
         .onChange(of: animat, initial: true) { _, acum in
@@ -514,6 +522,18 @@ private extension View {
             .offset(y: aparut ? 0 : 18)
             .blur(radius: aparut ? 0 : 6)
             .animation(.spring(response: 0.75, dampingFraction: 0.86).delay(intarziere), value: aparut)
+    }
+}
+
+/// Pe iOS 26, sub bara transparentă apare o estompare; aici blocul verde
+/// trebuie să se vadă curat până sus.
+private struct FaraUmbraLaMargine: ViewModifier {
+    func body(content: Content) -> some View {
+        if #available(iOS 26, *) {
+            content.scrollEdgeEffectHidden(true, for: .top)
+        } else {
+            content
+        }
     }
 }
 
