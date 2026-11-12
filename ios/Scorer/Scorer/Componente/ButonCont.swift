@@ -5,11 +5,17 @@ import UIKit
 /// autentificarea; conectat, arată inițialele și opțiunile contului.
 struct ButonCont: View {
     @Environment(Sesiune.self) private var sesiune
+    @Environment(\.deschideCont) private var deschideCont
     @State private var arataFoaia = false
 
     var body: some View {
         Button {
-            arataFoaia = true
+            // Conectat: duce la pagina Cont, aceeași ca din bara de jos.
+            if sesiune.esteConectat, let deschideCont {
+                deschideCont()
+            } else {
+                arataFoaia = true
+            }
         } label: {
             if let utilizator = sesiune.utilizator {
                 AvatarUtilizator(utilizator: utilizator, marime: 38)
@@ -37,8 +43,14 @@ struct ButonCont: View {
             // Pe Acasă, butonul stă într-o bară întunecată, iar foaia moștenea
             // tema închisă: text alb pe cadrane albe. Foaia urmează tema telefonului.
             .environment(\.colorScheme, Self.temaTelefonului)
+            .preferredColorScheme(Self.temaTelefonului)
         }
     }
+}
+
+extension EnvironmentValues {
+    /// Deschide pagina Cont din bara de jos, când există una.
+    @Entry var deschideCont: (() -> Void)? = nil
 }
 
 extension ButonCont {

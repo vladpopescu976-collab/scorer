@@ -46,6 +46,7 @@ struct PersonalTabView: View {
                     .intrarePagina(.clarificare)
             }
         }
+        .environment(\.deschideCont, { tab = .cont })
         #if DEBUG
         .sheet(isPresented: $arataAutentificarea) { AutentificareView() }
         .sheet(item: Binding(
