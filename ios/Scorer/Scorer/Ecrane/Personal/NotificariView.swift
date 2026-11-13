@@ -3,13 +3,40 @@ import SwiftUI
 /// Tot ce i s-a întâmplat contului: rezervări, anulări, mutări, meciuri, recenzii.
 struct NotificariView: View {
     @State private var notificari: [NotificareCont] = []
+    @State private var deRezolvat: [DeRezolvat] = []
     @State private var seIncarca = true
 
     var body: some View {
         List {
-            if seIncarca && notificari.isEmpty {
+            if !deRezolvat.isEmpty {
+                Section("Așteaptă răspunsul tău") {
+                    ForEach(deRezolvat) { d in
+                        Button {
+                            NotificationCenter.default.post(name: d.ecran == "meciuri" ? .deschideMeciuri : .deschideRezervari, object: nil)
+                        } label: {
+                            HStack(alignment: .top, spacing: 12) {
+                                Image(systemName: "exclamationmark")
+                                    .font(.system(size: 14, weight: .bold))
+                                    .foregroundStyle(.white)
+                                    .frame(width: 36, height: 36)
+                                    .background(Tema.asteptare, in: .rect(cornerRadius: 10, style: .continuous))
+                                VStack(alignment: .leading, spacing: 3) {
+                                    Text(d.titlu).font(.subheadline.weight(.bold)).foregroundStyle(.primary)
+                                    Text(d.text).font(.footnote).foregroundStyle(.secondary)
+                                }
+                                Spacer(minLength: 0)
+                                Image(systemName: "chevron.right").font(.footnote.weight(.semibold)).foregroundStyle(.tertiary)
+                            }
+                            .padding(.vertical, 4)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+            }
+
+            if seIncarca && notificari.isEmpty && deRezolvat.isEmpty {
                 HStack { Spacer(); ProgressView(); Spacer() }
-            } else if notificari.isEmpty {
+            } else if notificari.isEmpty && deRezolvat.isEmpty {
                 StareGoala(
                     simbol: "bell",
                     titlu: "Nicio notificare",
@@ -62,6 +89,7 @@ struct NotificariView: View {
     private func incarca() async {
         if let r = try? await ApiClient.shared.cere("notificari", ca: RaspunsNotificari.self) {
             notificari = r.notificari
+            deRezolvat = r.deRezolvat ?? []
         }
         seIncarca = false
     }

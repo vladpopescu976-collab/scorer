@@ -21,8 +21,17 @@ struct NotificareCont: Codable, Identifiable, Sendable {
     let creataLa: Date
 }
 
+/// Ce așteaptă acum răspunsul tău (o mutare propusă, o cerere de confirmat).
+struct DeRezolvat: Codable, Identifiable, Sendable {
+    let id: String
+    let titlu: String
+    let text: String
+    let ecran: String?
+}
+
 struct RaspunsNotificari: Codable, Sendable {
     let necitite: Int
+    var deRezolvat: [DeRezolvat]?
     let notificari: [NotificareCont]
 }
 
@@ -106,6 +115,21 @@ final class Notificari {
         if let ultima { parametri["dupa"] = ultima }
         guard let raspuns = try? await ApiClient.shared.cere("notificari", parametri: parametri, ca: RaspunsNotificari.self) else { return }
         necitite = raspuns.necitite
+
+        // Ce așteaptă răspunsul tău: arătat o singură dată pe telefon, fiecare.
+        var aratate = Set(UserDefaults.standard.stringArray(forKey: "scorer.deRezolvatAratate") ?? [])
+        for d in raspuns.deRezolvat ?? [] where !aratate.contains(d.id) {
+            let continut = UNMutableNotificationContent()
+            continut.title = d.titlu
+            continut.body = d.text
+            continut.sound = .default
+            if let ecran = d.ecran { continut.userInfo = ["ecran": ecran] }
+            try? await UNUserNotificationCenter.current().add(
+                UNNotificationRequest(identifier: d.id, content: continut, trigger: nil)
+            )
+            aratate.insert(d.id)
+        }
+        UserDefaults.standard.set(Array(aratate), forKey: "scorer.deRezolvatAratate")
 
         guard let cea_mai_noua = raspuns.notificari.first else {
             if ultima == nil { UserDefaults.standard.set(Date().formatted(.iso8601cuFractiuni), forKey: cheieUltima) }
