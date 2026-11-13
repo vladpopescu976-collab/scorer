@@ -62,10 +62,21 @@ export function anuntaRezervare(bookingId: string, eveniment: EvenimentRezervare
     } catch (eroare) {
       console.error(`[email:rezervare:${eveniment}] ${bookingId}`, eroare);
     }
-    // Pe lângă email, o notificare pe telefonul proprietarului.
-    await notificaProprietarul(bookingId, eveniment);
+    // Pe lângă email, notificări pe telefon: proprietarului și clientului.
+    await notificaPeTelefon(bookingId, eveniment);
   });
 }
+
+/** Ce află clientul (cu cont) pe telefon, pentru fiecare eveniment care îl privește. */
+const NOTIFICARI_CLIENT: Partial<Record<EvenimentRezervare, string>> = {
+  "confirmata-automat": "Rezervare confirmată",
+  aprobata: "Rezervarea ta a fost confirmată",
+  respinsa: "Rezervarea ta a fost respinsă",
+  "mutare-propusa": "Terenul îți propune altă oră",
+  "anulata-de-client": "Ai anulat rezervarea",
+  "mutata-de-client": "Ai mutat rezervarea",
+  "mutare-acceptata": "Rezervarea a fost mutată",
+};
 
 /** Ce află proprietarul pe telefon, pentru fiecare eveniment care îl privește. */
 const NOTIFICARI_PROPRIETAR: Partial<Record<EvenimentRezervare, string>> = {
@@ -77,9 +88,10 @@ const NOTIFICARI_PROPRIETAR: Partial<Record<EvenimentRezervare, string>> = {
   "mutare-refuzata": "Clientul a refuzat noua oră",
 };
 
-async function notificaProprietarul(bookingId: string, eveniment: EvenimentRezervare) {
-  const titlu = NOTIFICARI_PROPRIETAR[eveniment];
-  if (!titlu) return;
+async function notificaPeTelefon(bookingId: string, eveniment: EvenimentRezervare) {
+  const titluProprietar = NOTIFICARI_PROPRIETAR[eveniment];
+  const titluClient = NOTIFICARI_CLIENT[eveniment];
+  if (!titluProprietar && !titluClient) return;
   try {
     const rezervare = await prisma.booking.findUnique({
       where: { id: bookingId },
@@ -90,11 +102,25 @@ async function notificaProprietarul(bookingId: string, eveniment: EvenimentRezer
     });
     if (!rezervare) return;
     const client = clientulRezervarii(rezervare);
-    await trimiteNotificare(rezervare.field.ownerId, {
-      titlu,
-      text: `${client.nume} · ${rezervare.field.name} · ${ziua(rezervare.startTime)}, ${interval(rezervare.startTime, rezervare.endTime)}`,
-      date: { rezervareId: rezervare.id, ecran: "rezervari" },
-    });
+    const cand = `${ziua(rezervare.startTime)}, ${interval(rezervare.startTime, rezervare.endTime)}`;
+    if (titluProprietar) {
+      await trimiteNotificare(rezervare.field.ownerId, {
+        titlu: titluProprietar,
+        text: `${client.nume} · ${rezervare.field.name} · ${cand}`,
+        date: { rezervareId: rezervare.id, ecran: "rezervari" },
+      });
+    }
+    if (titluClient && rezervare.customerId) {
+      const propus =
+        eveniment === "mutare-propusa" && rezervare.proposedStartTime && rezervare.proposedEndTime
+          ? `${ziua(rezervare.proposedStartTime)}, ${interval(rezervare.proposedStartTime, rezervare.proposedEndTime)}`
+          : cand;
+      await trimiteNotificare(rezervare.customerId, {
+        titlu: titluClient,
+        text: `${rezervare.field.name} · ${propus}`,
+        date: { rezervareId: rezervare.id, ecran: "rezervari" },
+      });
+    }
   } catch (eroare) {
     console.error(`[push:rezervare:${eveniment}] ${bookingId}`, eroare);
   }

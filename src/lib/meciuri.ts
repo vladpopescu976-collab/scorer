@@ -5,6 +5,8 @@ import { prisma } from "@/lib/prisma";
 import { ActionError } from "@/lib/actions/result";
 import { cheieOras, normalizeazaOras } from "@/lib/orase";
 import { esteFormatValid } from "@/lib/formate-teren";
+import { after } from "next/server";
+import { trimiteNotificare } from "@/lib/push";
 
 /**
  * „Găsește meci”: anunțuri „mai avem nevoie de jucători”, alăturarea la ele
@@ -145,18 +147,61 @@ export async function alaturaMeci(anuntId: string, userId: string): Promise<Meci
 
     await tx.jucatorMeci.create({ data: { anuntId, userId } });
     const actual = await tx.anuntMeci.findUniqueOrThrow({ where: { id: anuntId }, include: includeMeci });
+    const nou = actual.jucatori.find((j) => j.userId === userId)?.user.name ?? "Cineva";
+    const ramase = actual.jucatoriNecesari - actual.jucatori.length;
+    anuntaPeTelefon(actual.autorId, {
+      titlu: ramase === 0 ? "Echipa e completă!" : "Un jucător s-a alăturat",
+      text: `${nou} vine la meciul din ${ziSiOra(actual.inceput)}${ramase > 0 ? ` · mai trebuie ${ramase}` : ""}`,
+    });
     return serializeaza(actual, userId);
   });
 }
 
+function ziSiOra(d: Date) {
+  return d.toLocaleString("ro-RO", {
+    timeZone: "Europe/Bucharest",
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+/** Notificarea pleacă după răspuns, ca să nu întârzie acțiunea. */
+function anuntaPeTelefon(userId: string, n: { titlu: string; text: string }) {
+  after(() => trimiteNotificare(userId, { ...n, date: { ecran: "meciuri" } }));
+}
+
 export async function parasesteMeci(anuntId: string, userId: string) {
-  await prisma.jucatorMeci.deleteMany({ where: { anuntId, userId } });
+  const sters = await prisma.jucatorMeci.deleteMany({ where: { anuntId, userId } });
+  if (sters.count === 0) return;
+  const [anunt, user] = await Promise.all([
+    prisma.anuntMeci.findUnique({ where: { id: anuntId }, select: { autorId: true, inceput: true } }),
+    prisma.user.findUnique({ where: { id: userId }, select: { name: true } }),
+  ]);
+  if (anunt) {
+    anuntaPeTelefon(anunt.autorId, {
+      titlu: "Un jucător s-a retras",
+      text: `${user?.name ?? "Cineva"} nu mai vine la meciul din ${ziSiOra(anunt.inceput)}`,
+    });
+  }
 }
 
 export async function stergeMeci(anuntId: string, userId: string) {
   const anunt = await prisma.anuntMeci.findUnique({ where: { id: anuntId }, select: { autorId: true } });
   if (!anunt || anunt.autorId !== userId) throw new ActionError("Doar organizatorul poate șterge anunțul.");
+  const detalii = await prisma.anuntMeci.findUnique({
+    where: { id: anuntId },
+    select: { inceput: true, jucatori: { select: { userId: true } } },
+  });
   await prisma.anuntMeci.delete({ where: { id: anuntId } });
+  for (const j of detalii?.jucatori ?? []) {
+    anuntaPeTelefon(j.userId, {
+      titlu: "Meci anulat",
+      text: `Organizatorul a anulat meciul din ${ziSiOra(detalii!.inceput)}`,
+    });
+  }
 }
 
 export type JucatorPublic = {

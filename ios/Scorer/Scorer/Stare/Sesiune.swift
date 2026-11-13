@@ -166,9 +166,8 @@ final class Sesiune {
         await pornesteNotificarile()
     }
 
-    /// Conturile Business primesc notificări pentru rezervări noi.
+    /// Orice cont conectat primește notificări: rezervări, anulări, mutări, meciuri.
     private func pornesteNotificarile() async {
-        guard esteBusiness else { return }
         await Notificari.shared.porneste()
         await Notificari.shared.trimiteLaServer()
     }

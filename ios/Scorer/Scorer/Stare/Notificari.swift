@@ -5,6 +5,8 @@ import UserNotifications
 extension Notification.Name {
     /// Atingerea unei notificări despre rezervări: aplicația deschide tabul Rezervări.
     static let deschideRezervari = Notification.Name("scorer.deschideRezervari")
+    /// Atingerea unei notificări despre un meci: aplicația deschide tabul Meciuri.
+    static let deschideMeciuri = Notification.Name("scorer.deschideMeciuri")
 }
 
 /// Notificările de pe telefon: permisiunea, tokenul dat de Apple și trimiterea
@@ -86,8 +88,9 @@ final class DelegatAplicatie: NSObject, UIApplicationDelegate, UNUserNotificatio
 
     /// Atingerea notificării deschide Rezervările.
     nonisolated func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse) async {
+        let ecran = response.notification.request.content.userInfo["ecran"] as? String
         await MainActor.run {
-            NotificationCenter.default.post(name: .deschideRezervari, object: nil)
+            NotificationCenter.default.post(name: ecran == "meciuri" ? .deschideMeciuri : .deschideRezervari, object: nil)
         }
     }
 }

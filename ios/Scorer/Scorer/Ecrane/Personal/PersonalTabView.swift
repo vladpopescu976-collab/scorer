@@ -48,6 +48,9 @@ struct PersonalTabView: View {
             }
         }
         .environment(\.deschideCont, { tab = .cont })
+        // Atingerea unei notificări duce la ecranul potrivit.
+        .onReceive(NotificationCenter.default.publisher(for: .deschideRezervari)) { _ in tab = .rezervari }
+        .onReceive(NotificationCenter.default.publisher(for: .deschideMeciuri)) { _ in tab = .meciuri }
         #if DEBUG
         .sheet(isPresented: $arataAutentificarea) { AutentificareView() }
         .sheet(item: Binding(
