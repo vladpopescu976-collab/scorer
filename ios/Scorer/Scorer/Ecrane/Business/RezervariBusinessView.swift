@@ -9,21 +9,55 @@ struct RezervariBusinessView: View {
     /// Implicit: ultima rezervare primită e sus.
     @State private var ordine = OrdineRezervari.noi
 
+    @State private var perioada = Perioada.toate
+
     enum OrdineRezervari: String, CaseIterable, Identifiable {
-        case noi = "Cele mai noi"
+        case noi = "Când a fost făcută"
+        case data = "Data jocului"
         case deConfirmat = "De confirmat întâi"
-        case urmatoare = "După data jocului"
+        case valoare = "Valoare"
         var id: String { rawValue }
     }
 
+    enum Perioada: String, CaseIterable, Identifiable {
+        case toate = "Oricând"
+        case azi = "Azi"
+        case maine = "Mâine"
+        case saptamana = "Următoarele 7 zile"
+        case trecute = "Trecute"
+        var id: String { rawValue }
+    }
+
+    private var filtreActive: Int {
+        (ordine != .noi ? 1 : 0) + (filtru != nil ? 1 : 0) + (perioada != .toate ? 1 : 0)
+    }
+
+    private func inPerioada(_ r: Rezervare, acum: Date) -> Bool {
+        let cal = Calendar.current
+        switch perioada {
+        case .toate: return true
+        case .azi: return cal.isDateInToday(r.inceput)
+        case .maine: return cal.isDateInTomorrow(r.inceput)
+        case .saptamana:
+            let start = cal.startOfDay(for: acum)
+            guard let final = cal.date(byAdding: .day, value: 8, to: start) else { return true }
+            return r.inceput >= start && r.inceput < final
+        case .trecute: return r.sfarsit < acum
+        }
+    }
+
     private var vizibile: [Rezervare] {
-        let filtrate = filtru.map { f in rezervari.filter { $0.status == f } } ?? rezervari
         let acum = Date()
+        let filtrate = rezervari.filter { r in
+            (filtru == nil || r.status == filtru) && inPerioada(r, acum: acum)
+        }
         return filtrate.sorted { a, b in
             switch ordine {
             case .deConfirmat where (a.status == .inAsteptare) != (b.status == .inAsteptare):
                 return a.status == .inAsteptare
-            case .urmatoare:
+            case .valoare:
+                return a.pretTotal > b.pretTotal
+            case .data:
                 let viitorA = a.inceput >= acum, viitorB = b.inceput >= acum
                 if viitorA != viitorB { return viitorA }
                 return viitorA ? a.inceput < b.inceput : a.inceput > b.inceput
@@ -35,25 +69,6 @@ struct RezervariBusinessView: View {
 
     var body: some View {
         List {
-            Section {
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 8) {
-                        PastilaFiltru(text: "Toate", activ: filtru == nil) { filtru = nil }
-                        ForEach(
-                            [StatusRezervare.inAsteptare, .confirmata, .mutarePropusa, .respinsa, .anulata],
-                            id: \.self
-                        ) { status in
-                            PastilaFiltru(text: status.eticheta, activ: filtru == status) {
-                                filtru = filtru == status ? nil : status
-                            }
-                        }
-                    }
-                    .padding(.vertical, 4)
-                }
-                .listRowInsets(.init(top: 0, leading: 16, bottom: 0, trailing: 0))
-                .listRowBackground(Color.clear)
-            }
-
             if seIncarca {
                 HStack { Spacer(); ProgressView(); Spacer() }
             } else if vizibile.isEmpty {
@@ -79,12 +94,38 @@ struct RezervariBusinessView: View {
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Menu {
-                    Picker("Ordine", selection: $ordine) {
+                    Picker(selection: $ordine) {
                         ForEach(OrdineRezervari.allCases) { Text($0.rawValue).tag($0) }
+                    } label: { Label("Ordine", systemImage: "arrow.up.arrow.down") }
+                    .pickerStyle(.menu)
+
+                    Picker(selection: $filtru) {
+                        Text("Toate").tag(StatusRezervare?.none)
+                        ForEach([StatusRezervare.inAsteptare, .confirmata, .mutarePropusa, .respinsa, .anulata], id: \.self) {
+                            Text($0.eticheta).tag(Optional($0))
+                        }
+                    } label: { Label("Status", systemImage: "checkmark.circle") }
+                    .pickerStyle(.menu)
+
+                    Picker(selection: $perioada) {
+                        ForEach(Perioada.allCases) { Text($0.rawValue).tag($0) }
+                    } label: { Label("Perioada jocului", systemImage: "calendar") }
+                    .pickerStyle(.menu)
+
+                    if filtreActive > 0 {
+                        Divider()
+                        Button("Resetează", role: .destructive) {
+                            ordine = .noi; filtru = nil; perioada = .toate
+                        }
                     }
                 } label: {
-                    Label("Ordine", systemImage: "arrow.up.arrow.down")
+                    Image(systemName: filtreActive > 0
+                          ? "line.3.horizontal.decrease.circle.fill"
+                          : "line.3.horizontal.decrease.circle")
+                        .font(.system(size: 19, weight: .medium))
+                        .foregroundStyle(Tema.accent)
                 }
+                .accessibilityLabel("Filtre și ordine")
             }
         }
         .refreshable { await incarca() }

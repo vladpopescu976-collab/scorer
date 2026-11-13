@@ -6,6 +6,7 @@ import { Check, X, Clock3, Search, SlidersHorizontal } from "lucide-react";
 import { toast } from "sonner";
 
 import { Input } from "@/components/ui/input";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { StatusBadge } from "@/components/dashboard/status-badge";
 import { clientulRezervarii } from "@/lib/client-rezervare";
 import {
@@ -34,13 +35,28 @@ type Row = {
   createdAt: Date;
 };
 
-type Ordine = "noi" | "deConfirmat" | "urmatoare";
+type Ordine = "noi" | "data" | "deConfirmat" | "pret";
+type Perioada = "toate" | "azi" | "maine" | "saptamana" | "trecute";
 
-const ORDINI: { id: Ordine; eticheta: string }[] = [
-  { id: "noi", eticheta: "Cele mai noi" },
-  { id: "deConfirmat", eticheta: "De confirmat întâi" },
-  { id: "urmatoare", eticheta: "După data jocului" },
+const ORDINI: { id: Ordine; eticheta: string; detaliu: string }[] = [
+  { id: "noi", eticheta: "Când a fost făcută", detaliu: "Ultima rezervare primită, sus" },
+  { id: "data", eticheta: "Data jocului", detaliu: "Cele care urmează, cea mai apropiată sus" },
+  { id: "deConfirmat", eticheta: "De confirmat întâi", detaliu: "Cererile care așteaptă răspunsul tău" },
+  { id: "pret", eticheta: "Valoare", detaliu: "Cele mai mari sume, sus" },
 ];
+
+const PERIOADE: { id: Perioada; eticheta: string }[] = [
+  { id: "toate", eticheta: "Oricând" },
+  { id: "azi", eticheta: "Azi" },
+  { id: "maine", eticheta: "Mâine" },
+  { id: "saptamana", eticheta: "Următoarele 7 zile" },
+  { id: "trecute", eticheta: "Trecute" },
+];
+
+/** Ziua în România, ca text „2026-11-13”, oricare ar fi fusul browserului. */
+function ziRo(d: Date | number) {
+  return new Date(d).toLocaleDateString("en-CA", { timeZone: "Europe/Bucharest" });
+}
 
 const FILTERS: (BookingStatus | "ALL")[] = ["ALL", "PENDING", "CONFIRMED", "REJECTED", "RESCHEDULE_PROPOSED"];
 
@@ -58,6 +74,7 @@ export function BookingsTable({ bookings, fields }: { bookings: Row[]; fields: {
   const [query, setQuery] = useState("");
   // Implicit: ultima rezervare primită e sus.
   const [ordine, setOrdine] = useState<Ordine>("noi");
+  const [perioada, setPerioada] = useState<Perioada>("toate");
   // Momentul deschiderii paginii: separă meciurile care urmează de cele trecute.
   const [acum] = useState(() => Date.now());
   const [rescheduling, setRescheduling] = useState<Row | null>(null);
@@ -75,6 +92,14 @@ export function BookingsTable({ bookings, fields }: { bookings: Row[]; fields: {
         if (filter !== "ALL" && b.status !== filter) return false;
         if (!terenuriVizibile.has(b.field.id)) return false;
         if (query && !clientulRezervarii(b).nume.toLowerCase().includes(query.toLowerCase())) return false;
+        if (perioada !== "toate") {
+          const zi = ziRo(b.startTime);
+          const azi = ziRo(acum);
+          if (perioada === "azi" && zi !== azi) return false;
+          if (perioada === "maine" && zi !== ziRo(acum + 86_400_000)) return false;
+          if (perioada === "saptamana" && (zi < azi || zi > ziRo(acum + 7 * 86_400_000))) return false;
+          if (perioada === "trecute" && b.endTime.getTime() >= acum) return false;
+        }
         return true;
       })
       .sort((a, b) => {
@@ -83,7 +108,8 @@ export function BookingsTable({ bookings, fields }: { bookings: Row[]; fields: {
           const pb = b.status === "PENDING" ? 0 : 1;
           if (pa !== pb) return pa - pb;
         }
-        if (ordine === "urmatoare") {
+        if (ordine === "pret") return b.totalPrice - a.totalPrice;
+        if (ordine === "data") {
           // Meciurile care urmează, cel mai apropiat primul; cele trecute la final.
           const ta = a.startTime.getTime(), tb = b.startTime.getTime();
           const viitorA = ta >= acum, viitorB = tb >= acum;
@@ -92,7 +118,7 @@ export function BookingsTable({ bookings, fields }: { bookings: Row[]; fields: {
         }
         return b.createdAt.getTime() - a.createdAt.getTime();
       });
-  }, [bookings, filter, terenuriVizibile, query, ordine, acum]);
+  }, [bookings, filter, terenuriVizibile, query, ordine, perioada, acum]);
 
   function handleApprove(id: string) {
     setPendingId(id);
@@ -121,6 +147,7 @@ export function BookingsTable({ bookings, fields }: { bookings: Row[]; fields: {
   }
 
   const pendingCount = bookings.filter((b) => b.status === "PENDING").length;
+  const filtreActive = (ordine !== "noi" ? 1 : 0) + (filter !== "ALL" ? 1 : 0) + (perioada !== "toate" ? 1 : 0);
 
   return (
     <div className="space-y-4">
@@ -138,33 +165,79 @@ export function BookingsTable({ bookings, fields }: { bookings: Row[]; fields: {
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
-        <SlidersHorizontal className="h-3.5 w-3.5 text-muted-foreground" />
-        {FILTERS.map((f) => (
-          <button
-            key={f}
-            type="button"
-            onClick={() => setFilter(f)}
-            className={
-              "rounded-full px-3 py-1.5 text-[12.5px] font-medium transition-colors " +
-              (filter === f ? "bg-foreground text-background" : "bg-muted text-muted-foreground hover:text-foreground")
+        <Popover>
+          <PopoverTrigger
+            render={
+              <button
+                type="button"
+                className="relative inline-flex h-9 items-center gap-2 rounded-full border bg-background px-4 text-[13px] font-medium shadow-sm transition-colors hover:bg-muted"
+              />
             }
           >
-            {f === "ALL" ? "Toate" : bookingStatusLabel[f]}
-          </button>
-        ))}
-        <span className="mx-1 hidden h-5 w-px bg-border sm:block" />
-        <label className="flex items-center gap-2 text-[12.5px] text-muted-foreground">
-          Ordine
-          <select
-            value={ordine}
-            onChange={(e) => setOrdine(e.target.value as Ordine)}
-            className="rounded-full border bg-background px-3 py-1.5 text-[12.5px] font-medium text-foreground"
-          >
-            {ORDINI.map((o) => (
-              <option key={o.id} value={o.id}>{o.eticheta}</option>
-            ))}
-          </select>
-        </label>
+            <SlidersHorizontal className="h-4 w-4" />
+            Filtre și ordine
+            {filtreActive > 0 && (
+              <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1 text-[11px] font-bold text-primary-foreground">
+                {filtreActive}
+              </span>
+            )}
+          </PopoverTrigger>
+          <PopoverContent align="start" className="w-80 space-y-5 rounded-2xl p-5">
+            <GrupFiltru titlu="Ordine">
+              {ORDINI.map((o) => (
+                <button
+                  key={o.id}
+                  type="button"
+                  onClick={() => setOrdine(o.id)}
+                  className={
+                    "flex w-full items-start gap-3 rounded-xl px-3 py-2 text-left transition-colors " +
+                    (ordine === o.id ? "bg-primary/10" : "hover:bg-muted")
+                  }
+                >
+                  <span className={"mt-1 flex h-4 w-4 shrink-0 items-center justify-center rounded-full border-2 " + (ordine === o.id ? "border-primary" : "border-muted-foreground/40")}>
+                    {ordine === o.id && <span className="h-2 w-2 rounded-full bg-primary" />}
+                  </span>
+                  <span>
+                    <span className="block text-[13.5px] font-medium">{o.eticheta}</span>
+                    <span className="block text-[12px] text-muted-foreground">{o.detaliu}</span>
+                  </span>
+                </button>
+              ))}
+            </GrupFiltru>
+            <GrupFiltru titlu="Status">
+              <div className="flex flex-wrap gap-1.5">
+                {FILTERS.map((f) => (
+                  <Cip key={f} activ={filter === f} onClick={() => setFilter(f)}>
+                    {f === "ALL" ? "Toate" : bookingStatusLabel[f]}
+                  </Cip>
+                ))}
+              </div>
+            </GrupFiltru>
+            <GrupFiltru titlu="Perioada jocului">
+              <div className="flex flex-wrap gap-1.5">
+                {PERIOADE.map((p) => (
+                  <Cip key={p.id} activ={perioada === p.id} onClick={() => setPerioada(p.id)}>
+                    {p.eticheta}
+                  </Cip>
+                ))}
+              </div>
+            </GrupFiltru>
+            {filtreActive > 0 && (
+              <button
+                type="button"
+                onClick={() => { setOrdine("noi"); setFilter("ALL"); setPerioada("toate"); }}
+                className="text-[13px] font-medium text-primary hover:underline"
+              >
+                Resetează
+              </button>
+            )}
+          </PopoverContent>
+        </Popover>
+        <span className="text-[12.5px] text-muted-foreground">
+          {ORDINI.find((o) => o.id === ordine)?.eticheta}
+          {filter !== "ALL" && ` · ${bookingStatusLabel[filter]}`}
+          {perioada !== "toate" && ` · ${PERIOADE.find((p) => p.id === perioada)?.eticheta}`}
+        </span>
       </div>
 
       {/* Aceeași alegere ca în orar: întâi sportul, apoi terenul. O listă cu
@@ -290,5 +363,29 @@ export function BookingsTable({ bookings, fields }: { bookings: Row[]; fields: {
         />
       )}
     </div>
+  );
+}
+
+function GrupFiltru({ titlu, children }: { titlu: string; children: React.ReactNode }) {
+  return (
+    <div className="space-y-2">
+      <p className="text-[11.5px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">{titlu}</p>
+      {children}
+    </div>
+  );
+}
+
+function Cip({ activ, onClick, children }: { activ: boolean; onClick: () => void; children: React.ReactNode }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={
+        "rounded-full px-3 py-1.5 text-[12.5px] font-medium transition-colors " +
+        (activ ? "bg-foreground text-background" : "bg-muted text-muted-foreground hover:text-foreground")
+      }
+    >
+      {children}
+    </button>
   );
 }
