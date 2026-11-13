@@ -4,6 +4,7 @@ import SwiftUI
 struct NotificariView: View {
     @State private var notificari: [NotificareCont] = []
     @State private var deRezolvat: [DeRezolvat] = []
+    @State private var rezultatTest: String?
     @State private var seIncarca = true
 
     var body: some View {
@@ -71,6 +72,16 @@ struct NotificariView: View {
         }
         .listStyle(.plain)
         .navigationTitle("Notificări")
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Button("Test", systemImage: "bell.badge") { Task { await test() } }
+            }
+        }
+        .alert("Notificare de test", isPresented: .init(get: { rezultatTest != nil }, set: { if !$0 { rezultatTest = nil } })) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(rezultatTest ?? "")
+        }
         .refreshable { await incarca() }
         .task {
             await incarca()
@@ -84,6 +95,25 @@ struct NotificariView: View {
         case "recenzii": "star.fill"
         default: "calendar"
         }
+    }
+
+    /// Trimite o notificare de test și spune ce lipsește, dacă lipsește ceva.
+    private func test() async {
+        struct Raspuns: Decodable { let cheieApple: Bool; let telefoaneInregistrate: Int; let tabelLipsa: Bool }
+        guard let r = try? await ApiClient.shared.cere("notificari/test", metoda: "POST", ca: Raspuns.self) else {
+            rezultatTest = "Serverul nu a răspuns. Încearcă din nou."
+            return
+        }
+        if r.tabelLipsa {
+            rezultatTest = "Baza de date nu are încă tabelele pentru notificări. Rulează actualizarea bazei (prisma migrate deploy)."
+        } else if !r.cheieApple {
+            rezultatTest = "Serverul nu are cheia Apple, deci nu poate trimite notificări cu aplicația închisă. Notificarea a fost salvată și apare doar cât aplicația e deschisă."
+        } else if r.telefoaneInregistrate == 0 {
+            rezultatTest = "Telefonul nu s-a înregistrat pentru notificări. Verifică în Setări → Scorer → Notificări că sunt permise, apoi deschide din nou aplicația."
+        } else {
+            rezultatTest = "Trimisă către \(r.telefoaneInregistrate) \(r.telefoaneInregistrate == 1 ? "telefon" : "telefoane"). Închide aplicația: ar trebui să apară în câteva secunde."
+        }
+        await Notificari.shared.trimiteLaServer()
     }
 
     private func incarca() async {
