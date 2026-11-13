@@ -170,6 +170,7 @@ final class Sesiune {
     private func pornesteNotificarile() async {
         await Notificari.shared.porneste()
         await Notificari.shared.trimiteLaServer()
+        Notificari.shared.pornesteVerificarea()
     }
 
 

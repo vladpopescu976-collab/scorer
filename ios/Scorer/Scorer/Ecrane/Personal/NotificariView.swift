@@ -1,0 +1,68 @@
+import SwiftUI
+
+/// Tot ce i s-a întâmplat contului: rezervări, anulări, mutări, meciuri, recenzii.
+struct NotificariView: View {
+    @State private var notificari: [NotificareCont] = []
+    @State private var seIncarca = true
+
+    var body: some View {
+        List {
+            if seIncarca && notificari.isEmpty {
+                HStack { Spacer(); ProgressView(); Spacer() }
+            } else if notificari.isEmpty {
+                StareGoala(
+                    simbol: "bell",
+                    titlu: "Nicio notificare",
+                    detaliu: "Aici apar rezervările, confirmările, anulările, mutările și meciurile tale."
+                )
+                .listRowSeparator(.hidden)
+            } else {
+                ForEach(notificari) { n in
+                    HStack(alignment: .top, spacing: 12) {
+                        Image(systemName: simbol(n.ecran))
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundStyle(.white)
+                            .frame(width: 36, height: 36)
+                            .background(Tema.gradientAccent, in: .rect(cornerRadius: 10, style: .continuous))
+                        VStack(alignment: .leading, spacing: 3) {
+                            HStack(alignment: .firstTextBaseline) {
+                                Text(n.titlu).font(.subheadline.weight(n.citita ? .medium : .bold))
+                                Spacer(minLength: 6)
+                                Text(n.creataLa, format: .relative(presentation: .named))
+                                    .font(.caption2)
+                                    .foregroundStyle(.secondary)
+                            }
+                            Text(n.text).font(.footnote).foregroundStyle(.secondary)
+                        }
+                        if !n.citita {
+                            Circle().fill(Tema.accent).frame(width: 8, height: 8).padding(.top, 6)
+                        }
+                    }
+                    .padding(.vertical, 4)
+                }
+            }
+        }
+        .listStyle(.plain)
+        .navigationTitle("Notificări")
+        .refreshable { await incarca() }
+        .task {
+            await incarca()
+            await Notificari.shared.marcheazaCitite()
+        }
+    }
+
+    private func simbol(_ ecran: String?) -> String {
+        switch ecran {
+        case "meciuri": "figure.run"
+        case "recenzii": "star.fill"
+        default: "calendar"
+        }
+    }
+
+    private func incarca() async {
+        if let r = try? await ApiClient.shared.cere("notificari", ca: RaspunsNotificari.self) {
+            notificari = r.notificari
+        }
+        seIncarca = false
+    }
+}

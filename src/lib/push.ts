@@ -73,8 +73,19 @@ function trimiteLaUnul(
   });
 }
 
-/** Trimite o notificare pe toate telefoanele contului. Nu aruncă niciodată. */
+/**
+ * Notifică un cont: o păstrează pe server (aplicația o ia de acolo și o arată,
+ * chiar fără cheia Apple) și o trimite prin Apple, dacă există cheie.
+ * Nu aruncă niciodată.
+ */
 export async function trimiteNotificare(userId: string, n: Notificare): Promise<void> {
+  try {
+    await prisma.notificare.create({
+      data: { userId, titlu: n.titlu, text: n.text, ecran: n.date?.ecran ?? null },
+    });
+  } catch (eroare) {
+    console.error("[notificare] nu a putut fi salvată:", eroare);
+  }
   if (!pushConfigurat) return;
   try {
     const dispozitive = await prisma.dispozitivPush.findMany({ where: { userId }, select: { token: true } });

@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { prisma } from "@/lib/prisma";
+import { anuntaRaspunsLaRecenzie, anuntaRecenzieNoua } from "@/lib/notificari-recenzii";
 import { cereAutentificare, eroare, eroareNeasteptata, raspuns } from "@/lib/api/raspuns";
 
 export const maxDuration = 60;
@@ -73,6 +74,7 @@ export async function POST(request: Request) {
       },
     });
 
+    anuntaRecenzieNoua(rezervare.fieldId, date.nota);
     return raspuns({ creata: true }, 201);
   } catch (error) {
     return eroareNeasteptata("creeaza-recenzie", error);
@@ -106,6 +108,7 @@ export async function PATCH(request: Request) {
       data: { ownerReply: date.raspuns, ownerReplyAt: new Date() },
     });
 
+    anuntaRaspunsLaRecenzie(date.recenzieId);
     return raspuns({ actualizata: true });
   } catch (error) {
     return eroareNeasteptata("raspunde-recenzie", error);

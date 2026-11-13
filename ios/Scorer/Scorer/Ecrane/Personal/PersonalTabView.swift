@@ -105,6 +105,32 @@ struct ContView: View {
                         sectiune("Securitate", nota: "Orice schimbare cere parola actuală și un cod primit pe email.") {
                             rand("Parolă", u: "••••••••••", simbol: "lock.fill") { deSchimbat = .parola }
                         }
+                        sectiune("Notificări") {
+                            NavigationLink { NotificariView() } label: {
+                                HStack(spacing: 14) {
+                                    Image(systemName: "bell.fill")
+                                        .font(.system(size: 15, weight: .semibold))
+                                        .foregroundStyle(Tema.accent)
+                                        .frame(width: 40, height: 40)
+                                        .background(Tema.accent.opacity(0.1), in: .rect(cornerRadius: 12, style: .continuous))
+                                    Text("Toate notificările").font(.body.weight(.medium)).foregroundStyle(.primary)
+                                    Spacer(minLength: 8)
+                                    if Notificari.shared.necitite > 0 {
+                                        Text("\(Notificari.shared.necitite)")
+                                            .font(.caption.weight(.bold))
+                                            .foregroundStyle(.white)
+                                            .padding(.horizontal, 8).padding(.vertical, 3)
+                                            .background(Tema.ocupat, in: .capsule)
+                                    }
+                                    Image(systemName: "chevron.right")
+                                        .font(.footnote.weight(.semibold))
+                                        .foregroundStyle(.tertiary)
+                                }
+                                .padding(.vertical, 14)
+                                .contentShape(.rect)
+                            }
+                            .buttonStyle(.plain)
+                        }
                         if !sesiune.esteBusiness {
                             sectiune("Activitate") {
                                 NavigationLink { FavoriteView() } label: {

@@ -11,13 +11,33 @@ extension Notification.Name {
 
 /// Notificările de pe telefon: permisiunea, tokenul dat de Apple și trimiterea
 /// lui la server, ca proprietarul să afle imediat de o rezervare nouă.
+/// O notificare păstrată pe server (lista din aplicație și cele arătate pe telefon).
+struct NotificareCont: Codable, Identifiable, Sendable {
+    let id: String
+    let titlu: String
+    let text: String
+    let ecran: String?
+    let citita: Bool
+    let creataLa: Date
+}
+
+struct RaspunsNotificari: Codable, Sendable {
+    let necitite: Int
+    let notificari: [NotificareCont]
+}
+
 @MainActor
+@Observable
 final class Notificari {
     static let shared = Notificari()
-    private let cheieToken = "scorer.tokenNotificari"
+    @ObservationIgnored private let cheieToken = "scorer.tokenNotificari"
+    @ObservationIgnored private let cheieUltima = "scorer.ultimaNotificare"
+    /// Câte notificări necitite are contul (insigna din Cont).
+    private(set) var necitite = 0
+    @ObservationIgnored private var bucla: Task<Void, Never>?
 
     /// Tokenul acestui telefon, primit de la Apple.
-    private(set) var token: String? = UserDefaults.standard.string(forKey: "scorer.tokenNotificari")
+    @ObservationIgnored private(set) var token: String? = UserDefaults.standard.string(forKey: "scorer.tokenNotificari")
 
     /// Cere voie o singură dată (iOS ține minte răspunsul) și înregistrează telefonul.
     func porneste() async {
@@ -50,6 +70,7 @@ final class Notificari {
 
     /// La deconectare: telefonul nu mai primește notificările contului.
     func dezleaga() async {
+        reseteaza()
         guard let token else { return }
         struct Corp: Encodable { let token: String }
         try? await ApiClient.shared.cereFaraRaspuns("eu/dispozitiv", metoda: "DELETE", corp: Corp(token: token))
@@ -57,6 +78,65 @@ final class Notificari {
 
     func golesteInsigna() {
         UNUserNotificationCenter.current().setBadgeCount(0)
+    }
+
+    // MARK: - Fără cheia Apple: aplicația își ia singură notificările
+
+    /// Cât timp aplicația e deschisă, verifică des dacă s-a întâmplat ceva.
+    func pornesteVerificarea() {
+        bucla?.cancel()
+        bucla = Task { [weak self] in
+            while !Task.isCancelled {
+                await self?.verifica()
+                try? await Task.sleep(for: .seconds(15))
+            }
+        }
+    }
+
+    func opresteVerificarea() {
+        bucla?.cancel()
+        bucla = nil
+    }
+
+    /// Ia de pe server ce e nou și arată pe telefon fiecare notificare.
+    func verifica() async {
+        guard Keychain.citeste("scorer.token") != nil else { return }
+        let ultima = UserDefaults.standard.string(forKey: cheieUltima)
+        var parametri: [String: String] = [:]
+        if let ultima { parametri["dupa"] = ultima }
+        guard let raspuns = try? await ApiClient.shared.cere("notificari", parametri: parametri, ca: RaspunsNotificari.self) else { return }
+        necitite = raspuns.necitite
+
+        guard let cea_mai_noua = raspuns.notificari.first else {
+            if ultima == nil { UserDefaults.standard.set(Date().formatted(.iso8601cuFractiuni), forKey: cheieUltima) }
+            return
+        }
+        UserDefaults.standard.set(cea_mai_noua.creataLa.formatted(.iso8601cuFractiuni), forKey: cheieUltima)
+        // Prima verificare pe acest telefon: nu arătăm tot istoricul dintr-odată.
+        guard ultima != nil else { return }
+
+        for n in raspuns.notificari.reversed() {
+            let continut = UNMutableNotificationContent()
+            continut.title = n.titlu
+            continut.body = n.text
+            continut.sound = .default
+            if let ecran = n.ecran { continut.userInfo = ["ecran": ecran] }
+            // Același id ca pe server: nu apare de două ori.
+            try? await UNUserNotificationCenter.current().add(
+                UNNotificationRequest(identifier: n.id, content: continut, trigger: nil)
+            )
+        }
+    }
+
+    func marcheazaCitite() async {
+        necitite = 0
+        try? await ApiClient.shared.cereFaraRaspuns("notificari/citite", metoda: "POST")
+    }
+
+    func reseteaza() {
+        opresteVerificarea()
+        necitite = 0
+        UserDefaults.standard.removeObject(forKey: cheieUltima)
     }
 }
 

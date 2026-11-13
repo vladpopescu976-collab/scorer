@@ -23,7 +23,15 @@ struct ScorerApp: App {
                 .environment(\.locale, .aplicatie)
                 .environment(\.timeZone, .aplicatie)
                 .onChange(of: faza) { _, noua in
-                    if noua == .active { Notificari.shared.golesteInsigna() }
+                    switch noua {
+                    case .active:
+                        Notificari.shared.golesteInsigna()
+                        if sesiune.esteConectat { Notificari.shared.pornesteVerificarea() }
+                    case .background:
+                        Notificari.shared.opresteVerificarea()
+                    default:
+                        break
+                    }
                 }
         }
     }

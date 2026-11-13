@@ -115,6 +115,8 @@ model User {
 
   /// Telefoanele pe care primește notificări (rezervări noi etc.).
   dispozitivePush DispozitivPush[]
+  /// Tot ce i s-a întâmplat contului: rezervări, anulări, meciuri. Și pentru lista din aplicație.
+  notificari      Notificare[]
 
   tokenuriEmail  EmailVerificationToken[]
   tokenuriParola PasswordResetToken[]
@@ -479,4 +481,23 @@ model DispozitivPush {
 
   @@index([userId])
   @@map("dispozitive_push")
+}
+
+/// O notificare pentru un cont. Se păstrează pe server, ca aplicația să le
+/// poată arăta chiar și fără notificările Apple, și ca listă în aplicație.
+model Notificare {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  titlu  String
+  text   String
+  /// Unde duce atingerea: „rezervari”, „meciuri”, „recenzii”.
+  ecran  String?
+  citita Boolean @default(false)
+
+  createdAt DateTime @default(now())
+
+  @@index([userId, createdAt])
+  @@map("notificari")
 }

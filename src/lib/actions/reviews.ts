@@ -5,6 +5,7 @@ import { z } from "zod";
 
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
+import { anuntaRaspunsLaRecenzie, anuntaRecenzieNoua } from "@/lib/notificari-recenzii";
 import { ActionError, fail, ok, toActionError, type ActionResult } from "@/lib/actions/result";
 
 async function requireSession() {
@@ -62,6 +63,7 @@ export async function submitReview(input: z.infer<typeof reviewSchema>): Promise
       },
     });
 
+    anuntaRecenzieNoua(booking.fieldId, data.rating);
     revalidatePath("/rezervarile-mele");
     revalidatePath(`/terenuri/${booking.fieldId}`);
     revalidatePath("/dashboard/business/recenzii");
@@ -101,6 +103,7 @@ export async function replyToReview(input: z.infer<typeof replySchema>): Promise
       data: { ownerReply: data.reply, ownerReplyAt: new Date() },
     });
 
+    anuntaRaspunsLaRecenzie(data.reviewId);
     revalidatePath("/dashboard/business/recenzii");
     revalidatePath(`/terenuri/${review.field.id}`);
     return ok();
