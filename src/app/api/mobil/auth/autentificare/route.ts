@@ -56,6 +56,7 @@ export async function POST(request: Request) {
         email: user.email,
         rol: user.role,
         telefon: user.phone,
+        poza: user.image,
       },
     });
   } catch (error) {

@@ -158,6 +158,10 @@ final class Sesiune {
         Keychain.scrie(cheieToken, valoare: raspuns.token)
         await ApiClient.shared.seteazaToken(raspuns.token)
         utilizator = raspuns.utilizator
+        // Răspunsul de la autentificare are doar datele de bază; profilul
+        // complet (poza, orașul, sporturile) vine de la „eu”. Fără asta, după
+        // o nouă conectare poza părea pierdută până la repornirea aplicației.
+        await reincarcaProfil()
     }
 
 
