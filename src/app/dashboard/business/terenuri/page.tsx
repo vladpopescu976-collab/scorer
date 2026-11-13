@@ -12,14 +12,26 @@ export default async function BusinessFieldsPage() {
   const session = await auth();
   const ownerId = session!.user.id;
 
-  const fields = await prisma.field.findMany({
-    where: { ownerId },
-    orderBy: { createdAt: "desc" },
-    include: { extras: { orderBy: { createdAt: "asc" } } },
-  });
+  const [fields, blocari] = await Promise.all([
+    prisma.field.findMany({
+      where: { ownerId },
+      orderBy: { createdAt: "desc" },
+      include: { extras: { orderBy: { createdAt: "asc" } } },
+    }),
+    // Doar ce urmează: intervalele trecute nu mai interesează.
+    prisma.blockedSlot.findMany({
+      where: { field: { ownerId }, endTime: { gt: new Date() } },
+      orderBy: { startTime: "asc" },
+      select: {
+        id: true, fieldId: true, startTime: true, endTime: true,
+        reason: true, clientName: true, clientPhone: true, serieId: true,
+      },
+    }),
+  ]);
 
   return (
     <FieldSettingsClient
+      blocari={blocari}
       fields={fields.map((f) => ({
         id: f.id,
         name: f.name,

@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
 import { FieldFormDialog, type EditableField } from "@/components/dashboard/field-form-dialog";
 import { OptiuniTeren } from "@/components/dashboard/optiuni-teren";
+import { OreBlocate, type BlocareTeren } from "@/components/dashboard/ore-blocate";
 import { updateField, removeField } from "@/lib/actions/business";
 import { sportMeta } from "@/lib/sports";
 
@@ -17,9 +18,11 @@ type Field = EditableField;
 function FieldCard({
   field,
   existingPhones,
+  blocari,
 }: {
   field: Field;
   existingPhones: { name: string; contactPhone: string }[];
+  blocari: BlocareTeren[];
 }) {
   const [draft, setDraft] = useState(field);
   const [prevField, setPrevField] = useState(field);
@@ -204,6 +207,11 @@ function FieldCard({
         </div>
       </div>
 
+      {/* În loc de lista întreagă: un rezumat, iar detaliile cu filtre la cerere. */}
+      <div className="mt-4">
+        <OreBlocate fieldId={field.id} numeTeren={field.name} blocari={blocari} />
+      </div>
+
       <div className="mt-4 border-t pt-4">
         <p className="mb-2 text-[12.5px] font-medium">Ce se poate adăuga peste prețul orei</p>
         <OptiuniTeren fieldId={field.id} optiuni={field.extras} />
@@ -219,7 +227,13 @@ function FieldCard({
   );
 }
 
-export function FieldSettingsClient({ fields }: { fields: Field[] }) {
+export function FieldSettingsClient({
+  fields,
+  blocari = [],
+}: {
+  fields: Field[];
+  blocari?: (BlocareTeren & { fieldId: string })[];
+}) {
   const [addOpen, setAddOpen] = useState(false);
   const existingPhones = fields
     .filter((f): f is Field & { contactPhone: string } => !!f.contactPhone)
@@ -253,7 +267,12 @@ export function FieldSettingsClient({ fields }: { fields: Field[] }) {
         <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
           <AnimatePresence>
             {fields.map((field) => (
-              <FieldCard key={field.id} field={field} existingPhones={existingPhones} />
+              <FieldCard
+                key={field.id}
+                field={field}
+                existingPhones={existingPhones}
+                blocari={blocari.filter((b) => b.fieldId === field.id)}
+              />
             ))}
           </AnimatePresence>
         </div>
