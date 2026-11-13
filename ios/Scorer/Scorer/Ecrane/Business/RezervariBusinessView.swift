@@ -6,10 +6,31 @@ struct RezervariBusinessView: View {
     @State private var filtru: StatusRezervare?
     @State private var eroare: String?
     @State private var dePropus: Rezervare?
+    /// Implicit: ultima rezervare primită e sus.
+    @State private var ordine = OrdineRezervari.noi
+
+    enum OrdineRezervari: String, CaseIterable, Identifiable {
+        case noi = "Cele mai noi"
+        case deConfirmat = "De confirmat întâi"
+        case urmatoare = "După data jocului"
+        var id: String { rawValue }
+    }
 
     private var vizibile: [Rezervare] {
-        guard let filtru else { return rezervari }
-        return rezervari.filter { $0.status == filtru }
+        let filtrate = filtru.map { f in rezervari.filter { $0.status == f } } ?? rezervari
+        let acum = Date()
+        return filtrate.sorted { a, b in
+            switch ordine {
+            case .deConfirmat where (a.status == .inAsteptare) != (b.status == .inAsteptare):
+                return a.status == .inAsteptare
+            case .urmatoare:
+                let viitorA = a.inceput >= acum, viitorB = b.inceput >= acum
+                if viitorA != viitorB { return viitorA }
+                return viitorA ? a.inceput < b.inceput : a.inceput > b.inceput
+            default:
+                return (a.creataLa ?? a.inceput) > (b.creataLa ?? b.inceput)
+            }
+        }
     }
 
     var body: some View {
@@ -55,8 +76,23 @@ struct RezervariBusinessView: View {
         }
         .listStyle(.plain)
         .navigationTitle("Rezervări")
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Menu {
+                    Picker("Ordine", selection: $ordine) {
+                        ForEach(OrdineRezervari.allCases) { Text($0.rawValue).tag($0) }
+                    }
+                } label: {
+                    Label("Ordine", systemImage: "arrow.up.arrow.down")
+                }
+            }
+        }
         .refreshable { await incarca() }
         .task { await incarca() }
+        // O notificare despre o rezervare nouă: lista se reîmprospătează.
+        .onReceive(NotificationCenter.default.publisher(for: .deschideRezervari)) { _ in
+            Task { await incarca() }
+        }
         .sheet(item: $dePropus) { rezervare in
             NavigationStack {
                 PropuneMutareView(rezervare: rezervare) { Task { await incarca() } }

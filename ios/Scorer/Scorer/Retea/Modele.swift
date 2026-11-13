@@ -300,6 +300,8 @@ struct Rezervare: Codable, Identifiable, Sendable {
     let inceputPropus: Date?
     let sfarsitPropus: Date?
     let notaMutare: String?
+    /// Când a fost făcută cererea. Lipsește pe serverele mai vechi.
+    var creataLa: Date?
     let pretTotal: Double
     let observatii: String?
     let teren: TerenScurt

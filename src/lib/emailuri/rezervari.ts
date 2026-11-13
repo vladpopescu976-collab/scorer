@@ -6,6 +6,7 @@ import { trimiteEmail, urlAplicatie } from "@/lib/email";
 import { sablon, type Rand } from "@/lib/emailuri/sablon";
 import { APP_TIME_ZONE } from "@/lib/datetime";
 import { linkRezervare, tokenSemnat } from "@/lib/rezervari-vizitator";
+import { trimiteNotificare } from "@/lib/push";
 
 /**
  * Anunțurile despre rezervări.
@@ -61,7 +62,42 @@ export function anuntaRezervare(bookingId: string, eveniment: EvenimentRezervare
     } catch (eroare) {
       console.error(`[email:rezervare:${eveniment}] ${bookingId}`, eroare);
     }
+    // Pe lângă email, o notificare pe telefonul proprietarului.
+    await notificaProprietarul(bookingId, eveniment);
   });
+}
+
+/** Ce află proprietarul pe telefon, pentru fiecare eveniment care îl privește. */
+const NOTIFICARI_PROPRIETAR: Partial<Record<EvenimentRezervare, string>> = {
+  "cerere-noua": "Rezervare nouă de confirmat",
+  "confirmata-automat": "Rezervare nouă, confirmată automat",
+  "anulata-de-client": "Rezervare anulată de client",
+  "mutata-de-client": "Clientul a mutat rezervarea",
+  "mutare-acceptata": "Clientul a acceptat noua oră",
+  "mutare-refuzata": "Clientul a refuzat noua oră",
+};
+
+async function notificaProprietarul(bookingId: string, eveniment: EvenimentRezervare) {
+  const titlu = NOTIFICARI_PROPRIETAR[eveniment];
+  if (!titlu) return;
+  try {
+    const rezervare = await prisma.booking.findUnique({
+      where: { id: bookingId },
+      include: {
+        customer: { select: { name: true, email: true, phone: true } },
+        field: { select: { name: true, ownerId: true } },
+      },
+    });
+    if (!rezervare) return;
+    const client = clientulRezervarii(rezervare);
+    await trimiteNotificare(rezervare.field.ownerId, {
+      titlu,
+      text: `${client.nume} · ${rezervare.field.name} · ${ziua(rezervare.startTime)}, ${interval(rezervare.startTime, rezervare.endTime)}`,
+      date: { rezervareId: rezervare.id, ecran: "rezervari" },
+    });
+  } catch (eroare) {
+    console.error(`[push:rezervare:${eveniment}] ${bookingId}`, eroare);
+  }
 }
 
 /**

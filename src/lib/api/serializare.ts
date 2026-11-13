@@ -77,6 +77,7 @@ export type RezervareApi = {
   inceputPropus: string | null;
   sfarsitPropus: string | null;
   notaMutare: string | null;
+  creataLa: string;
   pretTotal: number;
   observatii: string | null;
   teren: { id: string; nume: string; oras: string; oraDeschidere: number; oraInchidere: number };
@@ -101,6 +102,7 @@ export function serializeazaRezervare(booking: BookingCuTeren): RezervareApi {
     inceputPropus: booking.proposedStartTime?.toISOString() ?? null,
     sfarsitPropus: booking.proposedEndTime?.toISOString() ?? null,
     notaMutare: booking.rescheduleNote,
+    creataLa: booking.createdAt.toISOString(),
     pretTotal: Number(booking.totalPrice),
     observatii: booking.notes,
     teren: {

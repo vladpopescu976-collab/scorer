@@ -23,7 +23,8 @@ export default async function BusinessBookingsPage() {
         field: { select: { id: true, name: true } },
         extras: true,
       },
-      orderBy: { startTime: "desc" },
+      // Cea mai nouă cerere sus: o rezervare făcută acum apare prima.
+      orderBy: { createdAt: "desc" },
     }),
     prisma.field.findMany({ where: { ownerId }, select: { id: true, name: true, sportType: true } }),
   ]);

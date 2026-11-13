@@ -40,6 +40,10 @@ struct BusinessTabView: View {
                     .intrarePagina(.clarificare)
             }
         }
+        // Atingerea unei notificări despre o rezervare duce aici.
+        .onReceive(NotificationCenter.default.publisher(for: .deschideRezervari)) { _ in
+            tabAles = "rezervari"
+        }
     }
 }
 

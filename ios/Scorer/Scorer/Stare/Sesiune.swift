@@ -30,6 +30,7 @@ final class Sesiune {
         await ApiClient.shared.seteazaToken(token)
         do {
             utilizator = try await ApiClient.shared.cere("eu", ca: Utilizator.self)
+            await pornesteNotificarile()
         } catch {
             // Token expirat sau cont șters — pornim ca deconectat.
             await deconecteaza()
@@ -162,6 +163,14 @@ final class Sesiune {
         // complet (poza, orașul, sporturile) vine de la „eu”. Fără asta, după
         // o nouă conectare poza părea pierdută până la repornirea aplicației.
         await reincarcaProfil()
+        await pornesteNotificarile()
+    }
+
+    /// Conturile Business primesc notificări pentru rezervări noi.
+    private func pornesteNotificarile() async {
+        guard esteBusiness else { return }
+        await Notificari.shared.porneste()
+        await Notificari.shared.trimiteLaServer()
     }
 
 
@@ -187,6 +196,7 @@ final class Sesiune {
 
 
     func deconecteaza() async {
+        await Notificari.shared.dezleaga()
         Keychain.sterge(cheieToken)
         await ApiClient.shared.seteazaToken(nil)
         utilizator = nil

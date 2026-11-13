@@ -31,7 +31,16 @@ type Row = {
   guestPhone: string | null;
   extras: { id: string; name: string; units: number; pricing: string; total: number }[];
   field: { id: string; name: string };
+  createdAt: Date;
 };
+
+type Ordine = "noi" | "deConfirmat" | "urmatoare";
+
+const ORDINI: { id: Ordine; eticheta: string }[] = [
+  { id: "noi", eticheta: "Cele mai noi" },
+  { id: "deConfirmat", eticheta: "De confirmat întâi" },
+  { id: "urmatoare", eticheta: "După data jocului" },
+];
 
 const FILTERS: (BookingStatus | "ALL")[] = ["ALL", "PENDING", "CONFIRMED", "REJECTED", "RESCHEDULE_PROPOSED"];
 
@@ -47,6 +56,10 @@ export function BookingsTable({ bookings, fields }: { bookings: Row[]; fields: {
   const [sportAles, setSportAles] = useState<string>(TOATE);
   const [terenAles, setTerenAles] = useState<string>(TOATE);
   const [query, setQuery] = useState("");
+  // Implicit: ultima rezervare primită e sus.
+  const [ordine, setOrdine] = useState<Ordine>("noi");
+  // Momentul deschiderii paginii: separă meciurile care urmează de cele trecute.
+  const [acum] = useState(() => Date.now());
   const [rescheduling, setRescheduling] = useState<Row | null>(null);
   const [isPending, startTransition] = useTransition();
   const [pendingId, setPendingId] = useState<string | null>(null);
@@ -64,8 +77,22 @@ export function BookingsTable({ bookings, fields }: { bookings: Row[]; fields: {
         if (query && !clientulRezervarii(b).nume.toLowerCase().includes(query.toLowerCase())) return false;
         return true;
       })
-      .sort((a, b) => b.startTime.getTime() - a.startTime.getTime());
-  }, [bookings, filter, terenuriVizibile, query]);
+      .sort((a, b) => {
+        if (ordine === "deConfirmat") {
+          const pa = a.status === "PENDING" ? 0 : 1;
+          const pb = b.status === "PENDING" ? 0 : 1;
+          if (pa !== pb) return pa - pb;
+        }
+        if (ordine === "urmatoare") {
+          // Meciurile care urmează, cel mai apropiat primul; cele trecute la final.
+          const ta = a.startTime.getTime(), tb = b.startTime.getTime();
+          const viitorA = ta >= acum, viitorB = tb >= acum;
+          if (viitorA !== viitorB) return viitorA ? -1 : 1;
+          return viitorA ? ta - tb : tb - ta;
+        }
+        return b.createdAt.getTime() - a.createdAt.getTime();
+      });
+  }, [bookings, filter, terenuriVizibile, query, ordine, acum]);
 
   function handleApprove(id: string) {
     setPendingId(id);
@@ -125,6 +152,19 @@ export function BookingsTable({ bookings, fields }: { bookings: Row[]; fields: {
             {f === "ALL" ? "Toate" : bookingStatusLabel[f]}
           </button>
         ))}
+        <span className="mx-1 hidden h-5 w-px bg-border sm:block" />
+        <label className="flex items-center gap-2 text-[12.5px] text-muted-foreground">
+          Ordine
+          <select
+            value={ordine}
+            onChange={(e) => setOrdine(e.target.value as Ordine)}
+            className="rounded-full border bg-background px-3 py-1.5 text-[12.5px] font-medium text-foreground"
+          >
+            {ORDINI.map((o) => (
+              <option key={o.id} value={o.id}>{o.eticheta}</option>
+            ))}
+          </select>
+        </label>
       </div>
 
       {/* Aceeași alegere ca în orar: întâi sportul, apoi terenul. O listă cu

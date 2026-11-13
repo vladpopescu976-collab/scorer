@@ -2,6 +2,8 @@ import SwiftUI
 
 @main
 struct ScorerApp: App {
+    @UIApplicationDelegateAdaptor(DelegatAplicatie.self) private var delegat
+    @Environment(\.scenePhase) private var faza
     @State private var sesiune = Sesiune()
 
     init() {
@@ -20,6 +22,9 @@ struct ScorerApp: App {
                 .tint(Tema.accent)
                 .environment(\.locale, .aplicatie)
                 .environment(\.timeZone, .aplicatie)
+                .onChange(of: faza) { _, noua in
+                    if noua == .active { Notificari.shared.golesteInsigna() }
+                }
         }
     }
 }

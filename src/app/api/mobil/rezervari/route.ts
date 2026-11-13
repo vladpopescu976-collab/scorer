@@ -33,7 +33,8 @@ export async function GET(request: Request) {
     if (sesiune.role === "BUSINESS") {
       const rezervari = await prisma.booking.findMany({
         where: { field: { ownerId: sesiune.userId } },
-        orderBy: { startTime: "desc" },
+        // Cea mai nouă cerere sus: o rezervare făcută acum apare prima.
+        orderBy: { createdAt: "desc" },
         include: {
           ...includeStandard,
           customer: { select: { name: true, phone: true } },
