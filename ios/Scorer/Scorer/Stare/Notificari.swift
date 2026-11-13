@@ -77,7 +77,7 @@ final class DelegatAplicatie: NSObject, UIApplicationDelegate, UNUserNotificatio
     }
 
     /// Notificarea apare și când aplicația e deschisă.
-    func userNotificationCenter(
+    nonisolated func userNotificationCenter(
         _ center: UNUserNotificationCenter,
         willPresent notification: UNNotification
     ) async -> UNNotificationPresentationOptions {
@@ -85,7 +85,7 @@ final class DelegatAplicatie: NSObject, UIApplicationDelegate, UNUserNotificatio
     }
 
     /// Atingerea notificării deschide Rezervările.
-    func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse) async {
+    nonisolated func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse) async {
         await MainActor.run {
             NotificationCenter.default.post(name: .deschideRezervari, object: nil)
         }
