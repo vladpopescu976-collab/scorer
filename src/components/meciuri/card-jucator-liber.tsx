@@ -156,7 +156,7 @@ export function CardJucatorLiber({ anunt, conectat }: { anunt: AnuntJucatorPubli
         ) : !conectat ? (
           <Button className="w-full rounded-full bg-[#0E6B3A] hover:bg-[#0B5A30]" nativeButton={false} render={<Link href="/autentificare" />}>
             <UserPlus className="h-4 w-4" />
-            Vreau în echipă
+            Ia-l în echipă
           </Button>
         ) : scrieMesaj ? (
           <div className="space-y-2">
@@ -174,7 +174,7 @@ export function CardJucatorLiber({ anunt, conectat }: { anunt: AnuntJucatorPubli
         ) : (
           <Button className="w-full rounded-full bg-[#0E6B3A] hover:bg-[#0B5A30]" onClick={() => setScrieMesaj(true)}>
             <UserPlus className="h-4 w-4" />
-            Vreau în echipă
+            Ia-l în echipă
           </Button>
         )}
       </div>

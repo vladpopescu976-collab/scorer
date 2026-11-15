@@ -167,6 +167,10 @@ export async function invitaJucator(anuntId: string, userId: string, mesaj?: str
   if (!anunt.primesteInvitatii) throw new ActionError("Jucătorul nu mai primește invitații momentan.");
 
   const curat = mesaj?.trim().slice(0, 300) || null;
+  const existenta = await prisma.invitatieJucator.findUnique({
+    where: { anuntId_dinParteaId: { anuntId, dinParteaId: userId } },
+    select: { anuntId: true },
+  });
   await prisma.invitatieJucator.upsert({
     where: { anuntId_dinParteaId: { anuntId, dinParteaId: userId } },
     create: { anuntId, dinParteaId: userId, mesaj: curat },
@@ -174,7 +178,8 @@ export async function invitaJucator(anuntId: string, userId: string, mesaj?: str
   });
 
   const cine = await prisma.user.findUnique({ where: { id: userId }, select: { name: true, phone: true } });
-  after(() =>
+  // O invitație repetată de aceeași echipă nu mai trimite încă o notificare.
+  if (!existenta) after(() =>
     trimiteNotificare(anunt.userId, {
       titlu: "Te vor în echipă!",
       text: `${cine?.name ?? "O echipă"}${cine?.phone ? ` · ${cine.phone}` : ""}${curat ? ` · „${curat}”` : ""}`,

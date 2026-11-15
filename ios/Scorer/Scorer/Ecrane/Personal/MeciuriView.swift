@@ -57,7 +57,7 @@ struct MeciuriView: View {
                 }
             }
         }
-        .alert("Îl vrei în echipă?", isPresented: .init(get: { deInvitat != nil }, set: { if !$0 { deInvitat = nil } })) {
+        .alert("Îl iei în echipa ta?", isPresented: .init(get: { deInvitat != nil }, set: { if !$0 { deInvitat = nil } })) {
             TextField("Mesaj (opțional)", text: $mesajInvitatie)
             Button("Trimite invitația") { if let a = deInvitat { invita(a) } }
             Button("Renunță", role: .cancel) {}
@@ -290,7 +290,7 @@ struct MeciuriView: View {
                 Button {
                     if estePersonal { mesajInvitatie = ""; deInvitat = a } else { arataAutentificarea = true }
                 } label: {
-                    Label(inLucru == a.id ? "Se trimite…" : "Vreau în echipă", systemImage: "person.badge.plus")
+                    Label(inLucru == a.id ? "Se trimite…" : "Ia-l în echipă", systemImage: "person.badge.plus")
                         .font(.subheadline.weight(.semibold))
                         .foregroundStyle(.white)
                         .frame(maxWidth: .infinity)

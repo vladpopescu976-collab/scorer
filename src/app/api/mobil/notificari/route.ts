@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { cereAutentificare, eroareNeasteptata, raspuns } from "@/lib/api/raspuns";
 import { clientulRezervarii } from "@/lib/client-rezervare";
+import { pushConfigurat } from "@/lib/push";
 
 export const maxDuration = 60;
 
@@ -68,7 +69,14 @@ export async function GET(request: Request) {
             ecran: "rezervari",
           }));
 
+    // Dacă notificările pleacă deja prin Apple către acest cont, aplicația nu le
+    // mai arată și ea din listă: altfel ar apărea de două ori.
+    const pushActiv =
+      pushConfigurat &&
+      (await prisma.dispozitivPush.count({ where: { userId: sesiune.userId } }).catch(() => 0)) > 0;
+
     return raspuns({
+      pushActiv,
       necitite: necitite + deRezolvat.length,
       deRezolvat,
       notificari: notificari.map((n) => ({

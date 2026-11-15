@@ -68,14 +68,13 @@ export function anuntaRezervare(bookingId: string, eveniment: EvenimentRezervare
 }
 
 /** Ce află clientul (cu cont) pe telefon, pentru fiecare eveniment care îl privește. */
+// O singură notificare pe eveniment: la confirmarea automată pleacă și
+// „confirmata-automat”, și „aprobata”, deci clientul o primește doar pe a doua.
+// Ce face clientul însuși (anulare, mutare, acceptare) nu i se mai anunță.
 const NOTIFICARI_CLIENT: Partial<Record<EvenimentRezervare, string>> = {
-  "confirmata-automat": "Rezervare confirmată",
   aprobata: "Rezervarea ta a fost confirmată",
   respinsa: "Rezervarea ta a fost respinsă",
   "mutare-propusa": "Terenul îți propune altă oră",
-  "anulata-de-client": "Ai anulat rezervarea",
-  "mutata-de-client": "Ai mutat rezervarea",
-  "mutare-acceptata": "Rezervarea a fost mutată",
 };
 
 /** Ce află proprietarul pe telefon, pentru fiecare eveniment care îl privește. */

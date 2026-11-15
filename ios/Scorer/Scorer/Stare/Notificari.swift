@@ -30,6 +30,8 @@ struct DeRezolvat: Codable, Identifiable, Sendable {
 }
 
 struct RaspunsNotificari: Codable, Sendable {
+    /// Serverul le trimite deja prin Apple pe acest cont: aplicația nu le mai dublează.
+    var pushActiv: Bool?
     let necitite: Int
     var deRezolvat: [DeRezolvat]?
     let notificari: [NotificareCont]
@@ -116,20 +118,8 @@ final class Notificari {
         guard let raspuns = try? await ApiClient.shared.cere("notificari", parametri: parametri, ca: RaspunsNotificari.self) else { return }
         necitite = raspuns.necitite
 
-        // Ce așteaptă răspunsul tău: arătat o singură dată pe telefon, fiecare.
-        var aratate = Set(UserDefaults.standard.stringArray(forKey: "scorer.deRezolvatAratate") ?? [])
-        for d in raspuns.deRezolvat ?? [] where !aratate.contains(d.id) {
-            let continut = UNMutableNotificationContent()
-            continut.title = d.titlu
-            continut.body = d.text
-            continut.sound = .default
-            if let ecran = d.ecran { continut.userInfo = ["ecran": ecran] }
-            try? await UNUserNotificationCenter.current().add(
-                UNNotificationRequest(identifier: d.id, content: continut, trigger: nil)
-            )
-            aratate.insert(d.id)
-        }
-        UserDefaults.standard.set(Array(aratate), forKey: "scorer.deRezolvatAratate")
+        // „De rezolvat” apare doar în lista din aplicație, nu ca notificare separată:
+        // același eveniment („Terenul îți propune altă oră”) are deja notificarea lui.
 
         guard let cea_mai_noua = raspuns.notificari.first else {
             if ultima == nil { UserDefaults.standard.set(Date().formatted(.iso8601cuFractiuni), forKey: cheieUltima) }
@@ -138,6 +128,8 @@ final class Notificari {
         UserDefaults.standard.set(cea_mai_noua.creataLa.formatted(.iso8601cuFractiuni), forKey: cheieUltima)
         // Prima verificare pe acest telefon: nu arătăm tot istoricul dintr-odată.
         guard ultima != nil else { return }
+        // Serverul le trimite deja prin Apple: nu le arătăm a doua oară.
+        guard raspuns.pushActiv != true else { return }
 
         for n in raspuns.notificari.reversed() {
             let continut = UNMutableNotificationContent()
