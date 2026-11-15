@@ -68,8 +68,28 @@ export type AnuntJucatorPublic = {
   /** Telefonul jucătorului: doar pentru cine l-a invitat, dacă l-a arătat. */
   telefonJucator: string | null;
   /** Pentru propriul anunț: cine te-a invitat, cu telefonul lor. */
-  invitatii: { id: string; nume: string; poza: string | null; telefon: string | null; mesaj: string | null }[];
+  invitatii: {
+    id: string;
+    nume: string;
+    poza: string | null;
+    telefon: string | null;
+    mesaj: string | null;
+    teren: string | null;
+    dataOra: string | null;
+    durata: number | null;
+    pret: number | null;
+  }[];
 };
+
+/** Ce trimite echipa când cheamă un jucător: unde, când și cât costă. */
+export const invitatieSchema = z.object({
+  teren: z.string().trim().min(2, "Spune pe ce teren jucați.").max(120),
+  dataOra: z.coerce.date({ message: "Alege data și ora meciului." }),
+  durata: z.number().int().min(30).max(240).nullish(),
+  pret: z.number().int().min(0).max(1000).nullish(),
+  mesaj: z.string().trim().max(300).nullish(),
+});
+export type InvitatieInput = z.input<typeof invitatieSchema>;
 
 const include = {
   user: { select: { id: true, name: true, image: true, phone: true } },
@@ -107,6 +127,10 @@ function serializeaza(a: AnuntCuDetalii, vizitatorId: string | null): AnuntJucat
           poza: i.dinPartea.image,
           telefon: i.dinPartea.phone,
           mesaj: i.mesaj,
+          teren: i.teren,
+          dataOra: i.dataOra?.toISOString() ?? null,
+          durata: i.durata,
+          pret: i.pret,
         }))
       : [],
   };
@@ -157,7 +181,9 @@ export async function stergeAnuntJucator(id: string, userId: string) {
 }
 
 /** O echipă îl invită pe jucător. */
-export async function invitaJucator(anuntId: string, userId: string, mesaj?: string | null): Promise<AnuntJucatorPublic> {
+export async function invitaJucator(anuntId: string, userId: string, input: InvitatieInput): Promise<AnuntJucatorPublic> {
+  const detalii = invitatieSchema.parse(input);
+  if (detalii.dataOra.getTime() < Date.now() - 5 * 60_000) throw new ActionError("Meciul trebuie să fie în viitor.");
   const anunt = await prisma.anuntJucator.findUnique({
     where: { id: anuntId },
     select: { userId: true, sport: true, primesteInvitatii: true },
@@ -166,15 +192,22 @@ export async function invitaJucator(anuntId: string, userId: string, mesaj?: str
   if (anunt.userId === userId) throw new ActionError("Nu te poți invita singur.");
   if (!anunt.primesteInvitatii) throw new ActionError("Jucătorul nu mai primește invitații momentan.");
 
-  const curat = mesaj?.trim().slice(0, 300) || null;
+  const curat = detalii.mesaj || null;
+  const valori = {
+    mesaj: curat,
+    teren: detalii.teren,
+    dataOra: detalii.dataOra,
+    durata: detalii.durata ?? null,
+    pret: detalii.pret ?? null,
+  };
   const existenta = await prisma.invitatieJucator.findUnique({
     where: { anuntId_dinParteaId: { anuntId, dinParteaId: userId } },
     select: { anuntId: true },
   });
   await prisma.invitatieJucator.upsert({
     where: { anuntId_dinParteaId: { anuntId, dinParteaId: userId } },
-    create: { anuntId, dinParteaId: userId, mesaj: curat },
-    update: { mesaj: curat },
+    create: { anuntId, dinParteaId: userId, ...valori },
+    update: valori,
   });
 
   const cine = await prisma.user.findUnique({ where: { id: userId }, select: { name: true, phone: true } });
@@ -182,7 +215,13 @@ export async function invitaJucator(anuntId: string, userId: string, mesaj?: str
   if (!existenta) after(() =>
     trimiteNotificare(anunt.userId, {
       titlu: "Te vor în echipă!",
-      text: `${cine?.name ?? "O echipă"}${cine?.phone ? ` · ${cine.phone}` : ""}${curat ? ` · „${curat}”` : ""}`,
+      text: [
+        cine?.name ?? "O echipă",
+        `${detalii.teren}, ${ziSiOra(detalii.dataOra)}`,
+        detalii.pret != null ? `${detalii.pret} lei de om` : null,
+        cine?.phone,
+        curat ? `„${curat}”` : null,
+      ].filter(Boolean).join(" · "),
       date: { ecran: "meciuri" },
     })
   );
@@ -196,4 +235,15 @@ export async function seteazaInvitatii(id: string, userId: string, deschis: bool
   const anunt = await prisma.anuntJucator.findUnique({ where: { id }, select: { userId: true } });
   if (!anunt || anunt.userId !== userId) throw new ActionError("Doar tu poți schimba asta.");
   await prisma.anuntJucator.update({ where: { id }, data: { primesteInvitatii: deschis } });
+}
+
+function ziSiOra(d: Date) {
+  return d.toLocaleString("ro-RO", {
+    timeZone: "Europe/Bucharest",
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 }

@@ -271,6 +271,11 @@ struct AnuntJucator: Codable, Identifiable, Sendable {
         let poza: String?
         let telefon: String?
         let mesaj: String?
+        /// Unde și când e meciul la care e chemat.
+        let teren: String?
+        let dataOra: Date?
+        let durata: Int?
+        let pret: Int?
     }
     let id: String
     let sport: Sport

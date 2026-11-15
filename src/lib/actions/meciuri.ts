@@ -21,6 +21,7 @@ import {
   salveazaAnuntJucator,
   stergeAnuntJucator,
 } from "@/lib/jucatori-liberi";
+import type { InvitatieInput } from "@/lib/jucatori-liberi";
 import { noteazaJucator } from "@/lib/note-jucatori";
 
 async function cerePersonal() {
@@ -103,9 +104,9 @@ export async function stergeAnuntJucatorAction(id: string): Promise<ActionResult
   }
 }
 
-export async function invitaJucatorAction(id: string, mesaj?: string): Promise<ActionResult> {
+export async function invitaJucatorAction(id: string, detalii: InvitatieInput): Promise<ActionResult> {
   try {
-    await invitaJucator(id, await cerePersonal(), mesaj);
+    await invitaJucator(id, await cerePersonal(), detalii);
     revalidatePath("/gaseste-meci");
     return ok();
   } catch (error) {

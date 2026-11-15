@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import Link from "next/link";
-import { CalendarClock, MapPin, Phone, UserPlus } from "lucide-react";
+import { CalendarClock, Clock, MapPin, Phone, UserPlus, Wallet } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -11,6 +11,22 @@ import { invitaJucatorAction, seteazaInvitatiiAction, stergeAnuntJucatorAction }
 import type { AnuntJucatorPublic } from "@/lib/jucatori-liberi";
 import { sportMeta } from "@/lib/sports";
 import { textDisponibilitate } from "@/lib/jucatori-liberi-pozitii";
+import { localDateTimeToIso } from "@/lib/datetime";
+
+const DURATE = [60, 90, 120];
+
+function cand(iso: string) {
+  return new Date(iso).toLocaleString("ro-RO", {
+    timeZone: "Europe/Bucharest",
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+const camp = "h-10 w-full rounded-xl border bg-background px-3 text-[14px] outline-none focus:border-primary";
 
 const NIVELURI: Record<string, string> = {
   INCEPATOR: "Începător",
@@ -23,12 +39,26 @@ const NIVELURI: Record<string, string> = {
 export function CardJucatorLiber({ anunt, conectat }: { anunt: AnuntJucatorPublic; conectat: boolean }) {
   const [seLucreaza, startTransition] = useTransition();
   const [mesaj, setMesaj] = useState("");
+  const [teren, setTeren] = useState("");
+  const [data, setData] = useState("");
+  const [ora, setOra] = useState("");
+  const [durata, setDurata] = useState(60);
+  const [pret, setPret] = useState("");
   const [scrieMesaj, setScrieMesaj] = useState(false);
   const SportIcon = sportMeta[anunt.sport].icon;
 
   function invita() {
     startTransition(async () => {
-      const r = await invitaJucatorAction(anunt.id, mesaj || undefined);
+      const dataOra = data && ora ? localDateTimeToIso(data, ora) : null;
+      if (teren.trim().length < 2) return void toast.error("Spune pe ce teren jucați.");
+      if (!dataOra) return void toast.error("Alege data și ora meciului.");
+      const r = await invitaJucatorAction(anunt.id, {
+        teren: teren.trim(),
+        dataOra,
+        durata,
+        pret: pret === "" ? null : Math.max(0, Math.round(Number(pret))),
+        mesaj: mesaj.trim() || null,
+      });
       if (!r.ok) return void toast.error(r.error);
       toast.success(`L-ai invitat pe ${anunt.jucator.nume}. A primit o notificare.`);
       setScrieMesaj(false);
@@ -103,10 +133,29 @@ export function CardJucatorLiber({ anunt, conectat }: { anunt: AnuntJucatorPubli
               <div className="space-y-2 rounded-2xl bg-primary/5 p-3">
                 <p className="text-[12px] font-semibold uppercase tracking-[0.1em] text-primary">Te vor în echipă</p>
                 {anunt.invitatii.map((i) => (
-                  <div key={i.id} className="flex items-center gap-2.5">
+                  <div key={i.id} className="flex items-start gap-2.5">
                     <AvatarCont nume={i.nume} poza={i.poza} className="h-8 w-8" textClassName="text-[11px]" />
                     <div className="min-w-0 flex-1 leading-tight">
                       <p className="truncate text-[13.5px] font-medium">{i.nume}</p>
+                      {i.teren && (
+                        <p className="flex items-center gap-1 truncate text-[12px] text-foreground/80">
+                          <MapPin className="h-3 w-3 shrink-0" />
+                          {i.teren}
+                        </p>
+                      )}
+                      {i.dataOra && (
+                        <p className="flex items-center gap-1 text-[12px] text-foreground/80">
+                          <Clock className="h-3 w-3 shrink-0" />
+                          {cand(i.dataOra)}
+                          {i.durata ? ` · ${i.durata} min` : ""}
+                        </p>
+                      )}
+                      {i.pret != null && (
+                        <p className="flex items-center gap-1 text-[12px] text-foreground/80">
+                          <Wallet className="h-3 w-3 shrink-0" />
+                          {i.pret === 0 ? "Gratis" : `${i.pret} lei de om`}
+                        </p>
+                      )}
                       {i.mesaj && <p className="truncate text-[12px] text-muted-foreground">„{i.mesaj}”</p>}
                     </div>
                     {i.telefon && (
@@ -159,13 +208,41 @@ export function CardJucatorLiber({ anunt, conectat }: { anunt: AnuntJucatorPubli
             Ia-l în echipă
           </Button>
         ) : scrieMesaj ? (
-          <div className="space-y-2">
+          <div className="space-y-2.5 rounded-2xl bg-muted/50 p-3">
+            <p className="text-[12px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">Detaliile meciului</p>
+            <input
+              value={teren}
+              onChange={(e) => setTeren(e.target.value)}
+              maxLength={120}
+              placeholder="Terenul, ex. Baza Sportivă Olimpia"
+              className={camp}
+            />
+            <div className="grid grid-cols-2 gap-2">
+              <input type="date" value={data} onChange={(e) => setData(e.target.value)} aria-label="Data" className={camp} />
+              <input type="time" value={ora} onChange={(e) => setOra(e.target.value)} aria-label="Ora" className={camp} />
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <select value={durata} onChange={(e) => setDurata(Number(e.target.value))} aria-label="Durata" className={camp}>
+                {DURATE.map((d) => (
+                  <option key={d} value={d}>{d} min</option>
+                ))}
+              </select>
+              <input
+                type="number"
+                inputMode="numeric"
+                min={0}
+                value={pret}
+                onChange={(e) => setPret(e.target.value)}
+                placeholder="Lei de om (opț.)"
+                className={camp}
+              />
+            </div>
             <input
               value={mesaj}
               onChange={(e) => setMesaj(e.target.value)}
               maxLength={300}
-              placeholder="Mesaj (opțional), ex. Jucăm joi la 20:00"
-              className="h-10 w-full rounded-xl border bg-background px-3 text-[14px] outline-none focus:border-primary"
+              placeholder="Alte detalii (opțional), ex. adu tricou alb"
+              className={camp}
             />
             <Button className="w-full rounded-full bg-[#0E6B3A] hover:bg-[#0B5A30]" disabled={seLucreaza} onClick={invita}>
               Trimite invitația

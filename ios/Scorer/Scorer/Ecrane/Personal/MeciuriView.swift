@@ -25,7 +25,6 @@ struct MeciuriView: View {
     @State private var jucatoriLiberi: [AnuntJucator] = []
     @State private var arataAnuntJucator = false
     @State private var deInvitat: AnuntJucator?
-    @State private var mesajInvitatie = ""
     /// Meciul la care vrei să te alături: întâi cerem telefonul.
     @State private var deAlaturat: Meci?
     @State private var oras = ""
@@ -68,12 +67,15 @@ struct MeciuriView: View {
                 }
             }
         }
-        .alert("Îl iei în echipa ta?", isPresented: .init(get: { deInvitat != nil }, set: { if !$0 { deInvitat = nil } })) {
-            TextField("Mesaj (opțional)", text: $mesajInvitatie)
-            Button("Trimite invitația") { if let a = deInvitat { invita(a) } }
-            Button("Renunță", role: .cancel) {}
-        } message: {
-            Text("\(deInvitat?.jucator.nume ?? "") primește o notificare și vă vedeți telefoanele.")
+        .sheet(item: $deInvitat) { a in
+            NavigationStack {
+                InvitatieView(anunt: a) { actualizat in
+                    if let i = jucatoriLiberi.firstIndex(where: { $0.id == actualizat.id }) {
+                        withAnimation(.smooth) { jucatoriLiberi[i] = actualizat }
+                    }
+                }
+            }
+            .presentationDetents([.large])
         }
         .sheet(item: $deNotat) { d in
             NavigationStack {
@@ -317,10 +319,23 @@ struct MeciuriView: View {
                     VStack(alignment: .leading, spacing: 10) {
                         Text("TE VOR ÎN ECHIPĂ").font(.caption.weight(.bold)).tracking(0.8).foregroundStyle(Tema.accent)
                         ForEach(a.invitatii) { i in
-                            HStack(spacing: 10) {
+                            HStack(alignment: .top, spacing: 10) {
                                 AvatarPersoana(nume: i.nume, poza: i.poza, marime: 32)
                                 VStack(alignment: .leading, spacing: 1) {
                                     Text(i.nume).font(.subheadline.weight(.medium))
+                                    if let t = i.teren {
+                                        Label(t, systemImage: "mappin.and.ellipse").font(.caption)
+                                    }
+                                    if let d = i.dataOra {
+                                        Label(
+                                            d.formatted(.dateTime.weekday(.wide).day().month(.wide).hour().minute().locale(.aplicatie).inRomania).capitalized
+                                                + (i.durata.map { " · \($0) min" } ?? ""),
+                                            systemImage: "clock"
+                                        ).font(.caption)
+                                    }
+                                    if let p = i.pret {
+                                        Label(p == 0 ? "Gratis" : "\(p) lei de om", systemImage: "banknote").font(.caption)
+                                    }
                                     if let m = i.mesaj { Text("„\(m)”").font(.caption).foregroundStyle(.secondary) }
                                 }
                                 Spacer()
@@ -356,7 +371,7 @@ struct MeciuriView: View {
                     .background(Color.primary.opacity(0.05), in: .rect(cornerRadius: 12, style: .continuous))
             } else {
                 Button {
-                    if estePersonal { mesajInvitatie = ""; deInvitat = a } else { arataAutentificarea = true }
+                    if estePersonal { deInvitat = a } else { arataAutentificarea = true }
                 } label: {
                     Label(inLucru == a.id ? "Se trimite…" : "Ia-l în echipă", systemImage: "person.badge.plus")
                         .font(.subheadline.weight(.semibold))
@@ -651,26 +666,6 @@ struct MeciuriView: View {
             do {
                 try await ApiClient.shared.cereFaraRaspuns("meciuri/\(meci.id)/jucatori/\(j.id)", metoda: "DELETE")
                 await incarca()
-            } catch {
-                eroare = error.localizedDescription
-            }
-        }
-    }
-
-    private func invita(_ a: AnuntJucator) {
-        inLucru = a.id
-        let mesaj = mesajInvitatie
-        Task {
-            defer { inLucru = nil }
-            struct Corp: Encodable { let mesaj: String? }
-            do {
-                let actualizat = try await ApiClient.shared.cere(
-                    "jucatori-liberi/\(a.id)/invita", metoda: "POST",
-                    corp: Corp(mesaj: mesaj.isEmpty ? nil : mesaj), ca: AnuntJucator.self
-                )
-                if let i = jucatoriLiberi.firstIndex(where: { $0.id == a.id }) {
-                    withAnimation(.smooth) { jucatoriLiberi[i] = actualizat }
-                }
             } catch {
                 eroare = error.localizedDescription
             }
@@ -1170,6 +1165,102 @@ struct NotaMeciView: View {
                     corp: Corp(destinatarId: persoana.id, nota: nota, comentariu: comentariu.isEmpty ? nil : comentariu)
                 )
                 laSalvat()
+                inchide()
+            } catch {
+                eroare = error.localizedDescription
+            }
+        }
+    }
+}
+
+/// Invitația pentru un jucător: terenul, când, cât durează, cât costă și alte detalii.
+struct InvitatieView: View {
+    let anunt: AnuntJucator
+    let laTrimis: (AnuntJucator) -> Void
+
+    @Environment(\.dismiss) private var inchide
+    @State private var teren = ""
+    @State private var dataOra = Calendar.current.date(byAdding: .day, value: 1, to: .now) ?? .now
+    @State private var durata = 60
+    @State private var pret = ""
+    @State private var mesaj = ""
+    @State private var eroare: String?
+    @State private var seTrimite = false
+
+    private var poateTrimite: Bool { teren.trimmingCharacters(in: .whitespaces).count >= 2 && !seTrimite }
+
+    var body: some View {
+        Form {
+            Section {
+                HStack(spacing: 12) {
+                    AvatarPersoana(nume: anunt.jucator.nume, poza: anunt.jucator.poza, marime: 44)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(anunt.jucator.nume).font(.headline)
+                        Text("Primește notificare și vă vedeți telefoanele.").font(.footnote).foregroundStyle(.secondary)
+                    }
+                }
+            }
+            Section("Unde și când") {
+                TextField("Terenul, ex. Baza Sportivă Olimpia", text: $teren)
+                DatePicker("Data și ora", selection: $dataOra, in: Date()..., displayedComponents: [.date, .hourAndMinute])
+                Picker("Durata", selection: $durata) {
+                    ForEach([60, 90, 120], id: \.self) { Text("\($0) min").tag($0) }
+                }
+            }
+            Section("Alte detalii") {
+                HStack {
+                    Text("Preț de om")
+                    TextField("opțional", text: $pret)
+                        .keyboardType(.numberPad)
+                        .multilineTextAlignment(.trailing)
+                    Text("lei").foregroundStyle(.secondary)
+                }
+                TextField("Mesaj (opțional), ex. adu tricou alb", text: $mesaj, axis: .vertical).lineLimit(2...4)
+            }
+            if let eroare {
+                Section { Text(eroare).font(.footnote).foregroundStyle(.red) }
+            }
+            Section {
+                Button(action: trimite) {
+                    HStack {
+                        Spacer()
+                        if seTrimite { ProgressView().tint(.white) } else { Text("Trimite invitația").fontWeight(.semibold) }
+                        Spacer()
+                    }
+                }
+                .listRowBackground(poateTrimite ? Tema.accent : Color.gray.opacity(0.35))
+                .foregroundStyle(.white)
+                .disabled(!poateTrimite)
+            }
+        }
+        .navigationTitle("Ia-l în echipă")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Renunță") { inchide() } } }
+    }
+
+    private func trimite() {
+        struct Corp: Encodable {
+            let teren: String
+            let dataOra: Date
+            let durata: Int
+            let pret: Int?
+            let mesaj: String?
+        }
+        let corp = Corp(
+            teren: teren.trimmingCharacters(in: .whitespaces),
+            dataOra: dataOra,
+            durata: durata,
+            pret: Int(pret.filter(\.isNumber)),
+            mesaj: mesaj.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : mesaj
+        )
+        seTrimite = true
+        Task {
+            defer { seTrimite = false }
+            do {
+                let actualizat = try await ApiClient.shared.cere(
+                    "jucatori-liberi/\(anunt.id)/invita", metoda: "POST", corp: corp, ca: AnuntJucator.self
+                )
+                laTrimis(actualizat)
                 inchide()
             } catch {
                 eroare = error.localizedDescription

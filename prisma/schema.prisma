@@ -561,6 +561,11 @@ model InvitatieJucator {
   dinPartea   User   @relation("InvitatiiTrimise", fields: [dinParteaId], references: [id], onDelete: Cascade)
 
   mesaj String?
+  /// Detaliile meciului la care e chemat: terenul, când, cât durează, cât costă de om.
+  teren   String?
+  dataOra DateTime?
+  durata  Int?
+  pret    Int?
 
   createdAt DateTime @default(now())
 
