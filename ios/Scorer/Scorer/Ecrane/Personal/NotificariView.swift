@@ -9,6 +9,7 @@ struct NotificariView: View {
 
     var body: some View {
         List {
+            AntetEcran(eticheta: "Notificări", titlu: "Ce e nou.", accent: "Pe scurt.").randAntet()
             if !deRezolvat.isEmpty {
                 Section("Așteaptă răspunsul tău") {
                     ForEach(deRezolvat) { d in
@@ -72,6 +73,8 @@ struct NotificariView: View {
         }
         .listStyle(.plain)
         .navigationTitle("Notificări")
+        .navigationBarTitleDisplayMode(.inline)
+        .faraTitluSus()
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Button("Test", systemImage: "bell.badge") { Task { await test() } }

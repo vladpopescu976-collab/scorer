@@ -5,8 +5,15 @@ import SwiftUI
 enum Tema {
     // MARK: Culori
 
-    static let accent = Color(red: 0.09, green: 0.52, blue: 0.29)
-    static let accentDeschis = Color(red: 0.36, green: 0.75, blue: 0.48)
+    /// Verdele brandului, la fel ca pe site (#0E6B3A). În modul întunecat e mai
+    /// luminos, ca textul verde să se citească pe fundal negru.
+    static let accent = Color(UIColor { trasaturi in
+        trasaturi.userInterfaceStyle == .dark
+            ? UIColor(red: 0.30, green: 0.72, blue: 0.45, alpha: 1)
+            : UIColor(red: 0.055, green: 0.42, blue: 0.227, alpha: 1)
+    })
+    /// Verdele-lime de pe fundalurile închise (#7BD389), ca pe site.
+    static let accentDeschis = Color(red: 0.48, green: 0.83, blue: 0.54)
 
     /// Fundalul general — puțin mai cald decât albul pur, ca fișele să iasă în față.
     static let fundal = Color(.systemGroupedBackground)
@@ -187,26 +194,38 @@ struct StareGoala: View {
     var body: some View {
         VStack(spacing: 10) {
             Image(systemName: simbol)
-                .font(.system(size: 30, weight: .light))
-                .foregroundStyle(Tema.accent)
-                .frame(width: 68, height: 68)
-                .background(Tema.accent.opacity(0.10), in: .circle)
+                .font(.system(size: 26, weight: .semibold))
+                .foregroundStyle(.white)
+                .frame(width: 64, height: 64)
+                .background(Tema.gradientAccent, in: .rect(cornerRadius: 18, style: .continuous))
+                .shadow(color: Tema.accent.opacity(0.45), radius: 14, y: 8)
+                .padding(.bottom, 6)
 
-            Text(titlu).font(.headline)
+            Text(titlu).font(.title3.weight(.semibold))
             Text(detaliu)
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
 
             if let titluActiune, let actiune {
-                Button(titluActiune, action: actiune)
-                    .font(.subheadline.weight(.medium))
-                    .padding(.top, 2)
+                Button(action: actiune) {
+                    Text(titluActiune)
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 22)
+                        .frame(height: 44)
+                        .background(Tema.accent, in: .capsule)
+                }
+                .buttonStyle(.plain)
+                .padding(.top, 10)
             }
         }
         .frame(maxWidth: .infinity)
-        .padding(.vertical, 44)
+        .padding(.vertical, 40)
         .padding(.horizontal, 24)
+        .background {
+            RadialGradient(colors: [Tema.accent.opacity(0.10), .clear], center: .top, startRadius: 0, endRadius: 260)
+        }
     }
 }
 
@@ -275,5 +294,61 @@ struct PastilaFiltru: View {
                 .foregroundStyle(activ ? .white : .secondary)
         }
         .apasabil()
+    }
+}
+
+
+// MARK: - Antetul ecranelor
+
+/// Cardul verde de sus al ecranelor, ca banda de pe site: etichetă mică, titlu
+/// mare cu accent în serif italic (semnătura Scorer) și o descriere scurtă.
+struct AntetEcran: View {
+    let eticheta: String
+    let titlu: String
+    var accent: String?
+    var descriere: String?
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(eticheta)
+                .font(.footnote.weight(.medium))
+                .opacity(0.6)
+            (Text(titlu).font(.system(size: 30, weight: .semibold))
+             + Text(accent.map { " " + $0 } ?? "").font(.system(size: 28, weight: .regular, design: .serif).italic()).foregroundStyle(Color.white.opacity(0.6)))
+                .tracking(-0.6)
+                .fixedSize(horizontal: false, vertical: true)
+            if let descriere {
+                Text(descriere).font(.subheadline).opacity(0.65).padding(.top, 2)
+            }
+        }
+        .foregroundStyle(Color(red: 0.95, green: 0.94, blue: 0.90))
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(20)
+        .background {
+            ZStack(alignment: .topTrailing) {
+                RadialGradient(
+                    colors: [Color(red: 0.09, green: 0.33, blue: 0.23), Color(red: 0.043, green: 0.165, blue: 0.11), Color(red: 0.027, green: 0.086, blue: 0.06)],
+                    center: .topLeading, startRadius: 0, endRadius: 420
+                )
+                Circle().fill(Tema.accentDeschis.opacity(0.12)).frame(width: 180).blur(radius: 40).offset(x: 60, y: -70)
+            }
+        }
+        .clipShape(.rect(cornerRadius: 26, style: .continuous))
+        .shadow(color: .black.opacity(0.18), radius: 18, y: 10)
+    }
+}
+
+extension View {
+    /// Pe ecranele cu `AntetEcran`, titlul mic din bara de sus ar dubla cardul:
+    /// îl lăsăm gol (titlul rămâne pentru butonul „Înapoi” și accesibilitate).
+    func faraTitluSus() -> some View {
+        self.toolbar { ToolbarItem(placement: .principal) { Color.clear.frame(width: 1, height: 1) } }
+    }
+
+    /// Antetul ca prim rând dintr-o listă, fără fundal și margini de rând.
+    func randAntet() -> some View {
+        self.listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 10, trailing: 16))
+            .listRowBackground(Color.clear)
+            .listRowSeparator(.hidden)
     }
 }

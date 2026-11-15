@@ -12,6 +12,7 @@ struct RecenziiBusinessView: View {
 
     var body: some View {
         List {
+            AntetEcran(eticheta: "Panou", titlu: "Recenzii.", accent: "Ce spun jucătorii.").randAntet()
             if seIncarca {
                 HStack { Spacer(); ProgressView(); Spacer() }
             } else if recenzii.isEmpty {
@@ -63,6 +64,8 @@ struct RecenziiBusinessView: View {
             }
         }
         .navigationTitle("Recenzii")
+        .navigationBarTitleDisplayMode(.inline)
+        .faraTitluSus()
         .refreshable { await incarca() }
         .task { await incarca() }
         .sheet(item: $deRaspuns) { recenzie in

@@ -13,6 +13,7 @@ struct TerenuriBusinessView: View {
 
     var body: some View {
         List {
+            AntetEcran(eticheta: "Panou", titlu: "Terenurile tale.", accent: "Program și prețuri.").randAntet()
             if seIncarca {
                 HStack { Spacer(); ProgressView(); Spacer() }
             } else if terenuri.isEmpty {
@@ -77,6 +78,8 @@ struct TerenuriBusinessView: View {
             }
         }
         .navigationTitle("Terenurile mele")
+        .navigationBarTitleDisplayMode(.inline)
+        .faraTitluSus()
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Button("Adaugă teren", systemImage: "plus") { adaugaTeren = true }
