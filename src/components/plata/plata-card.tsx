@@ -312,6 +312,7 @@ export function DialogPlataCard({
                   )}
                 </Button>
               )}
+              <ButonTest onClick={finalizeaza} />
             </motion.div>
           )}
 
@@ -352,6 +353,7 @@ export function DialogPlataCard({
               >
                 {metoda ? <>Plătește partea ta · {lei(calcul.parteaOrganizatorului)} RON</> : "Alege cum plătești"}
               </Button>
+              <ButonTest onClick={finalizeaza} />
             </motion.div>
           )}
 
@@ -600,6 +602,21 @@ function PasImparte({ suma, parti, setParti }: { suma: number; parti: number; se
       <p className="mt-4 text-center text-[13px] text-[#F3EFE6]/70">
         Tu plătești acum <span className="font-semibold text-[#F3EFE6]">{lei(parteaOrganizatorului)} RON</span>. Linkul îl trimiți după rezervare.
       </p>
+    </div>
+  );
+}
+
+/** Buton mic de test: sare peste plată (Apple Pay, card) și merge mai departe, ca să vezi toată procedura. */
+function ButonTest({ onClick }: { onClick: () => void }) {
+  return (
+    <div className="flex justify-center">
+      <button
+        type="button"
+        onClick={onClick}
+        className="rounded-full border border-dashed border-amber-500/50 bg-amber-500/10 px-3 py-1 text-[11.5px] font-bold uppercase tracking-[0.14em] text-amber-700 transition-colors hover:bg-amber-500/20 dark:text-amber-400"
+      >
+        Test
+      </button>
     </div>
   );
 }

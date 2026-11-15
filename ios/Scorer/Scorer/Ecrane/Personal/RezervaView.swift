@@ -63,7 +63,8 @@ struct RezervaView: View {
                 rezumat: rezumatPlata,
                 laApplePay: { platesteCuApplePay() },
                 laTeren: { alegePlata = false; trimite() },
-                laImpartire: { parti in platesteCuApplePay(parti: parti) }
+                laImpartire: { parti in platesteCuApplePay(parti: parti) },
+                laTest: { parti in alegePlata = false; trimite(parti: parti) }
             )
         }
         .sheet(item: $impartireCreata, onDismiss: { laFinal(); inchide() }) { imp in

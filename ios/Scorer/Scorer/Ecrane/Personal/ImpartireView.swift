@@ -164,6 +164,7 @@ struct ImpartireView: View {
                         .offset(y: -22)
                 }
                 .padding(.top, 14)
+            ButonTest { platesteDirect() }
         } else {
             mesaj("Meciul a început deja.", culoare: .secondary)
         }
@@ -285,15 +286,20 @@ struct ImpartireView: View {
     private func plateste(_ d: Impartire) {
         applePay.plateste(suma: d.sumaParte, descriere: "Partea ta · \(d.teren.nume)") { platit in
             guard platit else { return }
-            sePlateste = true
-            Task {
-                defer { sePlateste = false }
-                do {
-                    let noi = try await ApiClient.shared.cere("impartiri/\(cod)/plata", metoda: "POST", ca: Impartire.self)
-                    withAnimation(.smooth) { date = noi }
-                } catch {
-                    eroare = error.localizedDescription
-                }
+            platesteDirect()
+        }
+    }
+
+    /// Înregistrează partea plătită (după Apple Pay sau din butonul „Test”).
+    private func platesteDirect() {
+        sePlateste = true
+        Task {
+            defer { sePlateste = false }
+            do {
+                let noi = try await ApiClient.shared.cere("impartiri/\(cod)/plata", metoda: "POST", ca: Impartire.self)
+                withAnimation(.smooth) { date = noi }
+            } catch {
+                eroare = error.localizedDescription
             }
         }
     }

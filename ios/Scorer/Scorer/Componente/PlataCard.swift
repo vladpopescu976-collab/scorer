@@ -78,6 +78,8 @@ struct FoaieMetodaPlata: View {
     let laTeren: () -> Void
     /// Split the bill: organizatorul plătește partea lui, primește în câți se împarte.
     var laImpartire: ((Int) -> Void)?
+    /// Buton mic „Test”: sare peste Apple Pay și merge mai departe (cu `parti` la split the bill).
+    var laTest: ((Int?) -> Void)?
 
     @State private var metoda: MetodaPlata?
     @State private var imparte = false
@@ -128,6 +130,7 @@ struct FoaieMetodaPlata: View {
             Text("Partea ta: \(Impartire.lei(parteaMea)) RON · demonstrativ, nu se debitează nimic")
                 .font(.caption).foregroundStyle(.secondary)
                 .frame(maxWidth: .infinity)
+            if let laTest { ButonTest { laTest(parti) } }
         }
     }
 
@@ -180,6 +183,7 @@ struct FoaieMetodaPlata: View {
                 )
                 .transition(.opacity)
             }
+            if let laTest { ButonTest { laTest(nil) } }
         }
     }
 
@@ -261,5 +265,24 @@ struct FoaieMetodaPlata: View {
         }
         .buttonStyle(.plain)
         .accessibilityAddTraits(ales ? .isSelected : [])
+    }
+}
+
+/// Buton mic de test: sare peste plată și merge mai departe, ca să vezi toată procedura.
+struct ButonTest: View {
+    let actiune: () -> Void
+
+    var body: some View {
+        Button(action: actiune) {
+            Text("TEST")
+                .font(.caption2.weight(.bold))
+                .tracking(1.4)
+                .foregroundStyle(Color(red: 0.70, green: 0.44, blue: 0.02))
+                .padding(.horizontal, 12).padding(.vertical, 5)
+                .background(Color.orange.opacity(0.12), in: .capsule)
+                .overlay { Capsule().strokeBorder(style: StrokeStyle(lineWidth: 1, dash: [4, 3])).foregroundStyle(Color.orange.opacity(0.5)) }
+        }
+        .buttonStyle(.plain)
+        .frame(maxWidth: .infinity)
     }
 }
