@@ -244,6 +244,7 @@ export function Navbar() {
         </div>
 
         <div className="flex items-center gap-1.5 md:hidden">
+          <InstaleazaAplicatia peHero={peHero} compact />
           {session?.user && (
             <Link
               href={accountHref}
