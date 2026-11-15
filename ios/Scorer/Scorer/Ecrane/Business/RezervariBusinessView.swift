@@ -69,7 +69,6 @@ struct RezervariBusinessView: View {
 
     var body: some View {
         List {
-            AntetEcran(eticheta: "Panou", titlu: "Rezervări.", accent: "Cele mai noi sus.").randAntet()
             if seIncarca {
                 HStack { Spacer(); ProgressView(); Spacer() }
             } else if vizibile.isEmpty {
@@ -93,7 +92,7 @@ struct RezervariBusinessView: View {
         .listStyle(.plain)
         .navigationTitle("Rezervări")
         .navigationBarTitleDisplayMode(.inline)
-        .faraTitluSus()
+        .antetVerde("Panou", titlu: "Rezervări.", accent: "Cele mai noi sus.")
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Menu {

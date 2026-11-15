@@ -29,7 +29,10 @@ struct CautaTerenuriView: View {
             Tema.fundal.ignoresSafeArea()
             continut
         }
-        .toolbar(.hidden, for: .navigationBar)
+        .navigationTitle("Caută")
+        .navigationBarTitleDisplayMode(.inline)
+        .faraTitluSus()
+        .toolbar { ElementSimplu(placement: .topBarTrailing) { ButonCont() } }
         .navigationDestination(for: String.self) { DetaliuTerenView(terenId: $0) }
         .sheet(isPresented: $arataFiltre) {
             NavigationStack {
@@ -87,24 +90,26 @@ struct CautaTerenuriView: View {
 
     // MARK: - Antet: căutare + categorii
 
+    /// Banda verde de sus: titlul, bara de căutare și sporturile, ca pe site.
     private var antet: some View {
-        VStack(spacing: 16) {
-            HStack(spacing: 10) {
-                baraDeCautare
-                ButonCont()
+        VStack(alignment: .leading, spacing: 16) {
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Terenuri").font(.footnote.weight(.medium)).opacity(0.6)
+                (Text("Caută terenuri.").font(.system(size: 30, weight: .semibold))
+                 + Text(" Joacă azi.").font(.system(size: 28, weight: .regular, design: .serif).italic()).foregroundStyle(Tema.creta.opacity(0.6)))
+                    .tracking(-0.6)
             }
             .padding(.horizontal, 20)
 
+            baraDeCautare
+                .padding(.horizontal, 20)
+
             categorii
         }
-        .padding(.top, 8)
-        .padding(.bottom, 12)
-        // Aceeași culoare ca restul ecranului, ca să nu se vadă unde se
-        // termină antetul; linia apare doar după ce începe derularea.
-        .background(Tema.fundal)
-        .overlay(alignment: .bottom) {
-            Divider().opacity(derulat ? 1 : 0)
-        }
+        .foregroundStyle(Tema.creta)
+        .padding(.top, 2)
+        .padding(.bottom, 18)
+        .background { FundalVerde() }
     }
 
     /// Un singur loc, evident, în care începe căutarea.
@@ -145,6 +150,8 @@ struct CautaTerenuriView: View {
             .padding(.vertical, 9)
             .padding(.leading, 18)
             .padding(.trailing, 9)
+            // Bara e albă pe banda verde: culorile textului vin de la sistem, nu crem.
+            .foregroundStyle(Color.primary)
             .background(Tema.fisa, in: .capsule)
             .shadow(color: .black.opacity(0.08), radius: 10, x: 0, y: 4)
         }
@@ -302,12 +309,12 @@ private struct Categorie: View {
                 Text(eticheta)
                     .font(.caption2.weight(activ ? .semibold : .regular))
                     .fixedSize()
-                // Sublinierea marchează categoria activă, fără să adauge culoare.
-                Rectangle()
-                    .fill(activ ? Color.primary : .clear)
-                    .frame(height: 2)
+                // Sublinierea verde-lime marchează categoria activă, pe banda verde.
+                Capsule()
+                    .fill(activ ? Tema.accentDeschis : .clear)
+                    .frame(height: 2.5)
             }
-            .foregroundStyle(activ ? .primary : .secondary)
+            .foregroundStyle(activ ? Tema.creta : Tema.creta.opacity(0.55))
         }
         .buttonStyle(.plain)
     }

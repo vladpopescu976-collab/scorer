@@ -45,7 +45,6 @@ struct MeciuriView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 22) {
-                AntetEcran(eticheta: "Meciuri", titlu: "Găsește meci.", accent: "Intră în joc.")
                 antet
                 if !deEvaluat.isEmpty { sectiuneEvaluare }
                 lista
@@ -57,7 +56,7 @@ struct MeciuriView: View {
         .background(Tema.fundal.ignoresSafeArea())
         .navigationTitle("Găsește meci")
         .navigationBarTitleDisplayMode(.inline)
-        .faraTitluSus()
+        .antetVerde("Meciuri", titlu: "Găsește meci.", accent: "Intră în joc.")
         .sheet(isPresented: $arataAnunt) {
             NavigationStack {
                 PosteazaMeciView(orasInitial: oras.isEmpty ? (sesiune.utilizator?.oras ?? "") : oras) {

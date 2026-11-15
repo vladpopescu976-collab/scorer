@@ -17,7 +17,6 @@ struct RezervarileMeleView: View {
             Tema.fundal.ignoresSafeArea()
             ScrollView {
                 VStack(spacing: 14) {
-                    AntetEcran(eticheta: "Rezervări", titlu: "Rezervările mele.", accent: "Totul într-un loc.")
                     if !sesiune.esteConectat {
                         CereCont(
                             simbol: "calendar.badge.plus",
@@ -60,7 +59,7 @@ struct RezervarileMeleView: View {
         }
         .navigationTitle("Rezervările mele")
         .navigationBarTitleDisplayMode(.inline)
-        .faraTitluSus()
+        .antetVerde("Rezervări", titlu: "Rezervările mele.", accent: "Toate aici.")
         .refreshable { if sesiune.esteConectat { await incarca() } }
         .task { if sesiune.esteConectat { await incarca() } }
         .sheet(item: $deMutat) { rezervare in

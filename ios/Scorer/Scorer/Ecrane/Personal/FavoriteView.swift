@@ -11,7 +11,6 @@ struct FavoriteView: View {
             Tema.fundal.ignoresSafeArea()
             ScrollView {
                 VStack(spacing: 14) {
-                    AntetEcran(eticheta: "Favorite", titlu: "Terenurile tale.", accent: "La un clic.")
                     if !sesiune.esteConectat {
                         CereCont(
                             simbol: "heart",
@@ -42,7 +41,7 @@ struct FavoriteView: View {
         }
         .navigationTitle("Favorite")
         .navigationBarTitleDisplayMode(.inline)
-        .faraTitluSus()
+        .antetVerde("Favorite", titlu: "Terenurile tale.", accent: "La un clic.")
         .navigationDestination(for: String.self) { id in
             DetaliuTerenView(terenId: id)
         }

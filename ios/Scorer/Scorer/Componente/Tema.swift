@@ -14,6 +14,8 @@ enum Tema {
     })
     /// Verdele-lime de pe fundalurile închise (#7BD389), ca pe site.
     static let accentDeschis = Color(red: 0.48, green: 0.83, blue: 0.54)
+    /// Cremul textului de pe fundalurile verzi (#F3EFE6), ca pe site.
+    static let creta = Color(red: 0.953, green: 0.937, blue: 0.902)
 
     /// Fundalul general — puțin mai cald decât albul pur, ca fișele să iasă în față.
     static let fundal = Color(.systemGroupedBackground)
@@ -300,55 +302,100 @@ struct PastilaFiltru: View {
 
 // MARK: - Antetul ecranelor
 
-/// Cardul verde de sus al ecranelor, ca banda de pe site: etichetă mică, titlu
-/// mare cu accent în serif italic (semnătura Scorer) și o descriere scurtă.
-struct AntetEcran: View {
+/// Fundalul verde al antetelor: pe toată lățimea, urcă sub bara de sus și se
+/// termină cu margini rotunjite, ca banda de pe site și hero-ul de pe Acasă.
+struct FundalVerde: View {
+    var body: some View {
+        ZStack(alignment: .topTrailing) {
+            RadialGradient(
+                colors: [Color(red: 0.09, green: 0.33, blue: 0.23), Color(red: 0.043, green: 0.165, blue: 0.11), Color(red: 0.027, green: 0.086, blue: 0.06)],
+                center: .topLeading, startRadius: 0, endRadius: 520
+            )
+            Circle().fill(Tema.accentDeschis.opacity(0.10)).frame(width: 240).blur(radius: 50).offset(x: 70, y: 40)
+        }
+        .clipShape(UnevenRoundedRectangle(bottomLeadingRadius: 30, bottomTrailingRadius: 30, style: .continuous))
+        .shadow(color: .black.opacity(0.22), radius: 18, y: 8)
+        // Urcă sub bara de sus și sub ceas, ca să nu rămână o fâșie albă.
+        .padding(.top, -400)
+    }
+}
+
+/// Antetul verde al ecranelor: etichetă mică, titlu mare cu accent în serif
+/// italic (semnătura Scorer). Se pune cu `.safeAreaInset(edge: .top)`, deci
+/// stă fix sus, iar conținutul se derulează pe dedesubt.
+struct AntetEcran<Extra: View>: View {
     let eticheta: String
     let titlu: String
     var accent: String?
-    var descriere: String?
+    @ViewBuilder var extra: () -> Extra
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(eticheta)
-                .font(.footnote.weight(.medium))
-                .opacity(0.6)
-            (Text(titlu).font(.system(size: 30, weight: .semibold))
-             + Text(accent.map { " " + $0 } ?? "").font(.system(size: 28, weight: .regular, design: .serif).italic()).foregroundStyle(Color.white.opacity(0.6)))
-                .tracking(-0.6)
-                .fixedSize(horizontal: false, vertical: true)
-            if let descriere {
-                Text(descriere).font(.subheadline).opacity(0.65).padding(.top, 2)
+        VStack(alignment: .leading, spacing: 14) {
+            VStack(alignment: .leading, spacing: 6) {
+                Text(eticheta)
+                    .font(.footnote.weight(.medium))
+                    .opacity(0.6)
+                (Text(titlu).font(.system(size: 30, weight: .semibold))
+                 + Text(accent.map { " " + $0 } ?? "").font(.system(size: 28, weight: .regular, design: .serif).italic()).foregroundStyle(Color(red: 0.95, green: 0.94, blue: 0.90).opacity(0.6)))
+                    .tracking(-0.6)
+                    .lineLimit(2)
+                    .minimumScaleFactor(0.8)
             }
+            .padding(.horizontal, 20)
+            extra()
         }
         .foregroundStyle(Color(red: 0.95, green: 0.94, blue: 0.90))
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(20)
-        .background {
-            ZStack(alignment: .topTrailing) {
-                RadialGradient(
-                    colors: [Color(red: 0.09, green: 0.33, blue: 0.23), Color(red: 0.043, green: 0.165, blue: 0.11), Color(red: 0.027, green: 0.086, blue: 0.06)],
-                    center: .topLeading, startRadius: 0, endRadius: 420
-                )
-                Circle().fill(Tema.accentDeschis.opacity(0.12)).frame(width: 180).blur(radius: 40).offset(x: 60, y: -70)
-            }
-        }
-        .clipShape(.rect(cornerRadius: 26, style: .continuous))
-        .shadow(color: .black.opacity(0.18), radius: 18, y: 10)
+        .padding(.top, 2)
+        .padding(.bottom, 22)
+        .background { FundalVerde() }
+    }
+}
+
+extension AntetEcran where Extra == EmptyView {
+    init(eticheta: String, titlu: String, accent: String? = nil) {
+        self.init(eticheta: eticheta, titlu: titlu, accent: accent) { EmptyView() }
     }
 }
 
 extension View {
-    /// Pe ecranele cu `AntetEcran`, titlul mic din bara de sus ar dubla cardul:
-    /// îl lăsăm gol (titlul rămâne pentru butonul „Înapoi” și accesibilitate).
-    func faraTitluSus() -> some View {
-        self.toolbar { ToolbarItem(placement: .principal) { Color.clear.frame(width: 1, height: 1) } }
+    /// Antetul verde fix sus, cu bara de navigare transparentă și ceasul alb.
+    func antetVerde(_ eticheta: String, titlu: String, accent: String? = nil) -> some View {
+        self.safeAreaInset(edge: .top, spacing: 12) { AntetEcran(eticheta: eticheta, titlu: titlu, accent: accent) }
+            .faraTitluSus()
     }
 
-    /// Antetul ca prim rând dintr-o listă, fără fundal și margini de rând.
-    func randAntet() -> some View {
-        self.listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 10, trailing: 16))
-            .listRowBackground(Color.clear)
-            .listRowSeparator(.hidden)
+    /// Pe ecranele cu antet verde, bara de sus e transparentă, fără titlu (îl
+    /// are antetul), iar ceasul și butoanele sunt albe, ca să se citească.
+    func faraTitluSus() -> some View {
+        self.toolbar { ToolbarItem(placement: .principal) { Color.clear.frame(width: 1, height: 1) } }
+            .toolbarBackgroundVisibility(.hidden, for: .navigationBar)
+            .toolbarColorScheme(.dark, for: .navigationBar)
+            .modifier(FaraUmbraSus())
+    }
+}
+
+/// Fără umbra pe care iOS 26 o pune sub bara de sus când derulezi.
+private struct FaraUmbraSus: ViewModifier {
+    func body(content: Content) -> some View {
+        if #available(iOS 26, *) {
+            content.scrollEdgeEffectHidden(true, for: .top)
+        } else {
+            content
+        }
+    }
+}
+
+/// Element de bară fără bula de sticlă pe care iOS 26 o pune implicit.
+struct ElementSimplu<Continut: View>: ToolbarContent {
+    let placement: ToolbarItemPlacement
+    @ViewBuilder let continut: () -> Continut
+
+    var body: some ToolbarContent {
+        if #available(iOS 26, *) {
+            ToolbarItem(placement: placement, content: continut).sharedBackgroundVisibility(.hidden)
+        } else {
+            ToolbarItem(placement: placement, content: continut)
+        }
     }
 }
