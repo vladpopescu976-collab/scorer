@@ -62,7 +62,7 @@ export function OverviewClient({
   const maxShare = Math.max(1, ...sportData.map((s) => s.ore));
 
   return (
-    <motion.div variants={container} initial="hidden" animate="show" className="space-y-6">
+    <motion.div variants={container} initial={false} animate="show" className="space-y-6">
       {/* Cardul verde: încasarea lunii mare, ca un panou de bord, și trei casete. */}
       <AntetPanou
         eticheta={`Panou · ${new Date().toLocaleDateString("ro-RO", { month: "long", year: "numeric" })}`}

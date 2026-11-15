@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
-import { motion } from "framer-motion";
 import {
   LayoutDashboard,
   CalendarDays,
@@ -115,15 +114,10 @@ export function DashboardShell({
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col pb-28 md:pb-0">
-        <main className="flex-1 px-4 py-5 sm:px-8 sm:py-8">
-          <motion.div
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
-            className="mx-auto max-w-6xl"
-          >
-            {children}
-          </motion.div>
+        {/* @container: banda verde din capul paginii (AntetPanou) se întinde pe
+            toată lățimea lui main, ca pe restul site-ului și în aplicație. */}
+        <main className="@container flex-1">
+          <div className="mx-auto max-w-[76rem] px-4 pb-5 pt-5 sm:px-8 sm:pb-8 sm:pt-8">{children}</div>
         </main>
       </div>
 

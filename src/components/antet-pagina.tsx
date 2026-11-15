@@ -134,7 +134,7 @@ export function CategoriiSport({
 }
 
 /**
- * Antetul paginilor din panoul business: un card verde rotunjit, ca banda din
+ * Antetul paginilor din panoul business: banda verde pe toată lățimea, curbată jos, ca banda din
  * aplicație. Titlul cu accent în serif, un rând de context, butoanele paginii
  * în dreapta și, opțional, cifrele importante dedesubt.
  */
@@ -154,10 +154,14 @@ export function AntetPanou({
   children?: React.ReactNode;
 }) {
   return (
-    <section className="relative overflow-hidden rounded-[28px] bg-[radial-gradient(120%_140%_at_0%_0%,#17543A_0%,#0B2A1C_50%,#07160F_100%)] p-6 text-[#F3EFE6] shadow-[0_24px_50px_-28px_rgba(7,22,15,0.7)] sm:p-8">
-      <div aria-hidden className="pointer-events-none absolute -right-20 -top-24 h-72 w-72 rounded-full bg-[#7BD389]/10 blur-3xl" />
-      <div className="relative flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
-        <div className="min-w-0">
+    // Banda iese din coloana paginii până la marginile lui main (care e
+    // @container): marginile negative = jumătate din diferența de lățime,
+    // iar padding-ul la fel de mare ține textul aliniat cu restul paginii.
+    <section className="relative -mt-5 mx-[calc((100%_-_100cqw)/2)] overflow-hidden rounded-b-[32px] bg-[radial-gradient(120%_140%_at_0%_0%,#17543A_0%,#0B2A1C_50%,#07160F_100%)] px-[calc((100cqw_-_100%)/2)] pb-8 pt-[max(2rem,env(safe-area-inset-top))] text-[#F3EFE6] shadow-[0_24px_50px_-28px_rgba(7,22,15,0.7)] sm:-mt-8 sm:rounded-b-[44px] sm:pb-10 sm:pt-10">
+      <div aria-hidden className="pointer-events-none absolute -right-24 -top-24 h-[420px] w-[200px] rotate-[-24deg] bg-gradient-to-b from-[#F3EFE6]/[0.12] to-transparent blur-3xl" />
+      <div aria-hidden className="pointer-events-none absolute -left-20 bottom-0 h-72 w-72 rounded-full bg-[#7BD389]/10 blur-3xl" />
+      <div className="relative flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
+        <div className="min-w-0 flex-1">
           <p className="text-[12.5px] font-medium text-[#F3EFE6]/60">{eticheta}</p>
           <h1 className="mt-2 text-[30px] font-semibold leading-[1.05] tracking-[-0.035em] first-letter:uppercase sm:text-[36px]">
             {titlu}

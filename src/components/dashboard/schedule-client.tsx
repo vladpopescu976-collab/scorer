@@ -129,6 +129,10 @@ export function ScheduleClient({
   const [editingSlot, setEditingSlot] = useState<{ slot: BlockedSlot; terenNume: string } | null>(null);
   const [blockOpen, setBlockOpen] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
+  // Ziua arată toate terenurile una lângă alta; săptămâna arată un singur
+  // teren, cu cele șapte zile pe coloane, ca un calendar de perete.
+  const [mod, setMod] = useState<"zi" | "saptamana">("zi");
+  const [terenSapt, setTerenSapt] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
   // Ce ocupă efectiv terenul: rezervările active plus orele blocate manual.
@@ -157,15 +161,53 @@ export function ScheduleClient({
     [toateTerenurile]
   );
 
-  const dayBookings = useMemo(
-    () => bookings.filter((b) => isoDate(b.startTime) === isoDate(selectedDate)),
-    [bookings, selectedDate]
-  );
+  const terenSaptamana = fields.find((f) => f.id === terenSapt) ?? fields[0];
 
-  const dayBlocked = useMemo(
-    () => blockedSlots.filter((s) => isoDate(s.startTime) === isoDate(selectedDate)),
-    [blockedSlots, selectedDate]
-  );
+  const zileSaptamana = useMemo(() => {
+    const d = selectedDate;
+    const dinLuni = (d.getDay() + 6) % 7;
+    const luni = new Date(d.getFullYear(), d.getMonth(), d.getDate() - dinLuni);
+    return Array.from({ length: 7 }, (_, i) => new Date(luni.getFullYear(), luni.getMonth(), luni.getDate() + i));
+  }, [selectedDate]);
+
+  /** Coloanele grilei: terenele (pe zi) sau zilele (pe săptămână). */
+  const coloane = useMemo(() => {
+    const azi = isoDate(new Date());
+    if (mod === "zi") {
+      return fields.map((f) => ({
+        cheie: f.id,
+        titlu: f.name,
+        sub: sportMeta[f.sportType as SportType]?.label ?? f.sportType,
+        fieldId: f.id,
+        zi: selectedDate,
+        azi: false,
+      }));
+    }
+    if (!terenSaptamana) return [];
+    const ziFmt = new Intl.DateTimeFormat("ro-RO", { weekday: "short" });
+    return zileSaptamana.map((z) => ({
+      cheie: z.toDateString(),
+      titlu: ziFmt.format(z).replace(".", ""),
+      sub: String(z.getDate()),
+      fieldId: terenSaptamana.id,
+      zi: z,
+      azi: isoDate(z) === azi,
+    }));
+  }, [mod, fields, selectedDate, terenSaptamana, zileSaptamana]);
+
+  const ocupateInVedere = useMemo(() => {
+    const zile = new Set(coloane.map((c) => isoDate(c.zi)));
+    const terenuri = new Set(coloane.map((c) => c.fieldId));
+    return (
+      bookings.some((b) => terenuri.has(b.field.id) && zile.has(isoDate(b.startTime))) ||
+      blockedSlots.some((s) => terenuri.has(s.fieldId) && zile.has(isoDate(s.startTime)))
+    );
+  }, [coloane, bookings, blockedSlots]);
+
+  function muta(directie: 1 | -1) {
+    const pas = mod === "zi" ? 1 : 7;
+    setSelectedDate((d) => new Date(d.getFullYear(), d.getMonth(), d.getDate() + directie * pas));
+  }
 
   function removeBlock(id: string) {
     startTransition(async () => {
@@ -199,23 +241,33 @@ export function ScheduleClient({
   const longDateFmt = new Intl.DateTimeFormat("ro-RO", { day: "numeric", month: "long", year: "numeric" });
   // Etichetă scurtă pentru butonul din mijloc, ca să nu lățească bara.
   const shortDateFmt = new Intl.DateTimeFormat("ro-RO", { day: "numeric", month: "short" });
+  const primaZi = zileSaptamana[0];
+  const ultimaZi = zileSaptamana[6];
+  const lunaFmt = new Intl.DateTimeFormat("ro-RO", { month: "long" });
+  const intervalSaptamana =
+    primaZi.getMonth() === ultimaZi.getMonth()
+      ? `${primaZi.getDate()} – ${ultimaZi.getDate()} ${lunaFmt.format(ultimaZi)}`
+      : `${primaZi.getDate()} ${lunaFmt.format(primaZi)} – ${ultimaZi.getDate()} ${lunaFmt.format(ultimaZi)}`;
+  const intervalScurt = `${primaZi.getDate()}–${shortDateFmt.format(ultimaZi)}`;
+  const saptamanaCurenta = zileSaptamana.some((z) => isoDate(z) === isoDate(new Date()));
 
   return (
     <div className="space-y-4">
       <AntetPanou
         eticheta="Calendar & orar"
-        titlu={weekdayFmt.format(selectedDate)}
-        accent={longDateFmt.format(selectedDate)}
+        titlu={mod === "zi" ? weekdayFmt.format(selectedDate) : "Săptămâna"}
+        accent={mod === "zi" ? longDateFmt.format(selectedDate) : intervalSaptamana}
+        detaliu={mod === "saptamana" && terenSaptamana ? terenSaptamana.name : undefined}
         actiuni={
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <div className="flex items-center gap-1 rounded-full bg-white p-1 shadow-sm">
               <button
                 type="button"
-                onClick={() => setSelectedDate((d) => new Date(d.getFullYear(), d.getMonth(), d.getDate() - 1))}
-                className="flex items-center gap-1 rounded-md px-2 py-1.5 text-[12.5px] font-medium text-muted-foreground hover:bg-muted hover:text-foreground"
+                onClick={() => muta(-1)}
+                className="flex items-center gap-1 rounded-full px-2 py-1.5 text-[12.5px] font-medium text-muted-foreground hover:bg-muted hover:text-foreground"
               >
                 <ChevronLeft className="h-4 w-4" />
-                <span className="hidden sm:inline">Ziua anterioară</span>
+                <span className="hidden sm:inline">{mod === "zi" ? "Ziua anterioară" : "Săpt. anterioară"}</span>
               </button>
               {/* Data vizitată se vede mereu, iar apăsarea deschide un calendar
                   în care zilele sunt colorate după cât de ocupate sunt. */}
@@ -226,15 +278,24 @@ export function ScheduleClient({
                       type="button"
                       title="Alege ziua"
                       className={
-                        "flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-[12.5px] font-medium tabular-nums " +
-                        (isToday ? "bg-primary/10 text-primary" : "text-foreground hover:bg-muted")
+                        "flex items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 py-1.5 text-[12.5px] font-medium tabular-nums " +
+                        ((mod === "zi" ? isToday : saptamanaCurenta) ? "bg-primary/10 text-primary" : "text-foreground hover:bg-muted")
                       }
                     />
                   }
                 >
                   <CalendarDays className="h-3.5 w-3.5" />
-                  {isToday && <span>Azi ·</span>}
-                  {shortDateFmt.format(selectedDate)}
+                  {mod === "zi" ? (
+                    <>
+                      {isToday && <span>Azi ·</span>}
+                      {shortDateFmt.format(selectedDate)}
+                    </>
+                  ) : (
+                    <>
+                      {saptamanaCurenta && <span>Acum ·</span>}
+                      {intervalScurt}
+                    </>
+                  )}
                   <ChevronDown className="h-3 w-3 opacity-60" />
                 </PopoverTrigger>
                 <PopoverContent align="center" className="w-auto p-0">
@@ -265,10 +326,10 @@ export function ScheduleClient({
               </Popover>
               <button
                 type="button"
-                onClick={() => setSelectedDate((d) => new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1))}
-                className="flex items-center gap-1 rounded-md px-2 py-1.5 text-[12.5px] font-medium text-muted-foreground hover:bg-muted hover:text-foreground"
+                onClick={() => muta(1)}
+                className="flex items-center gap-1 rounded-full px-2 py-1.5 text-[12.5px] font-medium text-muted-foreground hover:bg-muted hover:text-foreground"
               >
-                <span className="hidden sm:inline">Ziua următoare</span>
+                <span className="hidden sm:inline">{mod === "zi" ? "Ziua următoare" : "Săpt. următoare"}</span>
                 <ChevronRight className="h-4 w-4" />
               </button>
             </div>
@@ -277,7 +338,7 @@ export function ScheduleClient({
               <button
                 type="button"
                 onClick={() => setBlockOpen(true)}
-                className="flex items-center gap-1.5 rounded-lg bg-primary px-3 py-2 text-[12.5px] font-medium text-primary-foreground hover:opacity-90"
+                className="flex items-center gap-1.5 whitespace-nowrap rounded-full bg-[#F3EFE6] px-3.5 py-2 text-[12.5px] font-semibold text-[#0B2A1C] hover:bg-white"
               >
                 <Plus className="h-4 w-4" />
                 Blochează ore
@@ -285,7 +346,47 @@ export function ScheduleClient({
             )}
           </div>
         }
-      />
+      >
+        {/* Pe verde, ca în aplicație: comutatorul Zi / Săptămână și, pe
+            săptămână, terenul afișat. */}
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+          <div className="grid w-full grid-cols-2 rounded-full bg-white/[0.08] p-1 ring-1 ring-inset ring-white/10 sm:w-64">
+            {(["zi", "saptamana"] as const).map((m) => (
+              <button
+                key={m}
+                type="button"
+                onClick={() => setMod(m)}
+                className={`rounded-full py-2 text-[13px] font-semibold transition-colors ${
+                  mod === m ? "bg-[#F3EFE6] text-[#0B2A1C] shadow-sm" : "text-[#F3EFE6]/70 hover:text-[#F3EFE6]"
+                }`}
+              >
+                {m === "zi" ? "Zi" : "Săptămână"}
+              </button>
+            ))}
+          </div>
+          {mod === "saptamana" && fields.length > 1 && (
+            <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1 sm:pb-0">
+              {fields.map((f) => {
+                const ales = f.id === terenSaptamana?.id;
+                return (
+                  <button
+                    key={f.id}
+                    type="button"
+                    onClick={() => setTerenSapt(f.id)}
+                    className={`shrink-0 rounded-full px-3.5 py-1.5 text-[12.5px] font-medium ring-1 ring-inset transition-colors ${
+                      ales
+                        ? "bg-[#F3EFE6] text-[#0B2A1C] ring-transparent"
+                        : "bg-white/[0.06] text-[#F3EFE6]/75 ring-white/15 hover:text-[#F3EFE6]"
+                    }`}
+                  >
+                    {f.name}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </AntetPanou>
 
       <SelectorSportTeren
         terenuri={toateTerenurile}
@@ -307,20 +408,48 @@ export function ScheduleClient({
           <Legenda />
 
           <div className="overflow-x-auto rounded-2xl border bg-background shadow-sm">
-            <div style={{ minWidth: 120 + fields.length * 180 }}>
-              <div className="grid border-b" style={{ gridTemplateColumns: `56px repeat(${fields.length}, 1fr)` }}>
+            <div style={{ minWidth: mod === "zi" ? 120 + coloane.length * 180 : 56 + 7 * 76 }}>
+              <div
+                className="sticky top-0 z-20 grid border-b bg-background"
+                style={{ gridTemplateColumns: `56px repeat(${coloane.length}, 1fr)` }}
+              >
                 <div />
-                {fields.map((f) => (
-                  <div key={f.id} className="border-l px-3 py-3">
-                    <p className="truncate text-[12px] font-semibold">{f.name}</p>
-                    <p className="truncate text-[10.5px] text-muted-foreground">
-                      {sportMeta[f.sportType as SportType]?.label ?? f.sportType}
-                    </p>
-                  </div>
-                ))}
+                {coloane.map((c) =>
+                  mod === "zi" ? (
+                    <div key={c.cheie} className="border-l px-3 py-3">
+                      <p className="truncate text-[12px] font-semibold">{c.titlu}</p>
+                      <p className="truncate text-[10.5px] text-muted-foreground">{c.sub}</p>
+                    </div>
+                  ) : (
+                    // Apăsarea pe o zi o deschide pe toată pagina, cu toate terenurile.
+                    <button
+                      key={c.cheie}
+                      type="button"
+                      title="Vezi ziua"
+                      onClick={() => {
+                        setSelectedDate(c.zi);
+                        setMod("zi");
+                      }}
+                      className={`flex flex-col items-center border-l py-2.5 transition-colors hover:bg-muted/60 ${c.azi ? "bg-primary/[0.06]" : ""}`}
+                    >
+                      <span
+                        className={`text-[10.5px] font-semibold uppercase tracking-[0.08em] ${c.azi ? "text-primary" : "text-muted-foreground"}`}
+                      >
+                        {c.titlu}
+                      </span>
+                      <span
+                        className={`mt-1 flex h-8 w-8 items-center justify-center rounded-full text-[15px] font-semibold tabular-nums ${
+                          c.azi ? "bg-primary text-primary-foreground" : ""
+                        }`}
+                      >
+                        {c.sub}
+                      </span>
+                    </button>
+                  )
+                )}
               </div>
 
-              <div className="relative grid" style={{ gridTemplateColumns: `56px repeat(${fields.length}, 1fr)` }}>
+              <div className="relative grid" style={{ gridTemplateColumns: `56px repeat(${coloane.length}, 1fr)` }}>
                 <div className="relative">
                   {HOURS.map((h) => (
                     <div key={h} style={{ height: HOUR_HEIGHT }} className="flex items-start justify-end border-b pr-2">
@@ -331,14 +460,14 @@ export function ScheduleClient({
                   ))}
                 </div>
 
-                {fields.map((field) => (
-                  <div key={field.id} className="relative border-l">
+                {coloane.map((col) => (
+                  <div key={col.cheie} className={`relative border-l ${col.azi ? "bg-primary/[0.03]" : ""}`}>
                     {HOURS.map((h) => (
                       <div key={h} style={{ height: HOUR_HEIGHT }} className="border-b" />
                     ))}
 
-                    {dayBlocked
-                      .filter((s) => s.fieldId === field.id)
+                    {blockedSlots
+                      .filter((s) => s.fieldId === col.fieldId && isoDate(s.startTime) === isoDate(col.zi))
                       .map((s) => {
                         const fel = felBlocare(s.clientName);
                         const stil = FEL_INTERVAL[fel];
@@ -356,7 +485,7 @@ export function ScheduleClient({
                               setSelected({
                                 tip: "blocare",
                                 blocare: s,
-                                terenNume: numeTeren.get(s.fieldId) ?? field.name,
+                                terenNume: numeTeren.get(s.fieldId) ?? "",
                               })
                             }
                             whileHover={{ scale: 1.015 }}
@@ -380,8 +509,8 @@ export function ScheduleClient({
                       })}
 
                     <AnimatePresence>
-                      {dayBookings
-                        .filter((b) => b.field.id === field.id)
+                      {bookings
+                        .filter((b) => b.field.id === col.fieldId && isoDate(b.startTime) === isoDate(col.zi))
                         .map((b) => {
                           const activa = STATUS_ACTIV.includes(b.status);
                           const stil = activa ? FEL_INTERVAL.site : STIL_INACTIV;
@@ -395,7 +524,7 @@ export function ScheduleClient({
                               type="button"
                               layout
                               onClick={() => setSelected({ tip: "rezervare", rezervare: b })}
-                              initial={{ opacity: 0, scale: 0.94 }}
+                              initial={{ scale: 0.94 }}
                               animate={{ opacity: 1, scale: 1 }}
                               whileHover={{ scale: 1.015 }}
                               style={{
@@ -432,8 +561,10 @@ export function ScheduleClient({
         </>
       )}
 
-      {dayBookings.length === 0 && dayBlocked.length === 0 && fields.length > 0 && (
-        <p className="text-center text-[12.5px] text-muted-foreground">Nicio oră ocupată în această zi.</p>
+      {!ocupateInVedere && fields.length > 0 && (
+        <p className="text-center text-[12.5px] text-muted-foreground">
+          {mod === "zi" ? "Nicio oră ocupată în această zi." : "Nicio oră ocupată în această săptămână."}
+        </p>
       )}
 
       <AnimatePresence>
