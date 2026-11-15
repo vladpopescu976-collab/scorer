@@ -25,7 +25,7 @@ const NIVELURI = [
 ] as const;
 
 /** „Mai am nevoie de jucători”: formularul de anunț. */
-export function PosteazaMeci({ orasImplicit }: { orasImplicit: string }) {
+export function PosteazaMeci({ orasImplicit, telefonImplicit = "" }: { orasImplicit: string; telefonImplicit?: string }) {
   const [deschis, setDeschis] = useState(false);
   const [seTrimite, startTransition] = useTransition();
   const [sport, setSport] = useState<SportType>("FOOTBALL");
@@ -37,7 +37,7 @@ export function PosteazaMeci({ orasImplicit }: { orasImplicit: string }) {
   const [necesari, setNecesari] = useState(2);
   const [nivel, setNivel] = useState("");
   const [descriere, setDescriere] = useState("");
-  const [arataTelefon, setArataTelefon] = useState(true);
+  const [telefon, setTelefon] = useState(telefonImplicit);
   const [eroare, setEroare] = useState("");
 
   function trimite(e: React.FormEvent) {
@@ -55,7 +55,7 @@ export function PosteazaMeci({ orasImplicit }: { orasImplicit: string }) {
         jucatoriNecesari: necesari,
         nivel: (nivel || undefined) as "INCEPATOR" | "MEDIU" | "AVANSAT" | undefined,
         descriere: descriere || undefined,
-        arataTelefon,
+        telefon: telefon.trim() || undefined,
       });
       if (!rezultat.ok) return setEroare(rezultat.error);
       toast.success("Anunțul a fost publicat.");
@@ -178,10 +178,11 @@ export function PosteazaMeci({ orasImplicit }: { orasImplicit: string }) {
               <Textarea id="meci-descriere" value={descriere} onChange={(e) => setDescriere(e.target.value)} placeholder="ex. Împărțim prețul terenului, aduceți tricou alb și negru." maxLength={400} />
             </div>
 
-            <label className="flex items-start gap-3 rounded-2xl bg-muted/60 p-3.5 text-[14px]">
-              <input type="checkbox" checked={arataTelefon} onChange={(e) => setArataTelefon(e.target.checked)} className="mt-0.5 h-4 w-4 accent-[#0E6B3A]" />
-              <span>Arată numărul meu de telefon celor care se alătură</span>
-            </label>
+            <div className="space-y-2">
+              <Label htmlFor="meci-telefon">Telefonul tău</Label>
+              <Input id="meci-telefon" type="tel" required value={telefon} onChange={(e) => setTelefon(e.target.value)} placeholder="07xx xxx xxx" />
+              <p className="text-[12.5px] text-muted-foreground">Îl văd doar jucătorii pe care îi accepți, ca să te poată suna.</p>
+            </div>
 
             {eroare && <p className="text-sm text-destructive">{eroare}</p>}
             <Button type="submit" disabled={seTrimite} className="h-12 w-full rounded-xl bg-[#0E6B3A] text-[15px] hover:bg-[#0B5A30]">

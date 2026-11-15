@@ -7,6 +7,7 @@ import type { SportType } from "@prisma/client";
 
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { salveazaAnuntJucatorAction } from "@/lib/actions/meciuri";
@@ -24,7 +25,7 @@ const NIVELURI = [
 ] as const;
 
 /** „Caut echipă”: jucătorul își pune anunțul. */
-export function PuneAnuntJucator({ orasImplicit }: { orasImplicit: string }) {
+export function PuneAnuntJucator({ orasImplicit, telefonImplicit = "" }: { orasImplicit: string; telefonImplicit?: string }) {
   const [deschis, setDeschis] = useState(false);
   const [seTrimite, startTransition] = useTransition();
   const [sport, setSport] = useState<SportType>("FOOTBALL");
@@ -33,6 +34,7 @@ export function PuneAnuntJucator({ orasImplicit }: { orasImplicit: string }) {
   const [nivel, setNivel] = useState("");
   const [descriere, setDescriere] = useState("");
   const [arataTelefon, setArataTelefon] = useState(true);
+  const [telefon, setTelefon] = useState(telefonImplicit);
   const [zile, setZile] = useState<number[]>([]);
   const [oraDe, setOraDe] = useState("");
   const [oraPana, setOraPana] = useState("");
@@ -49,6 +51,7 @@ export function PuneAnuntJucator({ orasImplicit }: { orasImplicit: string }) {
         nivel: (nivel || undefined) as "INCEPATOR" | "MEDIU" | "AVANSAT" | "COMPETITIV" | undefined,
         descriere: descriere || undefined,
         arataTelefon,
+        telefon: arataTelefon ? telefon.trim() || undefined : undefined,
         zile,
         oraDe: oraDe === "" ? undefined : Number(oraDe),
         oraPana: oraPana === "" ? undefined : Number(oraPana),
@@ -205,6 +208,9 @@ export function PuneAnuntJucator({ orasImplicit }: { orasImplicit: string }) {
               <input type="checkbox" checked={arataTelefon} onChange={(e) => setArataTelefon(e.target.checked)} className="mt-0.5 h-4 w-4 accent-[#0E6B3A]" />
               <span>Arată numărul meu de telefon echipelor care mă invită</span>
             </label>
+            {arataTelefon && (
+              <Input type="tel" value={telefon} onChange={(e) => setTelefon(e.target.value)} placeholder="Telefonul tău, ex. 07xx xxx xxx" aria-label="Telefonul tău" />
+            )}
 
             {eroare && <p className="text-sm text-destructive">{eroare}</p>}
             <Button type="submit" disabled={seTrimite} className="h-12 w-full rounded-xl bg-[#0E6B3A] text-[15px] hover:bg-[#0B5A30]">

@@ -34,6 +34,8 @@ export const anuntSchema = z
     nivel: z.enum(NIVELURI).optional(),
     descriere: z.string().trim().max(400, "Descrierea are cel mult 400 de caractere.").optional(),
     arataTelefon: z.boolean().optional(),
+    /** Lipsă: se ia din cont. */
+    telefon: z.string().trim().max(20).optional(),
   })
   // Orașul vine din listă: scris greșit, anunțul n-ar mai fi găsit de nimeni.
   .refine((d) => ORASE_ROMANIA.some((o) => cheieOras(o) === cheieOras(d.oras)), {
@@ -120,7 +122,7 @@ function serializeaza(m: MeciCuDetalii, vizitatorId: string | null): MeciPublic 
     nivel: m.nivel,
     descriere: m.descriere,
     organizator: { id: m.autor.id, nume: m.autor.name, poza: m.autor.image },
-    telefonOrganizator: mAmAlaturat && m.arataTelefon ? m.autor.phone : null,
+    telefonOrganizator: mAmAlaturat ? (m.telefon ?? m.autor.phone) : null,
     esteAlMeu: esteAlMeu,
     mAmAlaturat,
     cerereaMea: (aMea?.status as MeciPublic["cerereaMea"]) ?? null,
@@ -149,6 +151,7 @@ export async function listaMeciuri(
 
 export async function creeazaMeci(autorId: string, input: AnuntInput): Promise<MeciPublic> {
   const date = anuntSchema.parse(input);
+  const telefon = await telefonObligatoriu(autorId, date.telefon, "Lasă un număr de telefon, ca jucătorii să te poată suna.");
   const creat = await prisma.anuntMeci.create({
     data: {
       autorId,
@@ -161,7 +164,8 @@ export async function creeazaMeci(autorId: string, input: AnuntInput): Promise<M
       jucatoriNecesari: date.jucatoriNecesari,
       nivel: date.nivel ?? null,
       descriere: date.descriere || null,
-      arataTelefon: date.arataTelefon ?? true,
+      arataTelefon: true,
+      telefon,
     },
     include: includeMeci,
   });
@@ -332,4 +336,13 @@ export async function scoateJucator(anuntId: string, organizatorId: string, juca
       text: `Organizatorul te-a scos din meciul din ${ziSiOra(anunt.inceput)}`,
     });
   }
+}
+
+/** Telefonul dat în formular sau, dacă lipsește, cel din cont. Fără el nu merge. */
+export async function telefonObligatoriu(userId: string, dat: string | null | undefined, lipsa: string): Promise<string> {
+  const user = dat?.trim() ? null : await prisma.user.findUnique({ where: { id: userId }, select: { phone: true } });
+  const text = dat?.trim() || user?.phone?.trim() || "";
+  const verificat = phoneSchema.safeParse(text);
+  if (!verificat.success) throw new ActionError(text ? "Numărul de telefon nu pare valid." : lipsa);
+  return verificat.data;
 }

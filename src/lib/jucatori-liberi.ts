@@ -7,6 +7,7 @@ import { ActionError } from "@/lib/actions/result";
 import { ORASE_ROMANIA, cheieOras, normalizeazaOras } from "@/lib/orase";
 import { trimiteNotificare } from "@/lib/push";
 import { POZITII } from "@/lib/jucatori-liberi-pozitii";
+import { telefonObligatoriu } from "@/lib/meciuri";
 
 export { POZITII };
 
@@ -27,6 +28,8 @@ export const anuntJucatorSchema = z
     nivel: z.enum(NIVELURI).optional(),
     descriere: z.string().trim().max(400, "Descrierea are cel mult 400 de caractere.").optional(),
     arataTelefon: z.boolean().optional(),
+    /** Lipsă: se ia din cont. */
+    telefon: z.string().trim().max(20).optional(),
     /** 1 = luni … 7 = duminică. */
     zile: z.array(z.number().int().min(1).max(7)).max(7).optional(),
     oraDe: z.number().int().min(0).max(23).optional(),
@@ -88,6 +91,8 @@ export const invitatieSchema = z.object({
   durata: z.number().int().min(30).max(240).nullish(),
   pret: z.number().int().min(0).max(1000).nullish(),
   mesaj: z.string().trim().max(300).nullish(),
+  /** Lipsă: se ia din cont. */
+  telefon: z.string().trim().max(20).nullish(),
 });
 export type InvitatieInput = z.input<typeof invitatieSchema>;
 
@@ -119,13 +124,13 @@ function serializeaza(a: AnuntCuDetalii, vizitatorId: string | null): AnuntJucat
     esteAlMeu,
     lAmInvitat,
     primesteInvitatii: a.primesteInvitatii,
-    telefonJucator: lAmInvitat && a.arataTelefon ? a.user.phone : null,
+    telefonJucator: lAmInvitat && a.arataTelefon ? (a.telefon ?? a.user.phone) : null,
     invitatii: esteAlMeu
       ? a.invitatii.map((i) => ({
           id: i.dinPartea.id,
           nume: i.dinPartea.name,
           poza: i.dinPartea.image,
-          telefon: i.dinPartea.phone,
+          telefon: i.telefon ?? i.dinPartea.phone,
           mesaj: i.mesaj,
           teren: i.teren,
           dataOra: i.dataOra?.toISOString() ?? null,
@@ -154,13 +159,18 @@ export async function listaJucatoriLiberi(
 /** Pune sau actualizează anunțul jucătorului pentru sportul ales. */
 export async function salveazaAnuntJucator(userId: string, input: AnuntJucatorInput): Promise<AnuntJucatorPublic> {
   const date = anuntJucatorSchema.parse(input);
+  const arataTelefon = date.arataTelefon ?? true;
+  const telefon = arataTelefon
+    ? await telefonObligatoriu(userId, date.telefon, "Lasă un număr de telefon, ca echipele să te poată suna.")
+    : null;
   const valori = {
+    telefon,
     oras: normalizeazaOras(date.oras),
     orasCheie: cheieOras(date.oras),
     pozitii: date.pozitii ?? [],
     nivel: date.nivel ?? null,
     descriere: date.descriere || null,
-    arataTelefon: date.arataTelefon ?? true,
+    arataTelefon,
     zile: [...new Set(date.zile ?? [])],
     oraDe: date.oraDe ?? null,
     oraPana: date.oraPana ?? null,
@@ -193,7 +203,9 @@ export async function invitaJucator(anuntId: string, userId: string, input: Invi
   if (!anunt.primesteInvitatii) throw new ActionError("Jucătorul nu mai primește invitații momentan.");
 
   const curat = detalii.mesaj || null;
+  const telefon = await telefonObligatoriu(userId, detalii.telefon, "Lasă un număr de telefon, ca jucătorul să te poată suna.");
   const valori = {
+    telefon,
     mesaj: curat,
     teren: detalii.teren,
     dataOra: detalii.dataOra,
@@ -210,7 +222,7 @@ export async function invitaJucator(anuntId: string, userId: string, input: Invi
     update: valori,
   });
 
-  const cine = await prisma.user.findUnique({ where: { id: userId }, select: { name: true, phone: true } });
+  const cine = await prisma.user.findUnique({ where: { id: userId }, select: { name: true } });
   // O invitație repetată de aceeași echipă nu mai trimite încă o notificare.
   if (!existenta) after(() =>
     trimiteNotificare(anunt.userId, {
@@ -219,7 +231,7 @@ export async function invitaJucator(anuntId: string, userId: string, input: Invi
         cine?.name ?? "O echipă",
         `${detalii.teren}, ${ziSiOra(detalii.dataOra)}`,
         detalii.pret != null ? `${detalii.pret} lei de om` : null,
-        cine?.phone,
+        telefon,
         curat ? `„${curat}”` : null,
       ].filter(Boolean).join(" · "),
       date: { ecran: "meciuri" },

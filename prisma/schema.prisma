@@ -451,6 +451,8 @@ model AnuntMeci {
   descriere        String?     @db.Text
   /// Telefonul organizatorului se arată celor care s-au alăturat.
   arataTelefon     Boolean     @default(true)
+  /// Numărul la care îl sună jucătorii acceptați.
+  telefon          String?
 
   note     NotaJucator[]
   jucatori JucatorMeci[]
@@ -541,6 +543,8 @@ model AnuntJucator {
   primesteInvitatii Boolean     @default(true)
   /// Telefonul se arată echipelor care l-au invitat.
   arataTelefon      Boolean     @default(true)
+  /// Numărul la care îl sună echipele care îl invită (dacă îl arată).
+  telefon           String?
 
   invitatii InvitatieJucator[]
 
@@ -561,6 +565,8 @@ model InvitatieJucator {
   dinPartea   User   @relation("InvitatiiTrimise", fields: [dinParteaId], references: [id], onDelete: Cascade)
 
   mesaj String?
+  /// Numărul la care îl sună jucătorul chemat.
+  telefon String?
   /// Detaliile meciului la care e chemat: terenul, când, cât durează, cât costă de om.
   teren   String?
   dataOra DateTime?

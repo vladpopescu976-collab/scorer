@@ -76,9 +76,9 @@ export default async function GasesteMeciPage({
         <div className="mt-6 flex flex-wrap gap-3">
           {estePersonal ? (
             cautaEchipa ? (
-              <PuneAnuntJucator orasImplicit={oras || eu?.city || ""} />
+              <PuneAnuntJucator orasImplicit={oras || eu?.city || ""} telefonImplicit={eu?.phone ?? ""} />
             ) : (
-              <PosteazaMeci orasImplicit={oras || eu?.city || ""} />
+              <PosteazaMeci orasImplicit={oras || eu?.city || ""} telefonImplicit={eu?.phone ?? ""} />
             )
           ) : (
             !userId && (
@@ -116,7 +116,7 @@ export default async function GasesteMeciPage({
             ) : (
               <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
                 {jucatori.map((a) => (
-                  <CardJucatorLiber key={a.id} anunt={a} conectat={estePersonal} />
+                  <CardJucatorLiber key={a.id} anunt={a} conectat={estePersonal} telefonCont={eu?.phone ?? ""} />
                 ))}
               </div>
             )}
