@@ -29,6 +29,8 @@ struct RezervaView: View {
     /// butonul de jos întreabă din nou, până se trimite rezervarea.
     @State private var alegePlata = false
     @State private var applePay = ApplePay()
+    /// Split the bill creat după rezervare: arătăm imediat linkul de trimis.
+    @State private var impartireCreata: Impartire?
 
     private var esteMutare: Bool { rezervareExistenta != nil }
     private var ore: [Int] { Array(teren.oraDeschidere..<teren.oraInchidere) }
@@ -59,9 +61,13 @@ struct RezervaView: View {
             FoaieMetodaPlata(
                 suma: totalDePlata,
                 rezumat: rezumatPlata,
-                laApplePay: platesteCuApplePay,
-                laTeren: { alegePlata = false; trimite() }
+                laApplePay: { platesteCuApplePay() },
+                laTeren: { alegePlata = false; trimite() },
+                laImpartire: { parti in platesteCuApplePay(parti: parti) }
             )
+        }
+        .sheet(item: $impartireCreata, onDismiss: { laFinal(); inchide() }) { imp in
+            NavigationStack { ImpartireView(cod: imp.cod, initiala: imp) }
         }
         .navigationTitle(esteMutare ? "Modifică rezervarea" : "Rezervă")
         .navigationBarTitleDisplayMode(.inline)
@@ -466,7 +472,7 @@ struct RezervaView: View {
                     simbol: "checkmark",
                     seIncarca: seTrimite,
                     activ: oraStart != nil && oraSfarsit != nil,
-                    actiune: trimite
+                    actiune: { trimite() }
                 )
             } else {
                 // Plata se alege într-o foaie separată, ca subsolul să rămână curat.
@@ -651,17 +657,21 @@ struct RezervaView: View {
         return "\(teren.nume) · \(zi.ziScurta) · \(format(start))–\(format(sfarsit))"
     }
 
-    private func platesteCuApplePay() {
+    /// Cu `parti`, organizatorul plătește doar partea lui (split the bill).
+    private func platesteCuApplePay(parti: Int? = nil) {
         guard let start = oraStart, let sfarsit = oraSfarsit else { return }
-        let descriere = "\(teren.nume) · \(format(start))–\(format(sfarsit))"
-        applePay.plateste(suma: totalDePlata, descriere: descriere) { platit in
+        let descriere = parti == nil
+            ? "\(teren.nume) · \(format(start))–\(format(sfarsit))"
+            : "Partea ta · \(teren.nume)"
+        let suma = parti.map { Impartire.calculeaza(total: totalDePlata, parti: $0).parteaMea } ?? totalDePlata
+        applePay.plateste(suma: suma, descriere: descriere) { platit in
             guard platit else { return }
             alegePlata = false
-            trimite()
+            trimite(parti: parti)
         }
     }
 
-    private func trimite() {
+    private func trimite(parti: Int? = nil) {
         guard let start = oraStart, let sfarsit = oraSfarsit else { return }
         let calendar = Calendar.current
         guard
@@ -694,14 +704,26 @@ struct RezervaView: View {
                         let optiuni: [String]
                         let observatii: String?
                     }
-                    try await ApiClient.shared.cereFaraRaspuns(
+                    let creata = try await ApiClient.shared.cere(
                         "rezervari", metoda: "POST",
                         corp: Corp(
                             terenId: teren.id, inceput: inceput, sfarsit: final,
                             optiuni: Array(optiuniAlese),
                             observatii: observatii.isEmpty ? nil : observatii
-                        )
+                        ),
+                        ca: Rezervare.self
                     )
+                    if let parti {
+                        // Rezervarea e făcută: împărțim nota și arătăm linkul pentru prieteni.
+                        struct CorpParti: Encodable { let parti: Int }
+                        if let imp = try? await ApiClient.shared.cere(
+                            "rezervari/\(creata.id)/impartire", metoda: "POST",
+                            corp: CorpParti(parti: parti), ca: Impartire.self
+                        ) {
+                            impartireCreata = imp
+                            return
+                        }
+                    }
                 }
                 laFinal()
                 inchide()

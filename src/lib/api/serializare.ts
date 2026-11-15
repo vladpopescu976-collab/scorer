@@ -83,6 +83,8 @@ export type RezervareApi = {
   teren: { id: string; nume: string; oras: string; oraDeschidere: number; oraInchidere: number };
   client?: { nume: string; telefon: string | null; areCont: boolean };
   recenzie?: { nota: number; comentariu: string | null; raspunsProprietar: string | null } | null;
+  /** Split the bill, dacă organizatorul a împărțit nota. */
+  impartire?: { cod: string; numarParti: number; platite: number } | null;
 };
 
 type BookingCuTeren = Booking & {
@@ -91,6 +93,7 @@ type BookingCuTeren = Booking & {
   // apelantul nu a cerut deloc clientul.
   customer?: { name: string; phone: string | null } | null;
   review?: Pick<Review, "rating" | "comment" | "ownerReply"> | null;
+  impartire?: { cod: string; numarParti: number; _count: { parti: number } } | null;
 };
 
 export function serializeazaRezervare(booking: BookingCuTeren): RezervareApi {
@@ -131,6 +134,13 @@ export function serializeazaRezervare(booking: BookingCuTeren): RezervareApi {
                 comentariu: booking.review.comment,
                 raspunsProprietar: booking.review.ownerReply,
               }
+            : null,
+        }
+      : {}),
+    ...(booking.impartire !== undefined
+      ? {
+          impartire: booking.impartire
+            ? { cod: booking.impartire.cod, numarParti: booking.impartire.numarParti, platite: booking.impartire._count.parti }
             : null,
         }
       : {}),

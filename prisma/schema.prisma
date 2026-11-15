@@ -124,8 +124,10 @@ model User {
   noteDate         NotaJucator[]      @relation("NoteDate")
   notePrimite      NotaJucator[]      @relation("NotePrimite")
 
-  tokenuriEmail  EmailVerificationToken[]
-  tokenuriParola PasswordResetToken[]
+  tokenuriEmail       EmailVerificationToken[]
+  tokenuriParola      PasswordResetToken[]
+  impartiriOrganizate ImpartirePlata[]         @relation("ImpartiriOrganizate")
+  partiPlatite        ParteImpartire[]         @relation("PartiPlatite")
 
   @@map("users")
 }
@@ -297,8 +299,10 @@ model Booking {
   /// contului.
   guestTokenHash String? @unique
 
-  review Review?
-  extras BookingExtra[]
+  review    Review?
+  extras    BookingExtra[]
+  /// Split the bill: dacă organizatorul a împărțit plata cu prietenii.
+  impartire ImpartirePlata?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -564,7 +568,7 @@ model InvitatieJucator {
   dinParteaId String
   dinPartea   User   @relation("InvitatiiTrimise", fields: [dinParteaId], references: [id], onDelete: Cascade)
 
-  mesaj String?
+  mesaj   String?
   /// Numărul la care îl sună jucătorul chemat.
   telefon String?
   /// Detaliile meciului la care e chemat: terenul, când, cât durează, cât costă de om.
@@ -601,4 +605,49 @@ model NotaJucator {
   @@unique([anuntId, autorId, destinatarId])
   @@index([destinatarId])
   @@map("note_jucatori")
+}
+
+/// Split the bill: organizatorul plătește partea lui la rezervare, iar ceilalți
+/// își plătesc partea din linkul primit. Plata e demonstrativă: nu se debitează
+/// nimic până nu se conectează un procesator.
+model ImpartirePlata {
+  id String @id @default(cuid())
+
+  bookingId String  @unique
+  booking   Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+
+  organizatorId String
+  organizator   User   @relation("ImpartiriOrganizate", fields: [organizatorId], references: [id], onDelete: Cascade)
+
+  /// Codul din linkul trimis prietenilor.
+  cod        String  @unique
+  /// Câți împart nota, cu organizatorul cu tot.
+  numarParti Int
+  /// Cât plătește fiecare prieten; organizatorul acoperă diferența de rotunjire.
+  sumaParte  Decimal @db.Decimal(10, 2)
+
+  parti ParteImpartire[]
+
+  createdAt DateTime @default(now())
+
+  @@index([organizatorId])
+  @@map("impartiri_plata")
+}
+
+/// O parte plătită. Locurile neplătite nu au rând: sunt `numarParti` minus rânduri.
+model ParteImpartire {
+  id String @id @default(cuid())
+
+  impartireId String
+  impartire   ImpartirePlata @relation(fields: [impartireId], references: [id], onDelete: Cascade)
+
+  userId String
+  user   User   @relation("PartiPlatite", fields: [userId], references: [id], onDelete: Cascade)
+
+  suma            Decimal  @db.Decimal(10, 2)
+  esteOrganizator Boolean  @default(false)
+  platitLa        DateTime @default(now())
+
+  @@unique([impartireId, userId])
+  @@map("parti_impartire")
 }

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { ArrowLeft, Banknote, CheckCircle2, ChevronRight, CreditCard, Loader2, Lock, ShieldCheck, Users } from "lucide-react";
+import { ArrowLeft, Banknote, CheckCircle2, ChevronRight, CreditCard, Crown, Loader2, Lock, Minus, Plus, ShieldCheck, Users } from "lucide-react";
 
 import { Apple, Google } from "@/components/auth/butoane-sociale";
 
@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
+import { MAX_PARTI, MIN_PARTI, calculeazaPartile, lei } from "@/lib/impartire-calcul";
 
 /**
  * Plata cu cardul — DOAR DEMONSTRATIV. Nu există încă un procesator de plăți:
@@ -71,7 +72,7 @@ function marca(cifre: string): string {
 }
 
 type MetodaOnline = "applePay" | "googlePay" | "card";
-type Pas = "alege" | "card" | "procesare" | "gata";
+type Pas = "alege" | "imparte" | "card" | "procesare" | "gata";
 
 const METODE: { id: MetodaOnline; titlu: string; detaliu: string }[] = [
   { id: "applePay", titlu: "Apple Pay", detaliu: "Confirmi cu Face ID sau Touch ID" },
@@ -114,12 +115,15 @@ export function DialogPlataCard({
   laInchidere,
   suma,
   laPlata,
+  impartire,
 }: {
   deschis: boolean;
   laInchidere: () => void;
   suma: number;
-  /** Chemat după plata simulată; aici se trimite rezervarea. */
-  laPlata: () => void;
+  /** Chemat după plata simulată; aici se trimite rezervarea. Cu split the bill, primește în câți se împarte. */
+  laPlata: (parti?: number) => void;
+  /** Split the bill: dacă se poate alege și, dacă nu, de ce. Lipsă: opțiunea nu apare. */
+  impartire?: { permis: boolean; motiv?: string };
 }) {
   const [pas, setPas] = useState<Pas>("alege");
   const [metoda, setMetoda] = useState<MetodaOnline | null>(null);
@@ -129,6 +133,8 @@ export function DialogPlataCard({
   const [cvc, setCvc] = useState("");
   const [intors, setIntors] = useState(false);
   const [eroare, setEroare] = useState("");
+  // Split the bill: în câți se împarte nota (null = plătești tot).
+  const [parti, setParti] = useState<number | null>(null);
 
   const cifre = numar.replace(/\D/g, "");
   const ocupat = pas === "procesare" || pas === "gata";
@@ -136,7 +142,7 @@ export function DialogPlataCard({
   function goleste() {
     // Nimic nu rămâne după închidere.
     setNumar(""); setNume(""); setExpira(""); setCvc("");
-    setPas("alege"); setMetoda(null); setEroare(""); setIntors(false);
+    setPas("alege"); setMetoda(null); setEroare(""); setIntors(false); setParti(null);
   }
 
   useEffect(() => {
@@ -150,7 +156,7 @@ export function DialogPlataCard({
     setTimeout(() => {
       setPas("gata");
       setTimeout(() => {
-        laPlata();
+        laPlata(parti ?? undefined);
         laInchidere();
       }, 1100);
     }, 1500);
@@ -168,6 +174,8 @@ export function DialogPlataCard({
   }
 
   const grupe = (cifre.padEnd(16, "•").match(/.{1,4}/g) ?? []).join(" ");
+  const calcul = parti ? calculeazaPartile(suma, parti) : null;
+  const dePlata = calcul ? calcul.parteaOrganizatorului : suma;
   const numeMetoda = METODE.find((m) => m.id === metoda)?.titlu ?? "";
 
   return (
@@ -187,18 +195,38 @@ export function DialogPlataCard({
               Alte metode
             </button>
           )}
-          <DialogTitle className="text-xl">{pas === "card" ? "Plată cu cardul" : "Finalizează rezervarea"}</DialogTitle>
+          {pas === "imparte" && (
+            <button
+              type="button"
+              onClick={() => { setPas("alege"); setParti(null); setMetoda(null); }}
+              className="-ml-1 mb-1 inline-flex w-fit items-center gap-1.5 rounded-lg px-1.5 py-0.5 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              Plătesc tot eu
+            </button>
+          )}
+          <DialogTitle className="text-xl">
+            {pas === "card" ? "Plată cu cardul" : pas === "imparte" ? "Împarte nota" : "Finalizează rezervarea"}
+          </DialogTitle>
           <DialogDescription>
-            {pas === "card" ? "Introdu datele cardului." : "Plătești acum, iar terenul rămâne al tău."}
+            {pas === "card"
+              ? "Introdu datele cardului."
+              : pas === "imparte"
+                ? "Plătești doar partea ta. Ceilalți primesc un link și plătesc fiecare partea lui."
+                : "Plătești acum, iar terenul rămâne al tău."}
           </DialogDescription>
         </DialogHeader>
 
-        <div className="flex items-center justify-between rounded-2xl border border-primary/15 bg-gradient-to-br from-primary/10 via-primary/5 to-transparent px-5 py-4">
-          <span className="text-sm font-medium text-muted-foreground">Total de plată</span>
-          <span className="text-2xl font-bold tracking-tight tabular-nums">
-            {suma} <span className="text-sm font-semibold text-muted-foreground">RON</span>
-          </span>
-        </div>
+        {pas !== "imparte" && (
+          <div className="flex items-center justify-between rounded-2xl border border-primary/15 bg-gradient-to-br from-primary/10 via-primary/5 to-transparent px-5 py-4">
+            <span className="text-sm font-medium text-muted-foreground">
+              {calcul ? `Partea ta din ${lei(suma)} RON` : "Total de plată"}
+            </span>
+            <span className="text-2xl font-bold tracking-tight tabular-nums">
+              {lei(dePlata)} <span className="text-sm font-semibold text-muted-foreground">RON</span>
+            </span>
+          </div>
+        )}
 
         <AnimatePresence mode="wait" initial={false}>
           {pas === "alege" && (
@@ -236,19 +264,32 @@ export function DialogPlataCard({
                   );
                 })}
 
-                {/* Împărțirea plății între prieteni: se vede, dar nu se poate alege încă. */}
-                <div
-                  aria-disabled
-                  className="flex w-full cursor-not-allowed items-center gap-4 rounded-2xl border border-dashed bg-muted/30 p-3.5 pr-4"
-                >
-                  <span className="flex h-10 w-14 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground">
-                    <Users className="h-5 w-5" />
-                  </span>
-                  <span className="min-w-0 flex-1">
-                    <span className="block text-[15px] font-semibold text-muted-foreground">Split the bill</span>
-                    <span className="block text-[11px] font-bold tracking-[0.14em] text-primary">ÎN CURÂND</span>
-                  </span>
-                </div>
+                {/* Split the bill: organizatorul plătește partea lui, ceilalți din link. */}
+                {impartire && (
+                  <button
+                    type="button"
+                    disabled={!impartire.permis}
+                    onClick={() => { setParti(10); setMetoda(null); setPas("imparte"); }}
+                    className={cn(
+                      "flex w-full items-center gap-4 rounded-2xl border p-3.5 pr-4 text-left transition-all",
+                      impartire.permis ? "bg-card hover:border-primary/40 hover:bg-muted/40" : "cursor-not-allowed border-dashed bg-muted/30"
+                    )}
+                  >
+                    <span className={cn(
+                      "flex h-10 w-14 shrink-0 items-center justify-center rounded-lg",
+                      impartire.permis ? "bg-[#0B2A1C] text-[#7BD389]" : "bg-muted text-muted-foreground"
+                    )}>
+                      <Users className="h-5 w-5" />
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className={cn("block text-[15px] font-semibold", !impartire.permis && "text-muted-foreground")}>Split the bill</span>
+                      <span className="block text-[13px] text-muted-foreground">
+                        {impartire.permis ? "Fiecare își plătește partea" : impartire.motiv ?? "Indisponibil"}
+                      </span>
+                    </span>
+                    {impartire.permis && <ChevronRight className="h-4 w-4 text-muted-foreground" />}
+                  </button>
+                )}
               </div>
 
               {metoda === "applePay" ? (
@@ -271,6 +312,46 @@ export function DialogPlataCard({
                   )}
                 </Button>
               )}
+            </motion.div>
+          )}
+
+          {pas === "imparte" && parti && calcul && (
+            <motion.div key="imparte" {...intrare} transition={{ duration: 0.2 }} className="space-y-5">
+              <PasImparte suma={suma} parti={parti} setParti={setParti} />
+
+              <div role="radiogroup" aria-label="Cum plătești partea ta" className="space-y-2">
+                <p className="text-sm font-semibold">Cum plătești partea ta</p>
+                <div className="grid grid-cols-3 gap-2">
+                  {METODE.map((m) => {
+                    const ales = metoda === m.id;
+                    return (
+                      <button
+                        key={m.id}
+                        type="button"
+                        role="radio"
+                        aria-checked={ales}
+                        onClick={() => setMetoda(m.id)}
+                        className={cn(
+                          "flex flex-col items-center gap-2 rounded-2xl border bg-card p-3 text-[12.5px] font-semibold transition-all",
+                          ales ? "border-primary bg-primary/[0.04] ring-4 ring-primary/10" : "hover:border-primary/40"
+                        )}
+                      >
+                        <SiglaMetoda id={m.id} />
+                        {m.titlu}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <Button
+                type="button"
+                className="h-12 w-full rounded-xl bg-[#0E6B3A] text-[15px] hover:bg-[#0B5A30]"
+                disabled={!metoda}
+                onClick={() => (metoda === "card" ? setPas("card") : finalizeaza())}
+              >
+                {metoda ? <>Plătește partea ta · {lei(calcul.parteaOrganizatorului)} RON</> : "Alege cum plătești"}
+              </Button>
             </motion.div>
           )}
 
@@ -365,7 +446,7 @@ export function DialogPlataCard({
               </div>
               {eroare && <p className="text-sm text-destructive">{eroare}</p>}
               <Button type="submit" className="h-12 w-full rounded-xl text-[15px]">
-                <Lock className="h-4 w-4" /> Plătește {suma} RON
+                <Lock className="h-4 w-4" /> Plătește {lei(dePlata)} RON
               </Button>
             </motion.form>
           )}
@@ -443,5 +524,82 @@ function ButonGooglePay({ onClick }: { onClick: () => void }) {
         Pay
       </span>
     </button>
+  );
+}
+
+/** Split the bill: câți împart nota, cât plătește fiecare și cine e în cerc. */
+function PasImparte({ suma, parti, setParti }: { suma: number; parti: number; setParti: (n: number) => void }) {
+  const { sumaParte, parteaOrganizatorului } = calculeazaPartile(suma, parti);
+  const vizibili = Math.min(parti - 1, 7);
+  return (
+    <div className="overflow-hidden rounded-3xl bg-[radial-gradient(120%_120%_at_0%_0%,#17543A_0%,#0B2A1C_55%,#07160F_100%)] p-5 text-[#F3EFE6]">
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-[12px] font-semibold uppercase tracking-[0.14em] text-[#F3EFE6]/60">Total</p>
+          <p className="text-[15px] font-medium tabular-nums">{lei(suma)} RON</p>
+        </div>
+        <div className="flex items-center gap-1 rounded-full bg-white/10 p-1 ring-1 ring-inset ring-white/15">
+          <button
+            type="button"
+            aria-label="Mai puțini"
+            disabled={parti <= MIN_PARTI}
+            onClick={() => setParti(Math.max(MIN_PARTI, parti - 1))}
+            className="flex h-8 w-8 items-center justify-center rounded-full transition-colors hover:bg-white/15 disabled:opacity-30"
+          >
+            <Minus className="h-4 w-4" />
+          </button>
+          <span className="w-16 text-center text-[14px] font-semibold tabular-nums">{parti} pers.</span>
+          <button
+            type="button"
+            aria-label="Mai mulți"
+            disabled={parti >= MAX_PARTI}
+            onClick={() => setParti(Math.min(MAX_PARTI, parti + 1))}
+            className="flex h-8 w-8 items-center justify-center rounded-full transition-colors hover:bg-white/15 disabled:opacity-30"
+          >
+            <Plus className="h-4 w-4" />
+          </button>
+        </div>
+      </div>
+
+      <div className="mt-6 text-center">
+        <p className="text-[12px] font-semibold uppercase tracking-[0.14em] text-[#F3EFE6]/60">Fiecare plătește</p>
+        <motion.p
+          key={sumaParte}
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mt-1 text-[44px] font-semibold leading-none tracking-tight tabular-nums"
+        >
+          {lei(sumaParte)}
+          <span className="ml-1.5 text-[18px] font-medium text-[#F3EFE6]/60">RON</span>
+        </motion.p>
+      </div>
+
+      <div className="mt-6 flex items-center justify-center">
+        <div className="relative z-10 flex flex-col items-center">
+          <span className="flex h-11 w-11 items-center justify-center rounded-full bg-[#7BD389] text-[13px] font-bold text-[#07160F] ring-4 ring-[#0B2A1C]">
+            Tu
+          </span>
+          <Crown className="absolute -top-2.5 h-4 w-4 text-[#F5C243]" />
+        </div>
+        <div className="-ml-2 flex">
+          {Array.from({ length: vizibili }).map((_, i) => (
+            <motion.span
+              key={i}
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              className="-ml-2 h-11 w-11 rounded-full border-2 border-dashed border-[#F3EFE6]/30 bg-[#0B2A1C]"
+            />
+          ))}
+          {parti - 1 > vizibili && (
+            <span className="-ml-2 flex h-11 w-11 items-center justify-center rounded-full bg-white/10 text-[12px] font-semibold ring-4 ring-[#0B2A1C]">
+              +{parti - 1 - vizibili}
+            </span>
+          )}
+        </div>
+      </div>
+      <p className="mt-4 text-center text-[13px] text-[#F3EFE6]/70">
+        Tu plătești acum <span className="font-semibold text-[#F3EFE6]">{lei(parteaOrganizatorului)} RON</span>. Linkul îl trimiți după rezervare.
+      </p>
+    </div>
   );
 }

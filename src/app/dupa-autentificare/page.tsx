@@ -1,3 +1,4 @@
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 
 import { auth } from "@/auth";
@@ -19,6 +20,10 @@ export default async function DupaAutentificarePage() {
   if (!session?.user) {
     redirect("/autentificare");
   }
+
+  // Venit dintr-un link de split the bill: se întoarce acolo, ca să-și plătească partea.
+  const inapoi = (await cookies()).get("inapoi")?.value;
+  if (session.user.role === "PERSONAL" && inapoi && /^\/imparte\/[\w-]+$/.test(inapoi)) redirect(inapoi);
 
   redirect(session.user.role === "BUSINESS" ? "/dashboard/business" : "/");
 }

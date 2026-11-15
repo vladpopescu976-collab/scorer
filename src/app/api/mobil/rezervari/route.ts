@@ -46,7 +46,10 @@ export async function GET(request: Request) {
     const rezervari = await prisma.booking.findMany({
       where: { customerId: sesiune.userId },
       orderBy: { startTime: "desc" },
-      include: includeStandard,
+      include: {
+        ...includeStandard,
+        impartire: { select: { cod: true, numarParti: true, _count: { select: { parti: true } } } },
+      },
     });
     return raspuns(rezervari.map(serializeazaRezervare));
   } catch (error) {

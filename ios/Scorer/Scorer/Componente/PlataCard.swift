@@ -76,10 +76,62 @@ struct FoaieMetodaPlata: View {
     let rezumat: String
     let laApplePay: () -> Void
     let laTeren: () -> Void
+    /// Split the bill: organizatorul plătește partea lui, primește în câți se împarte.
+    var laImpartire: ((Int) -> Void)?
 
     @State private var metoda: MetodaPlata?
+    @State private var imparte = false
+    @State private var parti = 10
+    @State private var inaltime: PresentationDetent = .height(530)
 
     var body: some View {
+        Group {
+            if imparte { continutImparte } else { continutAlege }
+        }
+        .padding(Tema.spatiu)
+        .padding(.top, 14)
+        .animation(.snappy, value: metoda)
+        .animation(.snappy, value: imparte)
+        .presentationDetents([.height(530), .large], selection: $inaltime)
+        .presentationDragIndicator(.visible)
+        .presentationCornerRadius(28)
+        .presentationBackground(Tema.fundal)
+    }
+
+    /// Split the bill: alegi în câți se împarte și îți plătești partea cu Apple Pay.
+    private var continutImparte: some View {
+        let parteaMea = Impartire.calculeaza(total: suma, parti: parti).parteaMea
+        return VStack(alignment: .leading, spacing: 16) {
+            Button {
+                imparte = false
+                inaltime = .height(530)
+            } label: {
+                Label("Plătesc tot eu", systemImage: "chevron.left").font(.subheadline.weight(.medium))
+            }
+            .buttonStyle(.plain)
+            .foregroundStyle(.secondary)
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Împarte nota").font(.title3.weight(.bold))
+                Text("Plătești doar partea ta. Ceilalți primesc un link și plătesc fiecare partea lui.")
+                    .font(.subheadline).foregroundStyle(.secondary)
+            }
+
+            PasImparteNota(total: suma, parti: $parti)
+
+            Spacer(minLength: 0)
+
+            PayWithApplePayButton(.plain) { laImpartire?(parti) }
+                .payWithApplePayButtonStyle(.black)
+                .frame(height: 52)
+                .clipShape(.rect(cornerRadius: 14, style: .continuous))
+            Text("Partea ta: \(Impartire.lei(parteaMea)) RON · demonstrativ, nu se debitează nimic")
+                .font(.caption).foregroundStyle(.secondary)
+                .frame(maxWidth: .infinity)
+        }
+    }
+
+    private var continutAlege: some View {
         VStack(alignment: .leading, spacing: 18) {
             VStack(alignment: .leading, spacing: 4) {
                 Text("Cum dorești să rezervi?")
@@ -129,41 +181,40 @@ struct FoaieMetodaPlata: View {
                 .transition(.opacity)
             }
         }
-        .padding(Tema.spatiu)
-        .padding(.top, 14)
-        .animation(.snappy, value: metoda)
-        .presentationDetents([.height(530)])
-        .presentationDragIndicator(.visible)
-        .presentationCornerRadius(28)
-        .presentationBackground(Tema.fundal)
     }
 
-    /// Împărțirea plății între prieteni: se vede, dar nu se poate alege încă.
+    /// Split the bill: fiecare își plătește partea. Fără `laImpartire` (ex. la modificare), nu apare.
+    @ViewBuilder
     private var randInCurand: some View {
-        HStack(spacing: 14) {
-            Image(systemName: "person.3.fill")
-                .font(.system(size: 15, weight: .semibold))
-                .foregroundStyle(.secondary)
-                .frame(width: 54, height: 38)
-                .background(Color.primary.opacity(0.06), in: .rect(cornerRadius: 9, style: .continuous))
-            VStack(alignment: .leading, spacing: 3) {
-                Text("Split the bill").font(.body.weight(.semibold)).foregroundStyle(.secondary)
-                Text("ÎN CURÂND")
-                    .font(.caption2.weight(.bold))
-                    .tracking(1.2)
-                    .foregroundStyle(Tema.accent)
+        if laImpartire != nil {
+            Button {
+                metoda = nil
+                imparte = true
+                inaltime = .large
+            } label: {
+                HStack(spacing: 14) {
+                    Image(systemName: "person.3.fill")
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundStyle(Tema.accentDeschis)
+                        .frame(width: 54, height: 38)
+                        .background(Color(red: 0.043, green: 0.165, blue: 0.11), in: .rect(cornerRadius: 9, style: .continuous))
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Split the bill").font(.body.weight(.semibold))
+                        Text("Fiecare își plătește partea").font(.footnote).foregroundStyle(.secondary)
+                    }
+                    Spacer(minLength: 0)
+                    Image(systemName: "chevron.right").font(.footnote.weight(.semibold)).foregroundStyle(.tertiary)
+                }
+                .padding(14)
+                .background(Tema.fisa, in: .rect(cornerRadius: 18, style: .continuous))
+                .overlay {
+                    RoundedRectangle(cornerRadius: 18, style: .continuous)
+                        .strokeBorder(Color.primary.opacity(0.08), lineWidth: 1)
+                }
+                .contentShape(.rect)
             }
-            Spacer(minLength: 0)
+            .buttonStyle(.plain)
         }
-        .padding(14)
-        .background(Tema.fisa.opacity(0.6), in: .rect(cornerRadius: 18, style: .continuous))
-        .overlay {
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .strokeBorder(style: StrokeStyle(lineWidth: 1, dash: [5, 4]))
-                .foregroundStyle(Color.primary.opacity(0.15))
-        }
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel("Split the bill, în curând")
     }
 
     private func rand(_ optiune: MetodaPlata) -> some View {

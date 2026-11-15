@@ -13,6 +13,7 @@ import { statusLaCreare } from "@/lib/confirmare-automata";
 import { calculeazaPretul } from "@/lib/pret-rezervare";
 import { linieDeSalvat, optiuneDinTeren } from "@/lib/optiuni-teren";
 import { ActionError, fail, ok, toActionError, type ActionResult } from "@/lib/actions/result";
+import { platesteParte, pornesteImpartirea } from "@/lib/impartire-plata";
 
 // Statusurile care chiar ocupă terenul. Aceleași sunt folosite și de
 // constrângerea din baza de date (vezi migrarea prevent_booking_overlap).
@@ -443,5 +444,31 @@ export async function declineReschedule(bookingId: string): Promise<ActionResult
     return ok();
   } catch (error) {
     return toActionError("declineReschedule", error);
+  }
+}
+
+/** Split the bill: organizatorul împarte nota după ce a rezervat. Întoarce codul linkului. */
+export async function pornesteImpartireaAction(bookingId: string, parti: number): Promise<ActionResult<string>> {
+  try {
+    const session = await requireSession();
+    const impartire = await pornesteImpartirea(bookingId, session.user.id, parti);
+    revalidatePath("/rezervarile-mele");
+    return ok(impartire.cod);
+  } catch (error) {
+    return toActionError("pornesteImpartirea", error);
+  }
+}
+
+/** Un prieten își plătește partea din link (demonstrativ). */
+export async function platesteParteaAction(cod: string): Promise<ActionResult> {
+  try {
+    const session = await requireSession();
+    if (session.user.role !== "PERSONAL") throw new ActionError("Doar conturile de jucător pot plăti o parte.");
+    await platesteParte(cod, session.user.id);
+    revalidatePath(`/imparte/${cod}`);
+    revalidatePath("/rezervarile-mele");
+    return ok();
+  } catch (error) {
+    return toActionError("platesteParte", error);
   }
 }

@@ -15,7 +15,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { createBookingRequest, getBookedSlots } from "@/lib/actions/bookings";
+import { createBookingRequest, getBookedSlots, pornesteImpartireaAction } from "@/lib/actions/bookings";
 import { AlegeMetodaPlata, DialogPlataCard, type MetodaPlata } from "@/components/plata/plata-card";
 import { instantInAppZone, localDateTimeToIso, ziCaText } from "@/lib/datetime";
 import {
@@ -185,7 +185,7 @@ export function BookingForm({
     return true;
   }
 
-  function submit() {
+  function submit(parti?: number) {
     if (!verifica() || !date) return;
     // Momentul exact e calculat aici, în fusul clientului, nu pe server —
     // altfel rezervarea ajungea în baza de date cu altă oră decât cea aleasă.
@@ -237,6 +237,16 @@ export function BookingForm({
       if (!result.ok) {
         setError(result.error);
         return;
+      }
+      if (parti) {
+        // Split the bill: rezervarea e făcută, acum se împarte nota și organizatorul primește linkul.
+        const imp = await pornesteImpartireaAction(result.data, parti);
+        if (imp.ok) {
+          toast.success("Rezervarea e trimisă. Trimite linkul prietenilor, ca fiecare să-și plătească partea.");
+          router.push(`/imparte/${imp.data}`);
+          return;
+        }
+        toast.error(imp.error);
       }
       toast.success("Cererea de rezervare a fost trimisă! O poți urmări în „Rezervările mele”.");
       router.push("/rezervarile-mele");
@@ -492,6 +502,7 @@ export function BookingForm({
         laInchidere={() => setPlataDeschisa(false)}
         suma={total}
         laPlata={submit}
+        impartire={isAuthenticated ? { permis: true } : { permis: false, motiv: "Conectează-te ca să împarți nota" }}
       />
     </div>
   );

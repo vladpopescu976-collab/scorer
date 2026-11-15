@@ -431,6 +431,62 @@ struct Rezervare: Codable, Identifiable, Sendable {
     let teren: TerenScurt
     let client: ClientRezervare?
     let recenzie: RecenzieRezervare?
+    /// Split the bill, dacă organizatorul a împărțit nota.
+    var impartire: ImpartireScurta?
+}
+
+struct ImpartireScurta: Codable, Sendable {
+    let cod: String
+    let numarParti: Int
+    let platite: Int
+}
+
+/// Split the bill: cine a plătit și cât mai e de strâns. Organizatorul e primul.
+struct Impartire: Codable, Identifiable, Sendable {
+    struct Teren: Codable, Sendable { let nume: String; let oras: String; let sport: String }
+    struct Parte: Codable, Identifiable, Sendable {
+        let id: String
+        let nume: String
+        let poza: String?
+        let suma: Double
+        let esteOrganizator: Bool
+        let platitLa: Date
+        let eu: Bool
+    }
+    let cod: String
+    let link: String
+    let rezervareId: String
+    let teren: Teren
+    let inceput: Date
+    let sfarsit: Date
+    let total: Double
+    let numarParti: Int
+    let sumaParte: Double
+    let parti: [Parte]
+    let platite: Int
+    let colectat: Double
+    let ramas: Double
+    let esteOrganizator: Bool
+    let amPlatit: Bool
+    let potPlati: Bool
+    let inchisa: Bool
+
+    var id: String { cod }
+    var cand: String {
+        "\(inceput.formatted(.dateTime.weekday(.wide).day().month(.wide).locale(.aplicatie).inRomania).capitalized), \(inceput.oraScurta)–\(sfarsit.oraScurta)"
+    }
+
+    /// La fel ca pe server: partea fiecăruia rotunjită în sus la bani, organizatorul acoperă restul.
+    static func calculeaza(total: Double, parti: Int) -> (sumaParte: Double, parteaMea: Double) {
+        let sumaParte = (total * 100 / Double(parti)).rounded(.up) / 100
+        let parteaMea = max(0, ((total - sumaParte * Double(parti - 1)) * 100).rounded() / 100)
+        return (sumaParte, parteaMea)
+    }
+
+    /// 15 → „15”, 14.17 → „14,17”.
+    static func lei(_ suma: Double) -> String {
+        suma == suma.rounded() ? String(Int(suma)) : String(format: "%.2f", suma).replacingOccurrences(of: ".", with: ",")
+    }
 }
 
 struct Blocare: Codable, Identifiable, Sendable {

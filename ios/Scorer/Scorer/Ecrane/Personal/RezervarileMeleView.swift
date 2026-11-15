@@ -8,6 +8,9 @@ struct RezervarileMeleView: View {
     @State private var eroare: String?
     @State private var deMutat: Rezervare?
     @State private var deRecenzat: Rezervare?
+    @State private var impartireDeschisa: ImpartireScurtaDeschisa?
+
+    struct ImpartireScurtaDeschisa: Identifiable { let id: String }
 
     var body: some View {
         ZStack {
@@ -42,7 +45,8 @@ struct RezervarileMeleView: View {
                                 anuleaza: { Task { await actiune(rezervare, "anuleaza") } },
                                 accepta: { Task { await actiune(rezervare, "accepta-mutarea") } },
                                 refuza: { Task { await actiune(rezervare, "refuza-mutarea") } },
-                                recenzeaza: { deRecenzat = rezervare }
+                                recenzeaza: { deRecenzat = rezervare },
+                                imparte: { if let cod = rezervare.impartire?.cod { impartireDeschisa = .init(id: cod) } }
                             )
                             .fisa()
                             .intrareElement(index)
@@ -60,6 +64,9 @@ struct RezervarileMeleView: View {
             NavigationStack {
                 MutaRezervareView(rezervare: rezervare) { Task { await incarca() } }
             }
+        }
+        .sheet(item: $impartireDeschisa, onDismiss: { Task { await incarca() } }) { d in
+            NavigationStack { ImpartireView(cod: d.id) }
         }
         .sheet(item: $deRecenzat) { rezervare in
             NavigationStack {
@@ -126,6 +133,7 @@ struct CardRezervarePersonal: View {
     let accepta: () -> Void
     let refuza: () -> Void
     let recenzeaza: () -> Void
+    var imparte: () -> Void = {}
 
     private var incheiata: Bool { rezervare.sfarsit < Date() }
     private var poateGestiona: Bool {
@@ -169,6 +177,28 @@ struct CardRezervarePersonal: View {
                 .padding(10)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .background(Color.blue.opacity(0.08), in: .rect(cornerRadius: 10))
+            }
+
+            if let imp = rezervare.impartire {
+                Button(action: imparte) {
+                    HStack(spacing: 10) {
+                        Image(systemName: "person.3.fill").foregroundStyle(Tema.accentDeschis)
+                        Text("Split the bill · \(imp.platite)/\(imp.numarParti) au plătit")
+                            .font(.footnote.weight(.semibold))
+                        Spacer(minLength: 6)
+                        Capsule().fill(.white.opacity(0.15))
+                            .frame(width: 54, height: 5)
+                            .overlay(alignment: .leading) {
+                                Capsule().fill(Tema.accentDeschis)
+                                    .frame(width: 54 * CGFloat(imp.platite) / CGFloat(max(1, imp.numarParti)), height: 5)
+                            }
+                        Image(systemName: "chevron.right").font(.caption.weight(.bold)).opacity(0.6)
+                    }
+                    .foregroundStyle(Color(red: 0.95, green: 0.94, blue: 0.90))
+                    .padding(.horizontal, 12).padding(.vertical, 10)
+                    .background(Color(red: 0.043, green: 0.165, blue: 0.11), in: .rect(cornerRadius: 12, style: .continuous))
+                }
+                .buttonStyle(.plain)
             }
 
             if let recenzie = rezervare.recenzie {

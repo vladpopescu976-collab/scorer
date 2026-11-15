@@ -2,7 +2,8 @@
 
 import { useState, useTransition } from "react";
 import { motion } from "framer-motion";
-import { MapPin, Check, X, CalendarClock, Ban } from "lucide-react";
+import Link from "next/link";
+import { MapPin, Check, X, CalendarClock, Ban, Users, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
 
 import { StatusBadge } from "@/components/dashboard/status-badge";
@@ -22,6 +23,8 @@ type Booking = {
   totalPrice: number;
   field: { id: string; name: string; city: string; openingHour: number; closingHour: number };
   review: { rating: number; comment: string | null; ownerReply: string | null } | null;
+  /** Split the bill: câți au plătit din câți. */
+  impartire: { cod: string; numarParti: number; platite: number } | null;
 };
 
 function fmtDateTime(d: Date) {
@@ -155,6 +158,25 @@ function BookingRow({ booking }: { booking: Booking }) {
             Anulează
           </button>
         </div>
+      )}
+
+      {booking.impartire && (
+        <Link
+          href={`/imparte/${booking.impartire.cod}`}
+          className="mt-3 flex items-center gap-3 rounded-xl bg-[#0B2A1C] px-3.5 py-2.5 text-[#F3EFE6] transition-opacity hover:opacity-90"
+        >
+          <Users className="h-4 w-4 text-[#7BD389]" />
+          <span className="flex-1 text-[13px] font-medium">
+            Split the bill · {booking.impartire.platite}/{booking.impartire.numarParti} au plătit
+          </span>
+          <span className="h-1.5 w-16 overflow-hidden rounded-full bg-white/15">
+            <span
+              className="block h-full rounded-full bg-[#7BD389]"
+              style={{ width: `${(booking.impartire.platite / booking.impartire.numarParti) * 100}%` }}
+            />
+          </span>
+          <ChevronRight className="h-4 w-4 text-[#F3EFE6]/60" />
+        </Link>
       )}
 
       {/* Recenzia se poate lasa doar dupa ce o rezervare confirmata s-a incheiat. */}

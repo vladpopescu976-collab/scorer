@@ -27,6 +27,7 @@ export default async function MyBookingsPage() {
         select: { id: true, name: true, city: true, openingHour: true, closingHour: true },
       },
       review: { select: { rating: true, comment: true, ownerReply: true } },
+      impartire: { select: { cod: true, numarParti: true, _count: { select: { parti: true } } } },
     },
     orderBy: { startTime: "desc" },
   });
@@ -41,6 +42,9 @@ export default async function MyBookingsPage() {
           bookings={bookings.map((b) => ({
             ...b,
             totalPrice: Number(b.totalPrice),
+            impartire: b.impartire
+              ? { cod: b.impartire.cod, numarParti: b.impartire.numarParti, platite: b.impartire._count.parti }
+              : null,
             // Orașul apare mereu scris corect, chiar dacă proprietarul l-a
             // salvat cu litere mici sau fără diacritice.
             field: { ...b.field, city: normalizeazaOras(b.field.city) },
