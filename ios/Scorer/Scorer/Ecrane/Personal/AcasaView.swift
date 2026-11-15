@@ -107,15 +107,6 @@ struct AcasaView: View {
 
     private func hero(margineSus: CGFloat) -> some View {
         VStack(alignment: .leading, spacing: 0) {
-            HStack(spacing: 9) {
-                PunctViu()
-                Text(terenuri.isEmpty ? "Terenuri în toată România" : "\(terenuri.count) terenuri active în România")
-                    .font(.footnote.weight(.medium))
-                    .foregroundStyle(Paleta.creta.opacity(0.72))
-                    .contentTransition(.numericText())
-            }
-            .intrare(aparut, intarziere: 0)
-
             VStack(alignment: .leading, spacing: -4) {
                 Text("Rezervă terenul.")
                     .font(.system(size: 44, weight: .semibold))
@@ -128,7 +119,6 @@ struct AcasaView: View {
                     .foregroundStyle(Paleta.creta.opacity(0.58))
                     .intrare(aparut, intarziere: 0.18)
             }
-            .padding(.top, 18)
 
             Text("Vezi orele libere ale terenurilor din orașul tău, alege intervalul și trimite cererea în câteva secunde.")
                 .font(.system(size: 16))
