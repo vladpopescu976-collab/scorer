@@ -2,14 +2,21 @@
 
 import { useState, useTransition } from "react";
 import Link from "next/link";
-import { CalendarClock, MapPin, Phone, UserMinus, Users } from "lucide-react";
+import { CalendarClock, Check, MapPin, Phone, UserMinus, Users, X } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { AvatarCont } from "@/components/cont/poza-profil";
-import { alaturaMeciAction, parasesteMeciAction, scoateJucatorAction, stergeMeciAction } from "@/lib/actions/meciuri";
+import {
+  alaturaMeciAction,
+  parasesteMeciAction,
+  raspundeCerereAction,
+  scoateJucatorAction,
+  stergeMeciAction,
+} from "@/lib/actions/meciuri";
+import { POZITII } from "@/lib/jucatori-liberi-pozitii";
 import { sportMeta } from "@/lib/sports";
-import type { MeciPublic } from "@/lib/meciuri";
+import type { JucatorInMeci, MeciPublic } from "@/lib/meciuri";
 import { cn } from "@/lib/utils";
 
 const NIVELURI: Record<string, string> = {
@@ -35,6 +42,8 @@ export function CardMeci({ meci, conectat, telefonCont = "" }: { meci: MeciPubli
   // Alăturarea cere telefonul: organizatorul te sună dacă nu apari.
   const [cereTelefon, setCereTelefon] = useState(false);
   const [telefon, setTelefon] = useState(telefonCont);
+  const [pozitii, setPozitii] = useState<string[]>([]);
+  const [nivelAles, setNivelAles] = useState("");
   const SportIcon = sportMeta[meci.sport].icon;
   const ramase = Math.max(0, meci.jucatoriNecesari - meci.jucatoriAlaturati);
   const complet = ramase === 0;
@@ -109,20 +118,20 @@ export function CardMeci({ meci, conectat, telefonCont = "" }: { meci: MeciPubli
           >
             Șterge
           </Button>
-        ) : meci.mAmAlaturat ? (
+        ) : meci.cerereaMea === "ACCEPTAT" || meci.cerereaMea === "CERERE" ? (
           <Button
             variant="outline"
             size="sm"
             className="rounded-full"
             disabled={seLucreaza}
-            onClick={() => ruleaza(() => parasesteMeciAction(meci.id), "Ai ieșit din meci.")}
+            onClick={() => ruleaza(() => parasesteMeciAction(meci.id), meci.cerereaMea === "ACCEPTAT" ? "Ai ieșit din meci." : "Ți-ai retras cererea.")}
           >
-            Ies din meci
+            {meci.cerereaMea === "ACCEPTAT" ? "Ies din meci" : "Retrag cererea"}
           </Button>
-        ) : !conectat ? (
+        ) : meci.cerereaMea === "RESPINS" ? null : !conectat ? (
           <Button size="sm" className="rounded-full bg-[#0E6B3A] hover:bg-[#0B5A30]" nativeButton={false} render={<Link href="/autentificare" />}>
             <Users className="h-4 w-4" />
-            Mă alătur
+            Vreau să vin
           </Button>
         ) : (
           <Button
@@ -132,54 +141,140 @@ export function CardMeci({ meci, conectat, telefonCont = "" }: { meci: MeciPubli
             onClick={() => setCereTelefon(true)}
           >
             <Users className="h-4 w-4" />
-            {complet ? "Complet" : "Mă alătur"}
+            {complet ? "Complet" : "Vreau să vin"}
           </Button>
         )}
       </div>
 
-      {cereTelefon && !meci.mAmAlaturat && (
+      {meci.cerereaMea === "CERERE" && (
+        <p className="mt-3 rounded-xl bg-amber-500/10 px-3 py-2 text-[13px] font-medium text-amber-700 dark:text-amber-400">
+          Cererea ta așteaptă răspunsul organizatorului.
+        </p>
+      )}
+      {meci.cerereaMea === "ACCEPTAT" && (
+        <p className="mt-3 rounded-xl bg-primary/10 px-3 py-2 text-[13px] font-medium text-primary">Ești în echipă!</p>
+      )}
+      {meci.cerereaMea === "RESPINS" && (
+        <p className="mt-3 rounded-xl bg-muted px-3 py-2 text-[13px] text-muted-foreground">Organizatorul a ales alți jucători.</p>
+      )}
+
+      {cereTelefon && !meci.cerereaMea && (
         <form
           onSubmit={(e) => {
             e.preventDefault();
-            ruleaza(() => alaturaMeciAction(meci.id, telefon), "Te-ai alăturat meciului!");
+            ruleaza(
+              () => alaturaMeciAction(meci.id, { telefon, pozitii, nivel: nivelAles || undefined }),
+              "Cererea a fost trimisă. Organizatorul alege echipa."
+            );
             setCereTelefon(false);
           }}
-          className="mt-4 space-y-2 rounded-2xl bg-muted/60 p-3"
+          className="mt-4 space-y-3 rounded-2xl bg-muted/60 p-3.5"
         >
-          <label className="text-[13px] font-medium" htmlFor={`tel-${meci.id}`}>
-            Numărul tău de telefon (obligatoriu)
-          </label>
-          <input
-            id={`tel-${meci.id}`}
-            type="tel"
-            required
-            value={telefon}
-            onChange={(e) => setTelefon(e.target.value)}
-            placeholder="07xx xxx xxx"
-            className="h-10 w-full rounded-xl border bg-background px-3 text-[14px] outline-none focus:border-primary"
-          />
-          <p className="text-[12px] text-muted-foreground">Îl vede doar organizatorul, ca să te poată suna dacă nu ajungi.</p>
+          <div className="space-y-1.5">
+            <label className="text-[13px] font-medium" htmlFor={`tel-${meci.id}`}>
+              Telefon (obligatoriu)
+            </label>
+            <input
+              id={`tel-${meci.id}`}
+              type="tel"
+              required
+              value={telefon}
+              onChange={(e) => setTelefon(e.target.value)}
+              placeholder="07xx xxx xxx"
+              className="h-10 w-full rounded-xl border bg-background px-3 text-[14px] outline-none focus:border-primary"
+            />
+          </div>
+          {POZITII[meci.sport].length > 0 && (
+            <div className="space-y-1.5">
+              <p className="text-[13px] font-medium">Pe ce poziție joci?</p>
+              <div className="flex flex-wrap gap-1.5">
+                {POZITII[meci.sport].map((p) => {
+                  const ales = pozitii.includes(p);
+                  return (
+                    <button
+                      key={p}
+                      type="button"
+                      onClick={() => setPozitii(ales ? pozitii.filter((x) => x !== p) : [...pozitii, p])}
+                      className={cn(
+                        "rounded-full border px-3 py-1 text-[12.5px] font-medium transition-colors",
+                        ales ? "border-primary bg-primary text-primary-foreground" : "bg-background hover:border-primary/40"
+                      )}
+                    >
+                      {p}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+          <div className="space-y-1.5">
+            <p className="text-[13px] font-medium">Nivelul tău</p>
+            <div className="flex flex-wrap gap-1.5">
+              {[
+                ["INCEPATOR", "Începător"],
+                ["MEDIU", "Mediu"],
+                ["AVANSAT", "Avansat"],
+                ["COMPETITIV", "Competitiv"],
+              ].map(([id, eticheta]) => (
+                <button
+                  key={id}
+                  type="button"
+                  onClick={() => setNivelAles(nivelAles === id ? "" : id)}
+                  className={cn(
+                    "rounded-full border px-3 py-1 text-[12.5px] font-medium transition-colors",
+                    nivelAles === id ? "border-primary bg-primary text-primary-foreground" : "bg-background hover:border-primary/40"
+                  )}
+                >
+                  {eticheta}
+                </button>
+              ))}
+            </div>
+          </div>
+          <p className="text-[12px] text-muted-foreground">
+            Telefonul îl vede doar organizatorul. El alege pe cine ia; primești o notificare.
+          </p>
           <Button type="submit" size="sm" className="w-full rounded-full bg-[#0E6B3A] hover:bg-[#0B5A30]" disabled={seLucreaza || !telefon.trim()}>
-            Confirm, vin la meci
+            Trimite cererea
           </Button>
         </form>
       )}
 
+      {meci.esteAlMeu && meci.cereri.length > 0 && (
+        <div className="mt-4 space-y-2.5 rounded-2xl bg-amber-500/5 p-3 ring-1 ring-amber-500/20">
+          <p className="text-[12px] font-semibold uppercase tracking-[0.1em] text-amber-700 dark:text-amber-400">
+            Vor să vină · {meci.cereri.length}
+          </p>
+          {meci.cereri.map((j) => (
+            <RandJucator key={j.id} j={j}>
+              <button
+                type="button"
+                disabled={seLucreaza || complet}
+                title={complet ? "Ai deja toți jucătorii" : "Îl iei în echipă"}
+                onClick={() => ruleaza(() => raspundeCerereAction(meci.id, j.id, true), `${j.nume} e în echipă.`)}
+                className="flex h-8 w-8 items-center justify-center rounded-full bg-[#0E6B3A] text-white disabled:opacity-40"
+                aria-label={`Acceptă-l pe ${j.nume}`}
+              >
+                <Check className="h-4 w-4" />
+              </button>
+              <button
+                type="button"
+                disabled={seLucreaza}
+                onClick={() => ruleaza(() => raspundeCerereAction(meci.id, j.id, false), "Cererea a fost refuzată.")}
+                className="flex h-8 w-8 items-center justify-center rounded-full bg-muted text-muted-foreground hover:text-destructive"
+                aria-label={`Refuză-l pe ${j.nume}`}
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </RandJucator>
+          ))}
+        </div>
+      )}
+
       {meci.esteAlMeu && meci.jucatori.length > 0 && (
-        <div className="mt-4 space-y-2 rounded-2xl bg-primary/5 p-3">
-          <p className="text-[12px] font-semibold uppercase tracking-[0.1em] text-primary">Cine vine</p>
+        <div className="mt-4 space-y-2.5 rounded-2xl bg-primary/5 p-3">
+          <p className="text-[12px] font-semibold uppercase tracking-[0.1em] text-primary">În echipă</p>
           {meci.jucatori.map((j) => (
-            <div key={j.id} className="flex items-center gap-2.5">
-              <AvatarCont nume={j.nume} poza={j.poza} className="h-8 w-8" textClassName="text-[11px]" />
-              <div className="min-w-0 flex-1 leading-tight">
-                <p className="truncate text-[13.5px] font-medium">{j.nume}</p>
-                {j.telefon && (
-                  <a href={`tel:${j.telefon.replace(/\s/g, "")}`} className="flex items-center gap-1 text-[12.5px] text-primary">
-                    <Phone className="h-3 w-3" />
-                    {j.telefon}
-                  </a>
-                )}
-              </div>
+            <RandJucator key={j.id} j={j}>
               <button
                 type="button"
                 disabled={seLucreaza}
@@ -193,7 +288,7 @@ export function CardMeci({ meci, conectat, telefonCont = "" }: { meci: MeciPubli
                 <UserMinus className="h-3.5 w-3.5" />
                 Scoate
               </button>
-            </div>
+            </RandJucator>
           ))}
         </div>
       )}
@@ -210,3 +305,31 @@ export function CardMeci({ meci, conectat, telefonCont = "" }: { meci: MeciPubli
     </article>
   );
 }
+
+/** Un rând cu jucătorul: nume, poziții, nivel și telefon (doar organizatorul îl vede). */
+function RandJucator({ j, children }: { j: JucatorInMeci; children: React.ReactNode }) {
+  const detalii = [j.pozitii.join(", "), j.nivel ? NIVEL_JUCATOR[j.nivel] : ""].filter(Boolean).join(" · ");
+  return (
+    <div className="flex items-center gap-2.5">
+      <AvatarCont nume={j.nume} poza={j.poza} className="h-9 w-9" textClassName="text-[11px]" />
+      <div className="min-w-0 flex-1 leading-tight">
+        <p className="truncate text-[13.5px] font-medium">{j.nume}</p>
+        {detalii && <p className="truncate text-[12px] text-muted-foreground">{detalii}</p>}
+        {j.telefon && (
+          <a href={`tel:${j.telefon.replace(/\s/g, "")}`} className="flex items-center gap-1 text-[12.5px] text-primary">
+            <Phone className="h-3 w-3" />
+            {j.telefon}
+          </a>
+        )}
+      </div>
+      {children}
+    </div>
+  );
+}
+
+const NIVEL_JUCATOR: Record<string, string> = {
+  INCEPATOR: "Începător",
+  MEDIU: "Mediu",
+  AVANSAT: "Avansat",
+  COMPETITIV: "Competitiv",
+};

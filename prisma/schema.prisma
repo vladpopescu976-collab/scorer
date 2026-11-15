@@ -467,6 +467,11 @@ model JucatorMeci {
 
   /// Telefonul dat la alăturare (obligatoriu): organizatorul îl sună dacă nu vine.
   telefon String?
+  /// Cererea: „CERERE” până alege organizatorul, apoi „ACCEPTAT” sau „RESPINS”.
+  status  String      @default("CERERE")
+  /// Ce poziții joacă și ce nivel are, ca organizatorul să aleagă.
+  pozitii String[]    @default([])
+  nivel   SkillLevel?
 
   createdAt DateTime @default(now())
 

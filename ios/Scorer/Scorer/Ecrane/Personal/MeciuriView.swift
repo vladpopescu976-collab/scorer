@@ -20,7 +20,6 @@ struct MeciuriView: View {
     @State private var mesajInvitatie = ""
     /// Meciul la care vrei să te alături: întâi cerem telefonul.
     @State private var deAlaturat: Meci?
-    @State private var telefonAlaturare = ""
     @State private var oras = ""
     @State private var sport: Sport?
     @State private var seIncarca = true
@@ -67,13 +66,15 @@ struct MeciuriView: View {
         } message: {
             Text("\(deInvitat?.jucator.nume ?? "") primește o notificare și vă vedeți telefoanele.")
         }
-        .alert("Numărul tău de telefon", isPresented: .init(get: { deAlaturat != nil }, set: { if !$0 { deAlaturat = nil } })) {
-            TextField("07xx xxx xxx", text: $telefonAlaturare)
-                .keyboardType(.phonePad)
-            Button("Vin la meci") { if let m = deAlaturat { actiune(m, "alatura") } }
-            Button("Renunță", role: .cancel) {}
-        } message: {
-            Text("E obligatoriu. Îl vede doar organizatorul, ca să te poată suna dacă nu ajungi.")
+        .sheet(item: $deAlaturat) { meci in
+            NavigationStack {
+                CerereMeciView(meci: meci, telefonInitial: sesiune.utilizator?.telefon ?? "") { actualizat in
+                    if let i = meciuri.firstIndex(where: { $0.id == actualizat.id }) {
+                        withAnimation(.smooth) { meciuri[i] = actualizat }
+                    }
+                }
+            }
+            .presentationDetents([.large])
         }
         .onChange(of: sectiune) { Task { await incarca() } }
         .onChange(of: oras) { Task { await incarca() } }
@@ -425,21 +426,55 @@ struct MeciuriView: View {
                 butonActiune(meci)
             }
 
+            switch meci.cerereaMea {
+            case "CERERE":
+                Label("Cererea ta așteaptă răspunsul organizatorului.", systemImage: "hourglass")
+                    .font(.footnote.weight(.medium)).foregroundStyle(Tema.asteptare)
+            case "ACCEPTAT":
+                Label("Ești în echipă!", systemImage: "checkmark.seal.fill")
+                    .font(.footnote.weight(.semibold)).foregroundStyle(Tema.accent)
+            case "RESPINS":
+                Text("Organizatorul a ales alți jucători.").font(.footnote).foregroundStyle(.secondary)
+            default:
+                EmptyView()
+            }
+
+            if meci.esteAlMeu, let cereri = meci.cereri, !cereri.isEmpty {
+                VStack(alignment: .leading, spacing: 10) {
+                    Text("VOR SĂ VINĂ · \(cereri.count)").font(.caption.weight(.bold)).tracking(0.8).foregroundStyle(Tema.asteptare)
+                    ForEach(cereri) { j in
+                        randJucator(j) {
+                            Button { raspunde(j, din: meci, accepta: true) } label: {
+                                Image(systemName: "checkmark")
+                                    .font(.system(size: 13, weight: .bold))
+                                    .foregroundStyle(.white)
+                                    .frame(width: 34, height: 34)
+                                    .background(meci.ramase == 0 ? AnyShapeStyle(Color.gray.opacity(0.4)) : AnyShapeStyle(Tema.gradientAccent), in: .circle)
+                            }
+                            .buttonStyle(.plain)
+                            .disabled(meci.ramase == 0)
+                            .accessibilityLabel("Acceptă-l pe \(j.nume)")
+                            Button { raspunde(j, din: meci, accepta: false) } label: {
+                                Image(systemName: "xmark")
+                                    .font(.system(size: 13, weight: .bold))
+                                    .foregroundStyle(.secondary)
+                                    .frame(width: 34, height: 34)
+                                    .background(Color.primary.opacity(0.07), in: .circle)
+                            }
+                            .buttonStyle(.plain)
+                            .accessibilityLabel("Refuză-l pe \(j.nume)")
+                        }
+                    }
+                }
+                .padding(12)
+                .background(Tema.asteptare.opacity(0.07), in: .rect(cornerRadius: 14, style: .continuous))
+            }
+
             if meci.esteAlMeu && !meci.jucatori.isEmpty {
                 VStack(alignment: .leading, spacing: 10) {
-                    Text("CINE VINE").font(.caption.weight(.bold)).tracking(0.8).foregroundStyle(Tema.accent)
+                    Text("ÎN ECHIPĂ").font(.caption.weight(.bold)).tracking(0.8).foregroundStyle(Tema.accent)
                     ForEach(meci.jucatori) { j in
-                        HStack(spacing: 10) {
-                            AvatarPersoana(nume: j.nume, poza: j.poza, marime: 32)
-                            VStack(alignment: .leading, spacing: 1) {
-                                Text(j.nume).font(.subheadline.weight(.medium))
-                                if let t = j.telefon, let url = URL(string: "tel:\(t.filter { $0.isNumber || $0 == "+" })") {
-                                    Link(destination: url) {
-                                        Label(t, systemImage: "phone.fill").font(.caption.weight(.semibold))
-                                    }
-                                }
-                            }
-                            Spacer()
+                        randJucator(j) {
                             Button(role: .destructive) { scoate(j, din: meci) } label: {
                                 Label("Scoate", systemImage: "person.fill.xmark").font(.caption.weight(.semibold))
                             }
@@ -476,8 +511,10 @@ struct MeciuriView: View {
             Button("Șterge", role: .destructive) { actiune(meci, "sterge") }
                 .font(.subheadline.weight(.semibold))
                 .disabled(ocupat)
-        } else if meci.mAmAlaturat {
-            Button("Ies") { actiune(meci, "iesi") }
+        } else if meci.cerereaMea == "RESPINS" {
+            EmptyView()
+        } else if meci.mAmAlaturat || meci.cerereaMea == "CERERE" {
+            Button(meci.mAmAlaturat ? "Ies" : "Retrag") { actiune(meci, "iesi") }
                 .font(.subheadline.weight(.semibold))
                 .padding(.horizontal, 14).padding(.vertical, 8)
                 .background(Color.primary.opacity(0.06), in: .capsule)
@@ -485,13 +522,10 @@ struct MeciuriView: View {
                 .disabled(ocupat)
         } else {
             Button {
-                if estePersonal {
-                    telefonAlaturare = sesiune.utilizator?.telefon ?? ""
-                    deAlaturat = meci
-                } else { arataAutentificarea = true }
+                if estePersonal { deAlaturat = meci } else { arataAutentificarea = true }
             } label: {
                 Group {
-                    if ocupat { ProgressView().tint(.white) } else { Text(meci.ramase == 0 ? "Complet" : "Mă alătur") }
+                    if ocupat { ProgressView().tint(.white) } else { Text(meci.ramase == 0 ? "Complet" : "Vreau să vin") }
                 }
                 .font(.subheadline.weight(.semibold))
                 .foregroundStyle(.white)
@@ -526,8 +560,36 @@ struct MeciuriView: View {
         }
     }
 
+    private func randJucator<Butoane: View>(_ j: JucatorInMeci, @ViewBuilder butoane: () -> Butoane) -> some View {
+        HStack(spacing: 10) {
+            AvatarPersoana(nume: j.nume, poza: j.poza, marime: 36)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(j.nume).font(.subheadline.weight(.medium))
+                if !j.detalii.isEmpty { Text(j.detalii).font(.caption).foregroundStyle(.secondary) }
+                if let t = j.telefon, let url = URL(string: "tel:\(t.filter { $0.isNumber || $0 == "+" })") {
+                    Link(destination: url) { Label(t, systemImage: "phone.fill").font(.caption.weight(.semibold)) }
+                }
+            }
+            Spacer(minLength: 6)
+            butoane()
+        }
+    }
+
+    /// Organizatorul acceptă sau refuză o cerere.
+    private func raspunde(_ j: JucatorInMeci, din meci: Meci, accepta: Bool) {
+        Task {
+            struct Corp: Encodable { let accepta: Bool }
+            do {
+                try await ApiClient.shared.cereFaraRaspuns("meciuri/\(meci.id)/cereri/\(j.id)", metoda: "POST", corp: Corp(accepta: accepta))
+                await incarca()
+            } catch {
+                eroare = error.localizedDescription
+            }
+        }
+    }
+
     /// Organizatorul scoate un jucător; locul se eliberează pentru altcineva.
-    private func scoate(_ j: PersoanaScurta, din meci: Meci) {
+    private func scoate(_ j: JucatorInMeci, din meci: Meci) {
         Task {
             do {
                 try await ApiClient.shared.cereFaraRaspuns("meciuri/\(meci.id)/jucatori/\(j.id)", metoda: "DELETE")
@@ -579,15 +641,6 @@ struct MeciuriView: View {
             defer { inLucru = nil }
             do {
                 switch tip {
-                case "alatura":
-                    struct Corp: Encodable { let telefon: String }
-                    let actualizat = try await ApiClient.shared.cere(
-                        "meciuri/\(meci.id)/alaturare", metoda: "POST",
-                        corp: Corp(telefon: telefonAlaturare), ca: Meci.self
-                    )
-                    if let i = meciuri.firstIndex(where: { $0.id == meci.id }) {
-                        withAnimation(.smooth) { meciuri[i] = actualizat }
-                    }
                 case "iesi":
                     try await ApiClient.shared.cereFaraRaspuns("meciuri/\(meci.id)/alaturare", metoda: "DELETE")
                     await incarca()
@@ -880,6 +933,107 @@ struct PuneAnuntJucatorView: View {
             do {
                 try await ApiClient.shared.cereFaraRaspuns("jucatori-liberi", metoda: "POST", corp: corp)
                 laFinal()
+                inchide()
+            } catch {
+                eroare = error.localizedDescription
+            }
+        }
+    }
+}
+
+/// Cererea de a veni la un meci: telefon (obligatoriu), poziția și nivelul.
+/// Organizatorul alege apoi pe cine ia.
+struct CerereMeciView: View {
+    let meci: Meci
+    let telefonInitial: String
+    let laTrimis: (Meci) -> Void
+
+    @Environment(\.dismiss) private var inchide
+    @State private var telefon = ""
+    @State private var pozitii: Set<String> = []
+    @State private var nivel = ""
+    @State private var eroare: String?
+    @State private var seTrimite = false
+
+    var body: some View {
+        Form {
+            Section {
+                TextField("07xx xxx xxx", text: $telefon)
+                    .keyboardType(.phonePad)
+                    .textContentType(.telephoneNumber)
+            } header: {
+                Text("Telefon (obligatoriu)")
+            } footer: {
+                Text("Îl vede doar organizatorul, ca să te poată suna dacă nu ajungi.")
+            }
+            if !meci.sport.pozitii.isEmpty {
+                Section("Pe ce poziție joci?") {
+                    LazyVGrid(columns: [.init(.adaptive(minimum: 100), spacing: 8)], spacing: 8) {
+                        ForEach(meci.sport.pozitii, id: \.self) { p in
+                            let ales = pozitii.contains(p)
+                            Button {
+                                if ales { pozitii.remove(p) } else { pozitii.insert(p) }
+                            } label: {
+                                Text(p)
+                                    .font(.subheadline.weight(.medium))
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.vertical, 10)
+                                    .background(ales ? Tema.accent : Tema.fundal, in: .rect(cornerRadius: 10, style: .continuous))
+                                    .foregroundStyle(ales ? .white : .primary)
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                    .padding(.vertical, 4)
+                }
+            }
+            Section {
+                Picker("Nivelul tău", selection: $nivel) {
+                    Text("Nu spun").tag("")
+                    Text("Începător").tag("INCEPATOR")
+                    Text("Mediu").tag("MEDIU")
+                    Text("Avansat").tag("AVANSAT")
+                    Text("Competitiv").tag("COMPETITIV")
+                }
+            } footer: {
+                Text("Organizatorul vede cererile și alege pe cine ia. Primești o notificare.")
+            }
+            if let eroare {
+                Section { Text(eroare).font(.footnote).foregroundStyle(.red) }
+            }
+            Section {
+                Button(action: trimite) {
+                    HStack {
+                        Spacer()
+                        if seTrimite { ProgressView().tint(.white) } else { Text("Trimite cererea").fontWeight(.semibold) }
+                        Spacer()
+                    }
+                }
+                .listRowBackground(Tema.accent)
+                .foregroundStyle(.white)
+                .disabled(seTrimite)
+            }
+        }
+        .navigationTitle("Vreau să vin")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Renunță") { inchide() } } }
+        .onAppear { if telefon.isEmpty { telefon = telefonInitial } }
+    }
+
+    private func trimite() {
+        eroare = nil
+        guard telefon.filter(\.isNumber).count >= 9 else { eroare = "Lasă un număr de telefon valid."; return }
+        struct Corp: Encodable { let telefon: String; let pozitii: [String]; let nivel: String? }
+        seTrimite = true
+        Task {
+            defer { seTrimite = false }
+            do {
+                let actualizat = try await ApiClient.shared.cere(
+                    "meciuri/\(meci.id)/alaturare", metoda: "POST",
+                    corp: Corp(telefon: telefon, pozitii: meci.sport.pozitii.filter { pozitii.contains($0) }, nivel: nivel.isEmpty ? nil : nivel),
+                    ca: Meci.self
+                )
+                laTrimis(actualizat)
                 inchide()
             } catch {
                 eroare = error.localizedDescription

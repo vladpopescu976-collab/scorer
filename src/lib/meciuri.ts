@@ -6,6 +6,7 @@ import { ActionError } from "@/lib/actions/result";
 import { ORASE_ROMANIA, cheieOras, normalizeazaOras } from "@/lib/orase";
 import { esteFormatValid } from "@/lib/formate-teren";
 import { phoneSchema } from "@/lib/validations/field";
+import { POZITII } from "@/lib/jucatori-liberi-pozitii";
 import { after } from "next/server";
 import { trimiteNotificare } from "@/lib/push";
 
@@ -65,9 +66,23 @@ export type MeciPublic = {
   /** Telefonul organizatorului: doar pentru cei alăturați, dacă l-a arătat. */
   telefonOrganizator: string | null;
   esteAlMeu: boolean;
+  /** Ești acceptat în meci. */
   mAmAlaturat: boolean;
-  /** Telefonul fiecăruia se vede doar de organizator, ca să-l poată suna. */
-  jucatori: { id: string; nume: string; poza: string | null; telefon: string | null }[];
+  /** Cererea ta: în așteptare, acceptată sau refuzată; null dacă n-ai cerut. */
+  cerereaMea: "CERERE" | "ACCEPTAT" | "RESPINS" | null;
+  /** Cei acceptați. Telefonul se vede doar de organizator, ca să-i poată suna. */
+  jucatori: JucatorInMeci[];
+  /** Doar pentru organizator: cine a cerut să vină și așteaptă răspuns. */
+  cereri: JucatorInMeci[];
+};
+
+export type JucatorInMeci = {
+  id: string;
+  nume: string;
+  poza: string | null;
+  telefon: string | null;
+  pozitii: string[];
+  nivel: SkillLevel | null;
 };
 
 const includeMeci = {
@@ -81,8 +96,18 @@ const includeMeci = {
 type MeciCuDetalii = Prisma.AnuntMeciGetPayload<{ include: typeof includeMeci }>;
 
 function serializeaza(m: MeciCuDetalii, vizitatorId: string | null): MeciPublic {
-  const mAmAlaturat = !!vizitatorId && m.jucatori.some((j) => j.userId === vizitatorId);
   const esteAlMeu = vizitatorId === m.autorId;
+  const acceptati = m.jucatori.filter((j) => j.status === "ACCEPTAT");
+  const aMea = vizitatorId ? m.jucatori.find((j) => j.userId === vizitatorId) : undefined;
+  const mAmAlaturat = aMea?.status === "ACCEPTAT";
+  const descrie = (j: MeciCuDetalii["jucatori"][number]): JucatorInMeci => ({
+    id: j.user.id,
+    nume: j.user.name,
+    poza: j.user.image,
+    telefon: esteAlMeu ? (j.telefon ?? j.user.phone) : null,
+    pozitii: j.pozitii,
+    nivel: j.nivel,
+  });
   return {
     id: m.id,
     sport: m.sport,
@@ -91,19 +116,16 @@ function serializeaza(m: MeciCuDetalii, vizitatorId: string | null): MeciPublic 
     locatie: m.locatie,
     format: m.format,
     jucatoriNecesari: m.jucatoriNecesari,
-    jucatoriAlaturati: m.jucatori.length,
+    jucatoriAlaturati: acceptati.length,
     nivel: m.nivel,
     descriere: m.descriere,
     organizator: { id: m.autor.id, nume: m.autor.name, poza: m.autor.image },
     telefonOrganizator: mAmAlaturat && m.arataTelefon ? m.autor.phone : null,
     esteAlMeu: esteAlMeu,
     mAmAlaturat,
-    jucatori: m.jucatori.map((j) => ({
-      id: j.user.id,
-      nume: j.user.name,
-      poza: j.user.image,
-      telefon: esteAlMeu ? (j.telefon ?? j.user.phone) : null,
-    })),
+    cerereaMea: (aMea?.status as MeciPublic["cerereaMea"]) ?? null,
+    jucatori: acceptati.map(descrie),
+    cereri: esteAlMeu ? m.jucatori.filter((j) => j.status === "CERERE").map(descrie) : [],
   };
 }
 
@@ -147,37 +169,67 @@ export async function creeazaMeci(autorId: string, input: AnuntInput): Promise<M
 }
 
 /**
- * Alăturarea cere telefonul: organizatorul trebuie să-l poată suna dacă jucătorul
- * nu apare, ca să nu rămână echipa cu un om lipsă.
+ * Cererea de a veni la meci: telefonul e obligatoriu (organizatorul te sună
+ * dacă nu apari), plus poziția și nivelul, ca organizatorul să aleagă. Pot
+ * cere mai mulți decât locurile; organizatorul decide pe cine ia.
  */
-export async function alaturaMeci(anuntId: string, userId: string, telefonDat?: string | null): Promise<MeciPublic> {
-  const user = await prisma.user.findUnique({ where: { id: userId }, select: { phone: true } });
-  const telefonText = telefonDat?.trim() || user?.phone?.trim() || "";
+export async function aplicaLaMeci(
+  anuntId: string,
+  userId: string,
+  date: { telefon?: string | null; pozitii?: string[]; nivel?: string | null }
+): Promise<MeciPublic> {
+  const user = await prisma.user.findUnique({ where: { id: userId }, select: { phone: true, name: true } });
+  const telefonText = date.telefon?.trim() || user?.phone?.trim() || "";
   const verificat = phoneSchema.safeParse(telefonText);
   if (!verificat.success) {
     throw new ActionError(telefonText ? "Numărul de telefon nu pare valid." : "Ca să te alături, lasă un număr de telefon.");
   }
-  const telefon = verificat.data;
+  const nivel = date.nivel && (NIVELURI as readonly string[]).includes(date.nivel) ? (date.nivel as SkillLevel) : null;
 
-  return prisma.$transaction(async (tx) => {
-    // Blocăm anunțul cât numărăm, ca două alăturări simultane să nu treacă de limită.
+  const anunt = await prisma.anuntMeci.findUnique({ where: { id: anuntId }, include: includeMeci });
+  if (!anunt) throw new ActionError("Anunțul nu mai există.");
+  if (anunt.autorId === userId) throw new ActionError("Ești organizatorul acestui meci.");
+  if (anunt.inceput.getTime() < Date.now()) throw new ActionError("Meciul a început deja.");
+  const existenta = anunt.jucatori.find((j) => j.userId === userId);
+  if (existenta?.status === "RESPINS") throw new ActionError("Organizatorul a ales deja alți jucători.");
+  if (existenta) return serializeaza(anunt, userId);
+  if (anunt.jucatori.filter((j) => j.status === "ACCEPTAT").length >= anunt.jucatoriNecesari) {
+    throw new ActionError("Echipa e deja completă.");
+  }
+  const pozitii = (date.pozitii ?? []).filter((p) => POZITII[anunt.sport].includes(p));
+
+  await prisma.jucatorMeci.create({
+    data: { anuntId, userId, telefon: verificat.data, pozitii, nivel, status: "CERERE" },
+  });
+  anuntaPeTelefon(anunt.autorId, {
+    titlu: "Cerere nouă pentru meci",
+    text: `${user?.name ?? "Cineva"}${pozitii.length ? ` (${pozitii.join(", ")})` : ""} vrea să vină la meciul din ${ziSiOra(anunt.inceput)}`,
+  });
+  const actual = await prisma.anuntMeci.findUniqueOrThrow({ where: { id: anuntId }, include: includeMeci });
+  return serializeaza(actual, userId);
+}
+
+/** Organizatorul acceptă sau refuză o cerere. Acceptă doar cât mai are locuri. */
+export async function raspundeCerere(anuntId: string, organizatorId: string, jucatorId: string, accepta: boolean) {
+  await prisma.$transaction(async (tx) => {
+    // Blocăm anunțul cât numărăm, ca două acceptări simultane să nu treacă de limită.
     await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${anuntId}))`;
-    const anunt = await tx.anuntMeci.findUnique({ where: { id: anuntId }, include: includeMeci });
-    if (!anunt) throw new ActionError("Anunțul nu mai există.");
-    if (anunt.autorId === userId) throw new ActionError("Ești organizatorul acestui meci.");
-    if (anunt.inceput.getTime() < Date.now()) throw new ActionError("Meciul a început deja.");
-    if (anunt.jucatori.some((j) => j.userId === userId)) return serializeaza(anunt, userId);
-    if (anunt.jucatori.length >= anunt.jucatoriNecesari) throw new ActionError("S-au strâns deja toți jucătorii.");
-
-    await tx.jucatorMeci.create({ data: { anuntId, userId, telefon } });
-    const actual = await tx.anuntMeci.findUniqueOrThrow({ where: { id: anuntId }, include: includeMeci });
-    const nou = actual.jucatori.find((j) => j.userId === userId)?.user.name ?? "Cineva";
-    const ramase = actual.jucatoriNecesari - actual.jucatori.length;
-    anuntaPeTelefon(actual.autorId, {
-      titlu: ramase === 0 ? "Echipa e completă!" : "Un jucător s-a alăturat",
-      text: `${nou} vine la meciul din ${ziSiOra(actual.inceput)}${ramase > 0 ? ` · mai trebuie ${ramase}` : ""}`,
+    const anunt = await tx.anuntMeci.findUnique({
+      where: { id: anuntId },
+      select: { autorId: true, jucatoriNecesari: true, inceput: true, jucatori: { select: { userId: true, status: true } } },
     });
-    return serializeaza(actual, userId);
+    if (!anunt || anunt.autorId !== organizatorId) throw new ActionError("Doar organizatorul poate alege jucătorii.");
+    if (!anunt.jucatori.some((j) => j.userId === jucatorId)) throw new ActionError("Cererea nu mai există.");
+    if (accepta && anunt.jucatori.filter((j) => j.status === "ACCEPTAT").length >= anunt.jucatoriNecesari) {
+      throw new ActionError("Ai deja toți jucătorii de care aveai nevoie.");
+    }
+    await tx.jucatorMeci.update({
+      where: { anuntId_userId: { anuntId, userId: jucatorId } },
+      data: { status: accepta ? "ACCEPTAT" : "RESPINS" },
+    });
+    anuntaPeTelefon(jucatorId, accepta
+      ? { titlu: "Ai fost acceptat la meci!", text: `Te așteaptă la meciul din ${ziSiOra(anunt.inceput)}` }
+      : { titlu: "Cererea ta n-a fost acceptată", text: `Organizatorul a ales alți jucători pentru meciul din ${ziSiOra(anunt.inceput)}` });
   });
 }
 

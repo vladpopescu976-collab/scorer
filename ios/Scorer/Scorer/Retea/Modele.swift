@@ -176,6 +176,23 @@ struct PersoanaScurta: Codable, Identifiable, Sendable, Hashable {
     var telefon: String?
 }
 
+/// Un jucător într-un meci (acceptat sau care a cerut să vină).
+struct JucatorInMeci: Codable, Identifiable, Sendable, Hashable {
+    let id: String
+    let nume: String
+    let poza: String?
+    /// Doar organizatorul îl vede, ca să-l poată suna.
+    let telefon: String?
+    var pozitii: [String]?
+    var nivel: String?
+
+    var detalii: String {
+        [(pozitii ?? []).joined(separator: ", "), NivelJoc.eticheta(nivel) ?? ""]
+            .filter { !$0.isEmpty }
+            .joined(separator: " · ")
+    }
+}
+
 /// Un anunț din „Găsește meci”: cineva mai caută jucători.
 struct Meci: Codable, Identifiable, Sendable {
     let id: String
@@ -193,7 +210,12 @@ struct Meci: Codable, Identifiable, Sendable {
     let telefonOrganizator: String?
     let esteAlMeu: Bool
     let mAmAlaturat: Bool
-    let jucatori: [PersoanaScurta]
+    /// „CERERE”, „ACCEPTAT”, „RESPINS” sau nil dacă n-ai cerut.
+    var cerereaMea: String?
+    /// Cei acceptați în echipă.
+    let jucatori: [JucatorInMeci]
+    /// Doar pentru organizator: cine vrea să vină și așteaptă răspuns.
+    var cereri: [JucatorInMeci]?
 
     var ramase: Int { max(0, jucatoriNecesari - jucatoriAlaturati) }
 }

@@ -6,7 +6,8 @@ import { auth } from "@/auth";
 import { type ActionResult, ActionError, ok, toActionError } from "@/lib/actions/result";
 import {
   type AnuntInput,
-  alaturaMeci,
+  aplicaLaMeci,
+  raspundeCerere,
   creeazaMeci,
   parasesteMeci,
   scoateJucator,
@@ -38,9 +39,12 @@ export async function posteazaMeci(input: AnuntInput): Promise<ActionResult> {
   }
 }
 
-export async function alaturaMeciAction(id: string, telefon?: string): Promise<ActionResult> {
+export async function alaturaMeciAction(
+  id: string,
+  date: { telefon?: string; pozitii?: string[]; nivel?: string }
+): Promise<ActionResult> {
   try {
-    await alaturaMeci(id, await cerePersonal(), telefon);
+    await aplicaLaMeci(id, await cerePersonal(), date);
     revalidatePath("/gaseste-meci");
     return ok();
   } catch (error) {
@@ -125,5 +129,15 @@ export async function scoateJucatorAction(id: string, jucatorId: string): Promis
     return ok();
   } catch (error) {
     return toActionError("scoateJucator", error);
+  }
+}
+
+export async function raspundeCerereAction(id: string, jucatorId: string, accepta: boolean): Promise<ActionResult> {
+  try {
+    await raspundeCerere(id, await cerePersonal(), jucatorId, accepta);
+    revalidatePath("/gaseste-meci");
+    return ok();
+  } catch (error) {
+    return toActionError("raspundeCerere", error);
   }
 }
