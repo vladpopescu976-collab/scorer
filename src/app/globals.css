@@ -156,3 +156,41 @@
     display: none;
   }
 }
+
+/* Intrarea fiecărei pagini (template.tsx): numai CSS, nu așteaptă JavaScript. */
+@keyframes intrare-pagina {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+}
+.intrare-pagina {
+  animation: intrare-pagina 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* Elementele animate cu framer-motion pornesc din server cu opacity:0 și apar
+   abia după hidratare. Dacă JavaScript-ul întârzie, le arătăm oricum după o
+   secundă, ca nimic să nu rămână invizibil sau șters. */
+html:not([data-hidratat]) [style*="opacity:0"] {
+  animation: apare-fara-js 0.35s ease 1s forwards;
+}
+@keyframes apare-fara-js {
+  to {
+    opacity: 1;
+    transform: none;
+    filter: none;
+    clip-path: none;
+  }
+}
+/* La fel pentru cele care pornesc doar încețoșate sau tăiate. */
+html:not([data-hidratat]) [style*="filter:blur"],
+html:not([data-hidratat]) [style*="clip-path:inset"],
+html:not([data-hidratat]) [style*="transform:translateY(1"] {
+  animation: apare-fara-js 0.35s ease 1s forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .intrare-pagina {
+    animation: none;
+  }
+}

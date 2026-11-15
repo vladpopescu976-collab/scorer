@@ -122,4 +122,6 @@ export function VeziDetaliile() {
 export const clasaCard =
   "group flex w-full flex-col rounded-3xl border border-black/[0.06] bg-card p-5 text-left shadow-[0_1px_2px_rgba(0,0,0,0.04),0_14px_34px_-14px_rgba(0,0,0,0.12)] transition-all hover:-translate-y-0.5 hover:shadow-[0_1px_2px_rgba(0,0,0,0.04),0_20px_44px_-14px_rgba(0,0,0,0.18)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary dark:border-white/10";
 
-export const clasaFereastra = "max-h-[92dvh] gap-0 overflow-y-auto rounded-3xl p-0 sm:max-w-lg";
+// Butonul „×” stă peste antetul verde: îl facem deschis la culoare, ca să se vadă.
+export const clasaFereastra =
+  "max-h-[92dvh] gap-0 overflow-y-auto rounded-3xl p-0 sm:max-w-lg [&>[data-slot=dialog-close]]:top-4 [&>[data-slot=dialog-close]]:right-4 [&>[data-slot=dialog-close]]:bg-white/15 [&>[data-slot=dialog-close]]:text-[#F3EFE6] [&>[data-slot=dialog-close]]:hover:bg-white/25";
