@@ -27,6 +27,14 @@ export const anuntJucatorSchema = z
     nivel: z.enum(NIVELURI).optional(),
     descriere: z.string().trim().max(400, "Descrierea are cel mult 400 de caractere.").optional(),
     arataTelefon: z.boolean().optional(),
+    /** 1 = luni … 7 = duminică. */
+    zile: z.array(z.number().int().min(1).max(7)).max(7).optional(),
+    oraDe: z.number().int().min(0).max(23).optional(),
+    oraPana: z.number().int().min(1).max(24).optional(),
+  })
+  .refine((d) => d.oraDe == null || d.oraPana == null || d.oraPana > d.oraDe, {
+    message: "Ora de final trebuie să fie după cea de început.",
+    path: ["oraPana"],
   })
   // Orașul vine din listă: scris greșit, jucătorul n-ar mai fi găsit de nimeni.
   .refine((d) => ORASE_ROMANIA.some((o) => cheieOras(o) === cheieOras(d.oras)), {
@@ -47,6 +55,10 @@ export type AnuntJucatorPublic = {
   pozitii: string[];
   nivel: SkillLevel | null;
   descriere: string | null;
+  /** 1 = luni … 7 = duminică; goală = oricând. */
+  zile: number[];
+  oraDe: number | null;
+  oraPana: number | null;
   creatLa: string;
   jucator: { id: string; nume: string; poza: string | null };
   esteAlMeu: boolean;
@@ -77,6 +89,9 @@ function serializeaza(a: AnuntCuDetalii, vizitatorId: string | null): AnuntJucat
     pozitii: a.pozitii,
     nivel: a.nivel,
     descriere: a.descriere,
+    zile: [...a.zile].sort((x, y) => x - y),
+    oraDe: a.oraDe,
+    oraPana: a.oraPana,
     creatLa: a.createdAt.toISOString(),
     jucator: { id: a.user.id, nume: a.user.name, poza: a.user.image },
     esteAlMeu,
@@ -119,6 +134,9 @@ export async function salveazaAnuntJucator(userId: string, input: AnuntJucatorIn
     nivel: date.nivel ?? null,
     descriere: date.descriere || null,
     arataTelefon: date.arataTelefon ?? true,
+    zile: [...new Set(date.zile ?? [])],
+    oraDe: date.oraDe ?? null,
+    oraPana: date.oraPana ?? null,
   };
   const anunt = await prisma.anuntJucator.upsert({
     where: { userId_sport: { userId, sport: date.sport } },

@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import Link from "next/link";
-import { MapPin, Phone, UserPlus } from "lucide-react";
+import { CalendarClock, MapPin, Phone, UserPlus } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -10,6 +10,7 @@ import { AvatarCont } from "@/components/cont/poza-profil";
 import { invitaJucatorAction, stergeAnuntJucatorAction } from "@/lib/actions/meciuri";
 import type { AnuntJucatorPublic } from "@/lib/jucatori-liberi";
 import { sportMeta } from "@/lib/sports";
+import { textDisponibilitate } from "@/lib/jucatori-liberi-pozitii";
 
 const NIVELURI: Record<string, string> = {
   INCEPATOR: "Începător",
@@ -63,6 +64,12 @@ export function CardJucatorLiber({ anunt, conectat }: { anunt: AnuntJucatorPubli
         ))}
       </div>
 
+      {textDisponibilitate(anunt.zile, anunt.oraDe, anunt.oraPana) && (
+        <p className="mt-3 flex items-center gap-2 text-[14px] font-medium">
+          <CalendarClock className="h-4 w-4 text-primary" />
+          Disponibil: {textDisponibilitate(anunt.zile, anunt.oraDe, anunt.oraPana)}
+        </p>
+      )}
       {anunt.descriere && <p className="mt-3 text-[14px] leading-relaxed text-foreground/80">{anunt.descriere}</p>}
 
       <div className="mt-auto pt-5">

@@ -520,6 +520,11 @@ model AnuntJucator {
   pozitii      String[]
   nivel        SkillLevel?
   descriere    String?     @db.Text
+  /// Zilele în care poate juca: 1 = luni … 7 = duminică. Goală = oricând.
+  zile         Int[]       @default([])
+  /// Intervalul orar în care poate (ex. 18–22). Lipsă = orice oră.
+  oraDe        Int?
+  oraPana      Int?
   /// Telefonul se arată echipelor care l-au invitat.
   arataTelefon Boolean     @default(true)
 

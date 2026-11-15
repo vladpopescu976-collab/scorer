@@ -221,11 +221,36 @@ struct AnuntJucator: Codable, Identifiable, Sendable {
     let pozitii: [String]
     let nivel: String?
     let descriere: String?
+    /// 1 = luni … 7 = duminică; goală = oricând.
+    var zile: [Int]?
+    var oraDe: Int?
+    var oraPana: Int?
     let jucator: PersoanaScurta
     let esteAlMeu: Bool
     let lAmInvitat: Bool
     let telefonJucator: String?
     let invitatii: [Invitatie]
+}
+
+extension AnuntJucator {
+    static let zileScurte = ["Lun", "Mar", "Mie", "Joi", "Vin", "Sâm", "Dum"]
+
+    /// „Vin, Sâm, Dum · 18:00–22:00”, sau nil dacă n-a spus nimic.
+    var disponibilitate: String? {
+        let z = (zile ?? []).sorted()
+        let parteZile: String? = switch z {
+        case []: nil
+        case [1, 2, 3, 4, 5, 6, 7]: "Zilnic"
+        case [1, 2, 3, 4, 5]: "Luni–vineri"
+        case [6, 7]: "Weekend"
+        default: z.compactMap { (1...7).contains($0) ? Self.zileScurte[$0 - 1] : nil }.joined(separator: ", ")
+        }
+        let parteOre: String? = if let oraDe, let oraPana {
+            String(format: "%02d:00–%02d:00", oraDe, oraPana)
+        } else { nil }
+        let parti = [parteZile, parteOre].compactMap { $0 }
+        return parti.isEmpty ? nil : parti.joined(separator: " · ")
+    }
 }
 
 extension Sport {

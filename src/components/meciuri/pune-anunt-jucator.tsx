@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { salveazaAnuntJucatorAction } from "@/lib/actions/meciuri";
-import { POZITII } from "@/lib/jucatori-liberi-pozitii";
+import { POZITII, ZILE_SCURTE } from "@/lib/jucatori-liberi-pozitii";
 import { sportOptions } from "@/lib/sports";
 import { cn } from "@/lib/utils";
 import { SelectorOras } from "@/components/selector-oras";
@@ -33,6 +33,9 @@ export function PuneAnuntJucator({ orasImplicit }: { orasImplicit: string }) {
   const [nivel, setNivel] = useState("");
   const [descriere, setDescriere] = useState("");
   const [arataTelefon, setArataTelefon] = useState(true);
+  const [zile, setZile] = useState<number[]>([]);
+  const [oraDe, setOraDe] = useState("");
+  const [oraPana, setOraPana] = useState("");
   const [eroare, setEroare] = useState("");
 
   function trimite(e: React.FormEvent) {
@@ -46,6 +49,9 @@ export function PuneAnuntJucator({ orasImplicit }: { orasImplicit: string }) {
         nivel: (nivel || undefined) as "INCEPATOR" | "MEDIU" | "AVANSAT" | "COMPETITIV" | undefined,
         descriere: descriere || undefined,
         arataTelefon,
+        zile,
+        oraDe: oraDe === "" ? undefined : Number(oraDe),
+        oraPana: oraPana === "" ? undefined : Number(oraPana),
       });
       if (!r.ok) return setEroare(r.error);
       toast.success("Ești pe listă. Echipele te pot invita.");
@@ -117,6 +123,58 @@ export function PuneAnuntJucator({ orasImplicit }: { orasImplicit: string }) {
             <div className="space-y-2">
               <Label htmlFor="jucator-oras">Oraș</Label>
               <SelectorOras id="jucator-oras" value={oras} onChange={setOras} />
+            </div>
+
+            <div className="space-y-2">
+              <Label>În ce zile poți juca?</Label>
+              <div className="grid grid-cols-7 gap-1.5">
+                {ZILE_SCURTE.map((z, i) => {
+                  const zi = i + 1;
+                  const ales = zile.includes(zi);
+                  return (
+                    <button
+                      key={z}
+                      type="button"
+                      onClick={() => setZile(ales ? zile.filter((x) => x !== zi) : [...zile, zi])}
+                      className={cn(
+                        "rounded-xl border py-2 text-[13px] font-semibold transition-colors",
+                        ales ? "border-primary bg-primary text-primary-foreground" : "hover:border-primary/40"
+                      )}
+                    >
+                      {z}
+                    </button>
+                  );
+                })}
+              </div>
+              <div className="flex gap-2 pt-1">
+                {[
+                  { e: "Weekend", z: [6, 7] },
+                  { e: "Luni–vineri", z: [1, 2, 3, 4, 5] },
+                  { e: "Oricând", z: [] as number[] },
+                ].map((p) => (
+                  <button key={p.e} type="button" onClick={() => setZile(p.z)} className="text-[12.5px] font-medium text-primary hover:underline">
+                    {p.e}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label>La ce ore?</Label>
+              <div className="grid grid-cols-2 gap-3">
+                <select value={oraDe} onChange={(e) => setOraDe(e.target.value)} className="h-11 rounded-xl border bg-background px-3 text-[14px]">
+                  <option value="">De la (oricând)</option>
+                  {Array.from({ length: 24 }, (_, h) => (
+                    <option key={h} value={h}>de la {String(h).padStart(2, "0")}:00</option>
+                  ))}
+                </select>
+                <select value={oraPana} onChange={(e) => setOraPana(e.target.value)} className="h-11 rounded-xl border bg-background px-3 text-[14px]">
+                  <option value="">Până la (oricând)</option>
+                  {Array.from({ length: 24 }, (_, i) => i + 1).map((h) => (
+                    <option key={h} value={h}>până la {String(h).padStart(2, "0")}:00</option>
+                  ))}
+                </select>
+              </div>
             </div>
 
             <div className="space-y-2">

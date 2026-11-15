@@ -222,6 +222,11 @@ struct MeciuriView: View {
                 }
             }
 
+            if let disp = a.disponibilitate {
+                Label("Disponibil: \(disp)", systemImage: "calendar.badge.clock")
+                    .font(.subheadline.weight(.medium))
+                    .foregroundStyle(.primary)
+            }
             if let d = a.descriere { Text(d).font(.subheadline).foregroundStyle(.primary.opacity(0.8)) }
 
             if a.esteAlMeu {
@@ -642,6 +647,9 @@ struct PuneAnuntJucatorView: View {
     @State private var nivel = ""
     @State private var descriere = ""
     @State private var arataTelefon = true
+    @State private var zile: Set<Int> = []
+    @State private var oraDe: Int?
+    @State private var oraPana: Int?
     @State private var eroare: String?
     @State private var seTrimite = false
 
@@ -653,6 +661,44 @@ struct PuneAnuntJucatorView: View {
                         Label(s.eticheta, systemImage: s.simbol).tag(s)
                     }
                 }
+            }
+            Section {
+                HStack(spacing: 6) {
+                    ForEach(1...7, id: \.self) { zi in
+                        let ales = zile.contains(zi)
+                        Button {
+                            if ales { zile.remove(zi) } else { zile.insert(zi) }
+                        } label: {
+                            Text(AnuntJucator.zileScurte[zi - 1])
+                                .font(.caption.weight(.semibold))
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 10)
+                                .background(ales ? Tema.accent : Tema.fundal, in: .rect(cornerRadius: 9, style: .continuous))
+                                .foregroundStyle(ales ? .white : .primary)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+                .padding(.vertical, 4)
+                HStack(spacing: 16) {
+                    Button("Weekend") { zile = [6, 7] }
+                    Button("Luni–vineri") { zile = [1, 2, 3, 4, 5] }
+                    Button("Oricând") { zile = [] }
+                }
+                .font(.footnote.weight(.semibold))
+                .buttonStyle(.borderless)
+                Picker("De la", selection: $oraDe) {
+                    Text("Oricând").tag(Int?.none)
+                    ForEach(0..<24, id: \.self) { Text(String(format: "%02d:00", $0)).tag(Optional($0)) }
+                }
+                Picker("Până la", selection: $oraPana) {
+                    Text("Oricând").tag(Int?.none)
+                    ForEach(1...24, id: \.self) { Text(String(format: "%02d:00", $0)).tag(Optional($0)) }
+                }
+            } header: {
+                Text("Când poți juca?")
+            } footer: {
+                Text("De exemplu vineri, sâmbătă, duminică, de la 18:00 la 22:00.")
             }
             if !sport.pozitii.isEmpty {
                 Section {
@@ -722,10 +768,16 @@ struct PuneAnuntJucatorView: View {
 
     private func trimite() {
         eroare = nil
-        guard oras.trimmingCharacters(in: .whitespaces).count >= 2 else { eroare = "Scrie orașul."; return }
+        guard oras.trimmingCharacters(in: .whitespaces).count >= 2 else { eroare = "Alege orașul."; return }
+        if let oraDe, let oraPana, oraPana <= oraDe {
+            eroare = "Ora de final trebuie să fie după cea de început."; return
+        }
         struct Corp: Encodable {
             let sport: String
             let oras: String
+            let zile: [Int]
+            let oraDe: Int?
+            let oraPana: Int?
             let pozitii: [String]
             let nivel: String?
             let descriere: String?
@@ -733,6 +785,7 @@ struct PuneAnuntJucatorView: View {
         }
         let corp = Corp(
             sport: sport.rawValue, oras: oras,
+            zile: zile.sorted(), oraDe: oraDe, oraPana: oraPana,
             pozitii: sport.pozitii.filter { pozitii.contains($0) },
             nivel: nivel.isEmpty ? nil : nivel,
             descriere: descriere.isEmpty ? nil : descriere,
