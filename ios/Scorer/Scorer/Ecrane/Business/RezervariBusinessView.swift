@@ -17,6 +17,16 @@ struct RezervariBusinessView: View {
         case deConfirmat = "De confirmat întâi"
         case valoare = "Valoare"
         var id: String { rawValue }
+
+        /// Ce scrie în banda verde, după ordinea aleasă.
+        var accent: String {
+            switch self {
+            case .noi: "Cele mai noi sus."
+            case .data: "După data jocului."
+            case .deConfirmat: "De confirmat întâi."
+            case .valoare: "Cele mai mari sus."
+            }
+        }
     }
 
     enum Perioada: String, CaseIterable, Identifiable {
@@ -92,7 +102,7 @@ struct RezervariBusinessView: View {
         .listStyle(.plain)
         .navigationTitle("Rezervări")
         .navigationBarTitleDisplayMode(.inline)
-        .antetVerde("Panou", titlu: "Rezervări.", accent: "Cele mai noi sus.")
+        .antetVerde("Panou", titlu: "Rezervări.", accent: ordine.accent)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Menu {

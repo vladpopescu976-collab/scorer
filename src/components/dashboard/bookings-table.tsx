@@ -37,6 +37,14 @@ type Row = {
 };
 
 type Ordine = "noi" | "data" | "deConfirmat" | "pret";
+
+/** Ce scrie lângă titlu, după ordinea aleasă. */
+const ACCENT_ORDINE: Record<Ordine, string> = {
+  noi: "Cele mai noi sus.",
+  data: "După data jocului.",
+  deConfirmat: "De confirmat întâi.",
+  pret: "Cele mai mari sus.",
+};
 type Perioada = "toate" | "azi" | "maine" | "saptamana" | "trecute";
 
 const ORDINI: { id: Ordine; eticheta: string; detaliu: string }[] = [
@@ -154,7 +162,7 @@ export function BookingsTable({ bookings, fields }: { bookings: Row[]; fields: {
     <div className="space-y-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <TitluPanou titlu="Rezervări." accent="Cele mai noi sus." />
+          <TitluPanou titlu="Rezervări." accent={ACCENT_ORDINE[ordine]} />
           <p className="text-[13px] text-muted-foreground">
             {bookings.length} în total · {pendingCount} necesită răspuns
           </p>
