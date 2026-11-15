@@ -7,6 +7,7 @@ import { sablon, type Rand } from "@/lib/emailuri/sablon";
 import { APP_TIME_ZONE } from "@/lib/datetime";
 import { linkRezervare, tokenSemnat } from "@/lib/rezervari-vizitator";
 import { trimiteNotificare } from "@/lib/push";
+import { elibereazaOra } from "@/lib/impartire-plata";
 
 /**
  * Anunțurile despre rezervări.
@@ -64,7 +65,20 @@ export function anuntaRezervare(bookingId: string, eveniment: EvenimentRezervare
     }
     // Pe lângă email, notificări pe telefon: proprietarului și clientului.
     await notificaPeTelefon(bookingId, eveniment);
+    await elibereazaDacaE(bookingId, eveniment);
   });
+}
+
+/** Ora s-a eliberat: închidem split the bill-ul și anunțăm pe cine aștepta ora. */
+async function elibereazaDacaE(bookingId: string, eveniment: EvenimentRezervare) {
+  const motiv =
+    eveniment === "anulata-de-client" ? "anulata" : eveniment === "respinsa" || eveniment === "mutare-refuzata" ? "respinsa" : null;
+  if (!motiv) return;
+  try {
+    await elibereazaOra(bookingId, motiv);
+  } catch (eroare) {
+    console.error(`[eliberare:${eveniment}] ${bookingId}`, eroare);
+  }
 }
 
 /** Ce află clientul (cu cont) pe telefon, pentru fiecare eveniment care îl privește. */
@@ -141,6 +155,7 @@ export async function anuntaRezervareAcum(
   } catch (eroare) {
     console.error(`[email:rezervare:${eveniment}] ${bookingId}`, eroare);
   }
+  await elibereazaDacaE(bookingId, eveniment);
 }
 
 async function trimiteAnuntul(bookingId: string, eveniment: EvenimentRezervare) {

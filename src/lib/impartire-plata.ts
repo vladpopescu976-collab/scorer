@@ -49,7 +49,7 @@ export type ImpartireApi = {
   inchisa: boolean;
   /** Până când se pot strânge banii. */
   termen: string;
-  stare: "STRANGE" | "COMPLETA" | "ESUATA";
+  stare: "STRANGE" | "COMPLETA" | "ESUATA" | "ANULATA";
 };
 
 const include = {
@@ -221,6 +221,13 @@ export async function expiraImpartirile(): Promise<number> {
 
   let anulate = 0;
   for (const i of expirate) {
+    // Rezervarea fusese deja anulată sau refuzată: închidem împărțirea fără mesajul
+    // „nu s-au strâns banii”, dar cine aștepta ora tot află.
+    if (STARI_INCHISE.has(i.booking.status)) {
+      const inchisa = await prisma.impartirePlata.updateMany({ where: { id: i.id, stare: "STRANGE" }, data: { stare: "ANULATA" } });
+      if (inchisa.count > 0) await anuntaOraLibera(i.booking, []);
+      continue;
+    }
     const ok = await prisma.$transaction(async (tx) => {
       // Doar cine schimbă starea primul trimite notificările: fără dubluri.
       const schimbat = await tx.impartirePlata.updateMany({
@@ -239,13 +246,7 @@ export async function expiraImpartirile(): Promise<number> {
 
     const b = i.booking;
     const cand = ziSiOra(b.startTime);
-    const alerte = await prisma.alertaTeren.findMany({
-      where: { fieldId: b.fieldId, notificatLa: null, startTime: { lt: b.endTime }, endTime: { gt: b.startTime } },
-      select: { id: true, userId: true },
-    });
-    if (alerte.length) {
-      await prisma.alertaTeren.updateMany({ where: { id: { in: alerte.map((a) => a.id) } }, data: { notificatLa: new Date() } });
-    }
+    await anuntaOraLibera(b, i.parti.map((p) => p.userId));
 
     after(() =>
       Promise.all([
@@ -262,16 +263,6 @@ export async function expiraImpartirile(): Promise<number> {
           text: `${b.field.name}, ${cand}. Ora e din nou liberă.`,
           date: { ecran: "rezervari" },
         }),
-        // Cine aștepta ora primește vestea că s-a eliberat.
-        ...alerte
-          .filter((a) => !i.parti.some((p) => p.userId === a.userId))
-          .map((a) =>
-            trimiteNotificare(a.userId, {
-              titlu: "Terenul e disponibil!",
-              text: `${b.field.name} s-a eliberat: ${cand}. Rezervă acum, înainte să-l ia altcineva.`,
-              date: { ecran: "teren", terenId: b.fieldId },
-            })
-          ),
       ])
     );
   }
@@ -302,3 +293,77 @@ export async function cereAlerta(userId: string, fieldId: string, start: Date, e
 }
 
 export { textOre };
+
+/**
+ * Cine a cerut „Anunță-mă” pentru o oră care tocmai s-a eliberat primește
+ * „Terenul e disponibil!”. O singură dată pe alertă.
+ */
+async function anuntaOraLibera(
+  b: { fieldId: string; startTime: Date; endTime: Date; field: { name: string } },
+  exclusi: (string | null)[]
+) {
+  const alerte = await prisma.alertaTeren.findMany({
+    where: { fieldId: b.fieldId, notificatLa: null, startTime: { lt: b.endTime }, endTime: { gt: b.startTime } },
+    select: { id: true, userId: true },
+  });
+  if (!alerte.length) return;
+  const marcate = await prisma.alertaTeren.updateMany({
+    where: { id: { in: alerte.map((a) => a.id) }, notificatLa: null },
+    data: { notificatLa: new Date() },
+  });
+  if (marcate.count === 0) return;
+  const cand = ziSiOra(b.startTime);
+  await Promise.all(
+    alerte
+      .filter((a) => !exclusi.includes(a.userId))
+      .map((a) =>
+        trimiteNotificare(a.userId, {
+          titlu: "Terenul e disponibil!",
+          text: `${b.field.name} s-a eliberat: ${cand}. Rezervă acum, înainte să-l ia altcineva.`,
+          date: { ecran: "teren", terenId: b.fieldId },
+        })
+      )
+  );
+}
+
+/**
+ * O rezervare a fost anulată sau refuzată: dacă avea split the bill care strângea
+ * banii, se închide și prietenii care au plătit află; cine aștepta ora e anunțat.
+ * Se cheamă din `anuntaRezervare`, deci prinde toate drumurile de anulare.
+ */
+export async function elibereazaOra(bookingId: string, motiv: "anulata" | "respinsa"): Promise<void> {
+  const b = await prisma.booking.findUnique({
+    where: { id: bookingId },
+    select: {
+      fieldId: true,
+      startTime: true,
+      endTime: true,
+      customerId: true,
+      customer: { select: { name: true } },
+      field: { select: { name: true } },
+      impartire: { select: { id: true, stare: true, parti: { select: { userId: true, esteOrganizator: true } } } },
+    },
+  });
+  if (!b) return;
+
+  const notificari: Promise<void>[] = [];
+  if (b.impartire?.stare === "STRANGE") {
+    const schimbat = await prisma.impartirePlata.updateMany({
+      where: { id: b.impartire.id, stare: "STRANGE" },
+      data: { stare: "ANULATA" },
+    });
+    if (schimbat.count > 0) {
+      const cand = ziSiOra(b.startTime);
+      const text =
+        motiv === "anulata"
+          ? `${b.customer?.name ?? "Organizatorul"} a anulat rezervarea de la ${b.field.name}, ${cand}. Partea ta se întoarce.`
+          : `Terenul ${b.field.name} a refuzat rezervarea din ${cand}. Partea ta se întoarce.`;
+      // Organizatorul află deja din anunțul rezervării; prietenii care au plătit, de aici.
+      for (const p of b.impartire.parti.filter((x) => !x.esteOrganizator)) {
+        notificari.push(trimiteNotificare(p.userId, { titlu: "Meciul a fost anulat", text, date: { ecran: "rezervari" } }));
+      }
+    }
+  }
+  notificari.push(anuntaOraLibera(b, [b.customerId]));
+  await Promise.all(notificari);
+}
