@@ -10,8 +10,9 @@ export default function manifest(): MetadataRoute.Manifest {
     lang: "ro",
     start_url: "/",
     scope: "/",
+    // Fereastră proprie, cu bara de titlu normală a Windows-ului (fără
+    // „window-controls-overlay”, care ar fi pus butoanele ferestrei peste bara site-ului).
     display: "standalone",
-    display_override: ["window-controls-overlay", "standalone"],
     background_color: "#07160F",
     theme_color: "#0B2A1C",
     categories: ["sports", "lifestyle"],
@@ -20,6 +21,10 @@ export default function manifest(): MetadataRoute.Manifest {
       { src: "/pwa/icon-512.png", sizes: "512x512", type: "image/png", purpose: "any" },
       // Pătratul plin, ca Windows și Android să-l poată decupa în forma lor.
       { src: "/pwa/icon-512.png", sizes: "512x512", type: "image/png", purpose: "maskable" },
+    ],
+    // Apare în fereastra de instalare din Edge, ca previzualizare.
+    screenshots: [
+      { src: "/brand/aplicatie-rezervare.png", sizes: "598x1300", type: "image/png", form_factor: "narrow", label: "Rezervarea unui teren" },
     ],
     shortcuts: [
       { name: "Caută terenuri", url: "/cauta-terenuri", icons: [{ src: "/pwa/icon-192.png", sizes: "192x192" }] },
