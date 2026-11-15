@@ -53,77 +53,138 @@ struct AnsambluView: View {
 
     var body: some View {
         ZStack {
-        Tema.fundal.ignoresSafeArea()
-        ScrollView {
-            if seIncarca {
-                VStack(spacing: 12) {
-                    ForEach(0..<3, id: \.self) { _ in ScheletFisa(inaltime: 90) }
-                }
-                .padding()
-            } else if let s = statistici {
+            Tema.fundal.ignoresSafeArea()
+            ScrollView {
                 VStack(spacing: 16) {
-                    LazyVGrid(columns: [.init(.flexible()), .init(.flexible())], spacing: 12) {
-                        Kpi(titlu: "Venit luna aceasta", valoare: "\(s.venitLunaCurenta) RON", simbol: "banknote")
-                        Kpi(titlu: "Grad de ocupare", valoare: "\(s.gradOcupare)%", simbol: "chart.pie")
-                        Kpi(titlu: "Rezervări", valoare: "\(s.totalRezervari)", simbol: "calendar")
-                        Kpi(titlu: "În așteptare", valoare: "\(s.inAsteptare)", simbol: "clock.badge.exclamationmark")
-                    }
-
-                    if !s.oreDeVarf.isEmpty {
-                        Sectiune("Cele mai cerute ore") {
-                            VStack(spacing: 8) {
-                                ForEach(s.oreDeVarf) { ora in
-                                    HStack {
-                                        Text(String(format: "%02d:00", ora.ora))
-                                            .font(.subheadline.monospaced())
-                                        GeometryReader { geo in
-                                            let maxim = s.oreDeVarf.map(\.rezervari).max() ?? 1
-                                            Capsule()
-                                                .fill(Tema.accent.opacity(0.7))
-                                                .frame(
-                                                    width: geo.size.width
-                                                        * CGFloat(ora.rezervari) / CGFloat(maxim)
-                                                )
-                                        }
-                                        .frame(height: 10)
-                                        Text("\(ora.rezervari)")
-                                            .font(.caption).foregroundStyle(.secondary)
-                                            .frame(width: 22, alignment: .trailing)
-                                    }
-                                }
-                            }
-                        }
-                    }
-
-                    if !s.terenuri.isEmpty {
-                        Sectiune("Terenurile tale") {
-                            VStack(spacing: 8) {
-                                ForEach(s.terenuri) { teren in
-                                    HStack {
-                                        Circle()
-                                            .fill(teren.activ ? Color.green : Color.secondary)
-                                            .frame(width: 7, height: 7)
-                                        Text(teren.nume).font(.subheadline)
-                                        Spacer()
-                                        Text("\(teren.rezervari) rezervări")
-                                            .font(.caption).foregroundStyle(.secondary)
-                                    }
-                                }
-                            }
-                        }
+                    if seIncarca {
+                        ForEach(0..<2, id: \.self) { _ in ScheletFisa(inaltime: 120) }
+                    } else if let s = statistici {
+                        sectiuni(s)
                     }
                 }
-                .padding()
+                .padding(.horizontal)
+                .padding(.bottom, 24)
             }
         }
-        }
+        .safeAreaInset(edge: .top, spacing: 14) { antet }
         .navigationTitle("Privire de ansamblu")
+        .navigationBarTitleDisplayMode(.inline)
+        .faraTitluSus()
         .refreshable { await incarca() }
         .task { await incarca() }
     }
 
+    /// Banda verde: cifra lunii mare, ca un panou de bord, și trei casete sub ea.
+    private var antet: some View {
+        VStack(alignment: .leading, spacing: 18) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Panou · \(Date().formatted(.dateTime.month(.wide).locale(.aplicatie)).capitalized)")
+                    .font(.footnote.weight(.medium))
+                    .opacity(0.6)
+                Text("Venit luna aceasta")
+                    .font(.system(size: 20, weight: .regular, design: .serif).italic())
+                    .opacity(0.7)
+                    .padding(.top, 6)
+                Group {
+                    if let s = statistici {
+                        (Text(s.venitLunaCurenta.formatted(.number.locale(.aplicatie))) + Text(" RON").font(.title3.weight(.medium)).foregroundStyle(Tema.creta.opacity(0.6)))
+                            .contentTransition(.numericText())
+                    } else {
+                        Text("—")
+                    }
+                }
+                .font(.system(size: 44, weight: .semibold).monospacedDigit())
+                .tracking(-1)
+            }
+            .padding(.horizontal, 20)
+
+            HStack(spacing: 10) {
+                caseta("Ocupare", statistici.map { "\($0.gradOcupare)%" } ?? "—", simbol: "chart.pie.fill")
+                caseta("Rezervări", statistici.map { "\($0.totalRezervari)" } ?? "—", simbol: "calendar")
+                caseta(
+                    "De confirmat", statistici.map { "\($0.inAsteptare)" } ?? "—", simbol: "clock.badge.exclamationmark",
+                    atentie: (statistici?.inAsteptare ?? 0) > 0
+                )
+            }
+            .padding(.horizontal, 16)
+        }
+        .foregroundStyle(Tema.creta)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.top, 2)
+        .padding(.bottom, 22)
+        .background { FundalVerde() }
+    }
+
+    private func caseta(_ titlu: String, _ valoare: String, simbol: String, atentie: Bool = false) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Image(systemName: simbol)
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(atentie ? Tema.asteptare : Tema.accentDeschis)
+            Text(valoare).font(.title3.weight(.semibold).monospacedDigit())
+            Text(titlu).font(.caption2).opacity(0.65)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(12)
+        .background(.white.opacity(atentie ? 0.12 : 0.07), in: .rect(cornerRadius: 16, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .strokeBorder(atentie ? Tema.asteptare.opacity(0.5) : .white.opacity(0.1))
+        }
+    }
+
+    @ViewBuilder
+    private func sectiuni(_ s: Statistici) -> some View {
+        if !s.oreDeVarf.isEmpty {
+            Sectiune("Cele mai cerute ore") {
+                VStack(spacing: 10) {
+                    ForEach(s.oreDeVarf) { ora in
+                        HStack(spacing: 10) {
+                            Text(String(format: "%02d:00", ora.ora))
+                                .font(.subheadline.monospacedDigit())
+                                .frame(width: 48, alignment: .leading)
+                            GeometryReader { geo in
+                                let maxim = s.oreDeVarf.map(\.rezervari).max() ?? 1
+                                Capsule().fill(Color.primary.opacity(0.06))
+                                    .overlay(alignment: .leading) {
+                                        Capsule()
+                                            .fill(Tema.gradientAccent)
+                                            .frame(width: geo.size.width * CGFloat(ora.rezervari) / CGFloat(maxim))
+                                    }
+                            }
+                            .frame(height: 10)
+                            Text("\(ora.rezervari)")
+                                .font(.caption.monospacedDigit()).foregroundStyle(.secondary)
+                                .frame(width: 22, alignment: .trailing)
+                        }
+                    }
+                }
+            }
+        }
+
+        if !s.terenuri.isEmpty {
+            Sectiune("Terenurile tale") {
+                VStack(spacing: 0) {
+                    ForEach(Array(s.terenuri.enumerated()), id: \.element.id) { index, teren in
+                        if index > 0 { Divider() }
+                        HStack(spacing: 10) {
+                            Circle()
+                                .fill(teren.activ ? Tema.accent : Color.secondary)
+                                .frame(width: 8, height: 8)
+                            Text(teren.nume).font(.subheadline.weight(.medium))
+                            Spacer()
+                            Text("\(teren.rezervari) rezervări")
+                                .font(.caption).foregroundStyle(.secondary)
+                        }
+                        .padding(.vertical, 10)
+                    }
+                }
+            }
+        }
+    }
+
     private func incarca() async {
-        statistici = try? await ApiClient.shared.cere("business/statistici", ca: Statistici.self)
+        let noi = try? await ApiClient.shared.cere("business/statistici", ca: Statistici.self)
+        withAnimation(.smooth) { statistici = noi }
         seIncarca = false
     }
 }

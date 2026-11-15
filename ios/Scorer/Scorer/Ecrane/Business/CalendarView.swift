@@ -53,14 +53,12 @@ struct CalendarView: View {
                 )
             } else {
                 VStack(spacing: 0) {
-                    if terenuri.count > 1 { selectorTeren }
-                    comutatorMod
+                    antetVerde
                     legenda
+                        .padding(.top, 12)
                     if mod == .zi {
-                        selectorZile
                         agendaZilei
                     } else {
-                        navigatorSaptamana
                         antetZile
                         grila
                     }
@@ -71,6 +69,7 @@ struct CalendarView: View {
         }
         .navigationTitle("Calendar")
         .navigationBarTitleDisplayMode(.inline)
+        .faraTitluSus()
         .task {
             await incarca()
             #if DEBUG
@@ -128,6 +127,45 @@ struct CalendarView: View {
 
     // MARK: - Antet
 
+    /// Banda verde de sus: ziua aleasă ca titlu, terenul, modul și zilele, ca
+    /// restul aplicației. Calendarul propriu-zis rămâne dedesubt, pe alb.
+    private var antetVerde: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text(terenAles.map { "Calendar · \($0.nume)" } ?? "Calendar")
+                    .font(.footnote.weight(.medium))
+                    .opacity(0.6)
+                    .lineLimit(1)
+                titluZi
+                    .tracking(-0.6)
+                    .contentTransition(.numericText())
+            }
+            .padding(.horizontal, 18)
+
+            if terenuri.count > 1 { selectorTeren }
+            comutatorMod
+            if mod == .zi { selectorZile } else { navigatorSaptamana }
+        }
+        .foregroundStyle(Tema.creta)
+        .padding(.top, 2)
+        .padding(.bottom, 16)
+        .background { FundalVerde() }
+    }
+
+    private var titluZi: Text {
+        if mod == .zi {
+            let azi = Calendar.current.isDateInToday(ziAleasa)
+            let zi = azi ? "Azi" : ziAleasa.formatted(.dateTime.weekday(.wide).locale(.aplicatie)).capitalized
+            return Text("\(zi), \(ziAleasa.numarZi)").font(.system(size: 30, weight: .semibold))
+                + Text(" " + ziAleasa.formatted(.dateTime.month(.wide).locale(.aplicatie)))
+                    .font(.system(size: 28, weight: .regular, design: .serif).italic())
+                    .foregroundStyle(Tema.creta.opacity(0.6))
+        }
+        return Text("Săptămâna").font(.system(size: 30, weight: .semibold))
+            + Text(" " + intervalSaptamana).font(.system(size: 24, weight: .regular, design: .serif).italic())
+                .foregroundStyle(Tema.creta.opacity(0.6))
+    }
+
     /// Sporturile pe care proprietarul chiar le are, in ordinea obisnuita.
     private var sporturiProprii: [Sport] {
         let existente = Set(terenuri.map(\.sport))
@@ -147,13 +185,14 @@ struct CalendarView: View {
             if sporturiProprii.count > 1 {
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 8) {
-                        PastilaFiltru(text: "Toate sporturile", activ: sportAles == nil) {
+                        PastilaFiltru(text: "Toate sporturile", activ: sportAles == nil, peVerde: true) {
                             alegeSport(nil)
                         }
                         ForEach(sporturiProprii, id: \.self) { sport in
                             PastilaFiltru(
                                 text: "\(sport.eticheta) (\(terenuri.filter { $0.sport == sport }.count))",
-                                activ: sportAles == sport
+                                activ: sportAles == sport,
+                                peVerde: true
                             ) { alegeSport(sport) }
                         }
                     }
@@ -165,7 +204,7 @@ struct CalendarView: View {
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 8) {
                         ForEach(terenuriFiltrate) { teren in
-                            PastilaFiltru(text: teren.nume, activ: terenAles?.id == teren.id) {
+                            PastilaFiltru(text: teren.nume, activ: terenAles?.id == teren.id, peVerde: true) {
                                 withAnimation(.snappy) { terenAles = teren }
                             }
                         }
@@ -174,7 +213,6 @@ struct CalendarView: View {
                 }
             }
         }
-        .padding(.bottom, 10)
     }
 
     /// La schimbarea sportului, terenul ales trebuie sa fie unul din sportul
@@ -190,12 +228,26 @@ struct CalendarView: View {
     }
 
     private var comutatorMod: some View {
-        Picker("Mod", selection: $mod.animation(.snappy)) {
-            ForEach(Mod.allCases, id: \.self) { Text($0.rawValue).tag($0) }
+        HStack(spacing: 4) {
+            ForEach(Mod.allCases, id: \.self) { m in
+                Button {
+                    withAnimation(.snappy) { mod = m }
+                } label: {
+                    Text(m.rawValue)
+                        .font(.footnote.weight(.semibold))
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 8)
+                        .background(mod == m ? Tema.creta : .clear, in: .capsule)
+                        .foregroundStyle(mod == m ? Color(red: 0.043, green: 0.165, blue: 0.11) : Tema.creta.opacity(0.7))
+                }
+                .buttonStyle(.plain)
+            }
         }
-        .pickerStyle(.segmented)
+        .padding(4)
+        .background(.white.opacity(0.08), in: .capsule)
+        .overlay { Capsule().strokeBorder(.white.opacity(0.12)) }
         .padding(.horizontal, 14)
-        .padding(.bottom, 10)
+        .sensoryFeedback(.selection, trigger: mod)
     }
 
     private var navigatorSaptamana: some View {
@@ -210,7 +262,8 @@ struct CalendarView: View {
                     Button("Săptămâna curentă") {
                         withAnimation(.snappy) { inceputSaptamana = Self.startulSaptamanii(Date()) }
                     }
-                    .font(.caption2)
+                    .font(.caption2.weight(.semibold))
+                    .foregroundStyle(Tema.accentDeschis)
                 }
             }
             Spacer()
@@ -218,8 +271,8 @@ struct CalendarView: View {
                 Image(systemName: "chevron.right").frame(width: 32, height: 30)
             }
         }
+        .foregroundStyle(Tema.creta)
         .padding(.horizontal, 14)
-        .padding(.bottom, 6)
     }
 
     /// Ce înseamnă fiecare culoare din calendar. Fără rândul ăsta, verdele,
@@ -441,23 +494,25 @@ struct CalendarView: View {
                             HStack(spacing: 2) {
                                 ForEach(0..<3, id: \.self) { index in
                                     Circle()
-                                        .fill(index < cate ? (aleasa ? Color.white : Tema.accent) : .clear)
+                                        .fill(index < cate ? (aleasa ? Tema.accent : Tema.accentDeschis) : .clear)
                                         .frame(width: 4, height: 4)
                                 }
                             }
                         }
                         .frame(width: 54, height: 70)
-                        .background {
-                            if aleasa { Tema.gradientAccent } else { Tema.fisa }
-                        }
-                        .foregroundStyle(aleasa ? .white : .primary)
+                        .background(aleasa ? Tema.creta : .white.opacity(0.07))
+                        .foregroundStyle(aleasa ? Color(red: 0.043, green: 0.165, blue: 0.11) : Tema.creta)
                         .clipShape(.rect(cornerRadius: 14, style: .continuous))
+                        .overlay {
+                            if !aleasa {
+                                RoundedRectangle(cornerRadius: 14, style: .continuous).strokeBorder(.white.opacity(0.1))
+                            }
+                        }
                     }
                     .apasabil()
                 }
             }
             .padding(.horizontal, 14)
-            .padding(.bottom, 4)
         }
     }
 

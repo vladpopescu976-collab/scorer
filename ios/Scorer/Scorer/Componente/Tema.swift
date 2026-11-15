@@ -285,6 +285,8 @@ enum ZiApi {
 struct PastilaFiltru: View {
     let text: String
     let activ: Bool
+    /// Pe banda verde: activa e cremă cu text verde, restul sticlă transparentă.
+    var peVerde = false
     let actiune: () -> Void
 
     var body: some View {
@@ -292,10 +294,21 @@ struct PastilaFiltru: View {
             Text(text)
                 .font(.footnote.weight(.medium))
                 .padding(.horizontal, 12).padding(.vertical, 7)
-                .background(activ ? Tema.accent : Tema.fisa, in: .capsule)
-                .foregroundStyle(activ ? .white : .secondary)
+                .background(fundal, in: .capsule)
+                .overlay { if peVerde && !activ { Capsule().strokeBorder(.white.opacity(0.14)) } }
+                .foregroundStyle(culoareText)
         }
         .apasabil()
+    }
+
+    private var fundal: Color {
+        if peVerde { return activ ? Tema.creta : .white.opacity(0.08) }
+        return activ ? Tema.accent : Tema.fisa
+    }
+
+    private var culoareText: Color {
+        if peVerde { return activ ? Color(red: 0.043, green: 0.165, blue: 0.11) : Tema.creta.opacity(0.75) }
+        return activ ? .white : .secondary
     }
 }
 
