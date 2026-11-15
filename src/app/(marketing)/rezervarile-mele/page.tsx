@@ -40,7 +40,7 @@ export default async function MyBookingsPage() {
     <AntetPagina
       eticheta="Rezervări"
       titlu="Rezervările mele."
-      accent="Totul într-un loc."
+      accent="Toate aici."
       descriere="Urmărește cererile, mutările propuse și split the bill-urile tale."
     />
     <div className="mx-auto max-w-5xl px-4 py-10">

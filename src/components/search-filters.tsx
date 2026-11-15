@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { format } from "date-fns";
 import { ro } from "date-fns/locale";
-import { CalendarIcon, RotateCcw, SlidersHorizontal, X } from "lucide-react";
+import { CalendarIcon, RotateCcw, Search, SlidersHorizontal, X } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -22,7 +22,10 @@ export function SearchFilters({
   pretMax,
   data,
   dimensiune = "",
+  mod = "tot",
 }: {
+  /** „mobil”: doar bara de căutare (pe banda verde); „desktop”: doar coloana de filtre. */
+  mod?: "tot" | "mobil" | "desktop";
   sport: string;
   oras: string;
   pretMax: string;
@@ -53,6 +56,16 @@ export function SearchFilters({
 
   const selectedDate = data ? new Date(`${data}T00:00:00`) : undefined;
   const activeCount = [sport, oras, pretMax, data, dimensiune].filter(Boolean).length;
+  // Rândul mic din bara de căutare de pe mobil: ce e ales, pe scurt.
+  const rezumat =
+    [
+      sportOptions.find((o) => o.value === sport)?.label,
+      dimensiune && dimensiune.split(",").join(", "),
+      data && format(new Date(`${data}T12:00:00`), "d MMM", { locale: ro }),
+      pretMax && `sub ${pretMax} RON`,
+    ]
+      .filter(Boolean)
+      .join(" · ") || "Oriunde · oricând";
   // Dimensiunile depind de sport: „5+1” e fotbal, „3x3” e baschet.
   const formateSport = sport in FORMATE_PE_SPORT ? FORMATE_PE_SPORT[sport as keyof typeof FORMATE_PE_SPORT] : [];
   const dimensiuniAlese = dimensiune.split(",").map((cod) => cod.trim()).filter(Boolean);
@@ -224,24 +237,31 @@ export function SearchFilters({
 
   return (
     <>
-      {/* Mobil: buton care deschide filtrele */}
+      {/* Mobil: bara albă de căutare, ca în aplicație; deschide filtrele */}
+      {mod !== "desktop" && (
       <div className="lg:hidden">
-        <Button variant="outline" className="w-full" onClick={() => setMobileOpen(true)}>
-          <SlidersHorizontal className="h-4 w-4" />
-          Filtre
-          {activeCount > 0 && (
-            <span className="ml-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1 text-[11px] font-bold text-primary-foreground">
-              {activeCount}
-            </span>
-          )}
-        </Button>
+        <button
+          type="button"
+          onClick={() => setMobileOpen(true)}
+          className="flex w-full items-center gap-3 rounded-full bg-white py-2 pl-4 pr-2 text-left text-[#10231A] shadow-[0_10px_30px_-12px_rgba(0,0,0,0.5)] transition-transform active:scale-[0.98]"
+        >
+          <Search className="h-[18px] w-[18px] shrink-0 text-primary" />
+          <span className="min-w-0 flex-1 leading-tight">
+            <span className="block truncate text-[14.5px] font-semibold">{oras || "Caută un teren"}</span>
+            <span className="block truncate text-[12px] text-[#10231a]/55">{rezumat}</span>
+          </span>
+          <span className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#F2F2F4]">
+            <SlidersHorizontal className="h-4 w-4" />
+            {activeCount > 0 && <span className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full bg-primary ring-2 ring-white" />}
+          </span>
+        </button>
 
         {mobileOpen && (
           <div className="fixed inset-0 z-50 flex" onClick={() => setMobileOpen(false)}>
             <div className="absolute inset-0 bg-black/30" />
             <div
               onClick={(e) => e.stopPropagation()}
-              className="relative ml-auto flex h-full w-[85%] max-w-sm flex-col overflow-y-auto bg-background p-5 shadow-xl"
+              className="relative ml-auto flex h-full w-[85%] max-w-sm flex-col overflow-y-auto bg-background p-5 text-foreground shadow-xl"
             >
               <div className="mb-5 flex items-center justify-between">
                 <p className="font-heading text-base font-semibold">Filtre</p>
@@ -262,8 +282,10 @@ export function SearchFilters({
           </div>
         )}
       </div>
+      )}
 
       {/* Desktop: sidebar fix */}
+      {mod !== "mobil" && (
       <aside
         className={cn(
           "hidden lg:block lg:sticky lg:top-24 lg:h-fit",
@@ -275,6 +297,7 @@ export function SearchFilters({
           {panel}
         </div>
       </aside>
+      )}
     </>
   );
 }

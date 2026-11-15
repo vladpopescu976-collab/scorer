@@ -67,7 +67,9 @@ export function Navbar() {
 
   // Pe prima pagină, sus, bara stă transparent peste partea verde și face
   // corp comun cu ea; la derulare devine albă, ca pe celelalte pagini.
-  const peHero = pathname === "/" && !scrolled && !mobileOpen;
+  // La fel pe paginile cu banda verde sus (ca în aplicație): bara stă peste ea.
+  const paginiVerzi = ["/", "/cauta-terenuri", "/gaseste-meci", ...(session?.user ? ["/favorite", "/rezervarile-mele"] : [])];
+  const peHero = paginiVerzi.includes(pathname) && !scrolled && !mobileOpen;
 
   useEffect(() => {
     if (!isPersonal) return;

@@ -6,7 +6,7 @@ import type { Prisma, SportType } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { Skeleton } from "@/components/ui/skeleton";
 import { FieldCard } from "@/components/field-card";
-import { AntetPagina, StareGoala } from "@/components/antet-pagina";
+import { AntetPagina, CategoriiSport, StareGoala } from "@/components/antet-pagina";
 import { SearchFilters } from "@/components/search-filters";
 import { sportMeta } from "@/lib/sports";
 import { dayRangeInAppZone } from "@/lib/datetime";
@@ -166,11 +166,21 @@ export default async function CautaTerenuriPage({
       titlu="Caută terenuri."
       accent="Joacă azi."
       descriere="Filtrează după sport, dimensiune, oraș, preț și ziua în care vrei să joci."
-    />
+    >
+      <div className="mb-7 lg:hidden">
+        <SearchFilters mod="mobil" sport={sport} oras={oras} pretMax={pretMax} data={data} dimensiune={dimensiune} />
+      </div>
+      <CategoriiSport
+        cale="/cauta-terenuri"
+        activ={isSportType(sport) ? sport : ""}
+        parametri={{ sport, oras, pretMax, data, dimensiune }}
+        sporturi={Object.entries(sportMeta).map(([value, m]) => ({ value, label: m.label, icon: m.icon }))}
+      />
+    </AntetPagina>
     <div className="mx-auto w-full max-w-6xl px-4 py-10 sm:px-6 lg:px-8">
 
       <div className="grid gap-6 lg:grid-cols-[260px_1fr] lg:gap-10">
-        <SearchFilters sport={sport} oras={oras} pretMax={pretMax} data={data} dimensiune={dimensiune} />
+        <SearchFilters mod="desktop" sport={sport} oras={oras} pretMax={pretMax} data={data} dimensiune={dimensiune} />
 
         <div className="min-w-0">
           <Suspense key={`${sport}|${oras}|${pretMax}|${data}|${dimensiune}`} fallback={<ResultsSkeleton />}>
