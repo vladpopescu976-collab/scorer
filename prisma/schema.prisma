@@ -465,6 +465,9 @@ model JucatorMeci {
   userId String
   user   User   @relation("MeciuriJucator", fields: [userId], references: [id], onDelete: Cascade)
 
+  /// Telefonul dat la alăturare (obligatoriu): organizatorul îl sună dacă nu vine.
+  telefon String?
+
   createdAt DateTime @default(now())
 
   @@id([anuntId, userId])

@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { ActionError } from "@/lib/actions/result";
 import { ORASE_ROMANIA, cheieOras, normalizeazaOras } from "@/lib/orase";
 import { esteFormatValid } from "@/lib/formate-teren";
+import { phoneSchema } from "@/lib/validations/field";
 import { after } from "next/server";
 import { trimiteNotificare } from "@/lib/push";
 
@@ -65,14 +66,15 @@ export type MeciPublic = {
   telefonOrganizator: string | null;
   esteAlMeu: boolean;
   mAmAlaturat: boolean;
-  jucatori: { id: string; nume: string; poza: string | null }[];
+  /** Telefonul fiecăruia se vede doar de organizator, ca să-l poată suna. */
+  jucatori: { id: string; nume: string; poza: string | null; telefon: string | null }[];
 };
 
 const includeMeci = {
   autor: { select: { id: true, name: true, image: true, phone: true } },
   jucatori: {
     orderBy: { createdAt: "asc" },
-    include: { user: { select: { id: true, name: true, image: true } } },
+    include: { user: { select: { id: true, name: true, image: true, phone: true } } },
   },
 } satisfies Prisma.AnuntMeciInclude;
 
@@ -96,7 +98,12 @@ function serializeaza(m: MeciCuDetalii, vizitatorId: string | null): MeciPublic 
     telefonOrganizator: mAmAlaturat && m.arataTelefon ? m.autor.phone : null,
     esteAlMeu: esteAlMeu,
     mAmAlaturat,
-    jucatori: m.jucatori.map((j) => ({ id: j.user.id, nume: j.user.name, poza: j.user.image })),
+    jucatori: m.jucatori.map((j) => ({
+      id: j.user.id,
+      nume: j.user.name,
+      poza: j.user.image,
+      telefon: esteAlMeu ? (j.telefon ?? j.user.phone) : null,
+    })),
   };
 }
 
@@ -139,7 +146,19 @@ export async function creeazaMeci(autorId: string, input: AnuntInput): Promise<M
   return serializeaza(creat, autorId);
 }
 
-export async function alaturaMeci(anuntId: string, userId: string): Promise<MeciPublic> {
+/**
+ * Alăturarea cere telefonul: organizatorul trebuie să-l poată suna dacă jucătorul
+ * nu apare, ca să nu rămână echipa cu un om lipsă.
+ */
+export async function alaturaMeci(anuntId: string, userId: string, telefonDat?: string | null): Promise<MeciPublic> {
+  const user = await prisma.user.findUnique({ where: { id: userId }, select: { phone: true } });
+  const telefonText = telefonDat?.trim() || user?.phone?.trim() || "";
+  const verificat = phoneSchema.safeParse(telefonText);
+  if (!verificat.success) {
+    throw new ActionError(telefonText ? "Numărul de telefon nu pare valid." : "Ca să te alături, lasă un număr de telefon.");
+  }
+  const telefon = verificat.data;
+
   return prisma.$transaction(async (tx) => {
     // Blocăm anunțul cât numărăm, ca două alăturări simultane să nu treacă de limită.
     await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${anuntId}))`;
@@ -150,7 +169,7 @@ export async function alaturaMeci(anuntId: string, userId: string): Promise<Meci
     if (anunt.jucatori.some((j) => j.userId === userId)) return serializeaza(anunt, userId);
     if (anunt.jucatori.length >= anunt.jucatoriNecesari) throw new ActionError("S-au strâns deja toți jucătorii.");
 
-    await tx.jucatorMeci.create({ data: { anuntId, userId } });
+    await tx.jucatorMeci.create({ data: { anuntId, userId, telefon } });
     const actual = await tx.anuntMeci.findUniqueOrThrow({ where: { id: anuntId }, include: includeMeci });
     const nou = actual.jucatori.find((j) => j.userId === userId)?.user.name ?? "Cineva";
     const ramase = actual.jucatoriNecesari - actual.jucatori.length;
@@ -248,4 +267,17 @@ export async function cautaJucatori(filtre: {
 
 export async function seteazaVizibilitate(userId: string, vizibil: boolean) {
   await prisma.user.update({ where: { id: userId }, data: { vizibilInCautare: vizibil } });
+}
+
+/** Organizatorul scoate un jucător din meci; locul se eliberează pentru altcineva. */
+export async function scoateJucator(anuntId: string, organizatorId: string, jucatorId: string) {
+  const anunt = await prisma.anuntMeci.findUnique({ where: { id: anuntId }, select: { autorId: true, inceput: true } });
+  if (!anunt || anunt.autorId !== organizatorId) throw new ActionError("Doar organizatorul poate scoate jucători.");
+  const sters = await prisma.jucatorMeci.deleteMany({ where: { anuntId, userId: jucatorId } });
+  if (sters.count > 0) {
+    anuntaPeTelefon(jucatorId, {
+      titlu: "Ai fost scos din meci",
+      text: `Organizatorul te-a scos din meciul din ${ziSiOra(anunt.inceput)}`,
+    });
+  }
 }

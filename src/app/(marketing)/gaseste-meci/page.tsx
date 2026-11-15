@@ -34,7 +34,7 @@ export default async function GasesteMeciPage({
   const [meciuri, jucatori, eu] = await Promise.all([
     cautaEchipa ? Promise.resolve([]) : listaMeciuri({ oras, sport }, userId),
     cautaEchipa ? listaJucatoriLiberi({ oras, sport }, userId) : Promise.resolve([]),
-    userId ? prisma.user.findUnique({ where: { id: userId }, select: { city: true } }) : null,
+    userId ? prisma.user.findUnique({ where: { id: userId }, select: { city: true, phone: true } }) : null,
   ]);
 
   return (
@@ -137,7 +137,7 @@ export default async function GasesteMeciPage({
             ) : (
               <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
                 {meciuri.map((m) => (
-                  <CardMeci key={m.id} meci={m} conectat={estePersonal} />
+                  <CardMeci key={m.id} meci={m} conectat={estePersonal} telefonCont={eu?.phone ?? ""} />
                 ))}
               </div>
             )}

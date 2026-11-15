@@ -1,13 +1,13 @@
 "use client";
 
-import { useTransition } from "react";
+import { useState, useTransition } from "react";
 import Link from "next/link";
-import { CalendarClock, MapPin, Phone, Users } from "lucide-react";
+import { CalendarClock, MapPin, Phone, UserMinus, Users } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { AvatarCont } from "@/components/cont/poza-profil";
-import { alaturaMeciAction, parasesteMeciAction, stergeMeciAction } from "@/lib/actions/meciuri";
+import { alaturaMeciAction, parasesteMeciAction, scoateJucatorAction, stergeMeciAction } from "@/lib/actions/meciuri";
 import { sportMeta } from "@/lib/sports";
 import type { MeciPublic } from "@/lib/meciuri";
 import { cn } from "@/lib/utils";
@@ -30,8 +30,11 @@ function cand(iso: string) {
   });
 }
 
-export function CardMeci({ meci, conectat }: { meci: MeciPublic; conectat: boolean }) {
+export function CardMeci({ meci, conectat, telefonCont = "" }: { meci: MeciPublic; conectat: boolean; telefonCont?: string }) {
   const [seLucreaza, startTransition] = useTransition();
+  // Alăturarea cere telefonul: organizatorul te sună dacă nu apari.
+  const [cereTelefon, setCereTelefon] = useState(false);
+  const [telefon, setTelefon] = useState(telefonCont);
   const SportIcon = sportMeta[meci.sport].icon;
   const ramase = Math.max(0, meci.jucatoriNecesari - meci.jucatoriAlaturati);
   const complet = ramase === 0;
@@ -126,13 +129,74 @@ export function CardMeci({ meci, conectat }: { meci: MeciPublic; conectat: boole
             size="sm"
             className="rounded-full bg-[#0E6B3A] hover:bg-[#0B5A30]"
             disabled={seLucreaza || complet}
-            onClick={() => ruleaza(() => alaturaMeciAction(meci.id), "Te-ai alăturat meciului!")}
+            onClick={() => setCereTelefon(true)}
           >
             <Users className="h-4 w-4" />
             {complet ? "Complet" : "Mă alătur"}
           </Button>
         )}
       </div>
+
+      {cereTelefon && !meci.mAmAlaturat && (
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            ruleaza(() => alaturaMeciAction(meci.id, telefon), "Te-ai alăturat meciului!");
+            setCereTelefon(false);
+          }}
+          className="mt-4 space-y-2 rounded-2xl bg-muted/60 p-3"
+        >
+          <label className="text-[13px] font-medium" htmlFor={`tel-${meci.id}`}>
+            Numărul tău de telefon (obligatoriu)
+          </label>
+          <input
+            id={`tel-${meci.id}`}
+            type="tel"
+            required
+            value={telefon}
+            onChange={(e) => setTelefon(e.target.value)}
+            placeholder="07xx xxx xxx"
+            className="h-10 w-full rounded-xl border bg-background px-3 text-[14px] outline-none focus:border-primary"
+          />
+          <p className="text-[12px] text-muted-foreground">Îl vede doar organizatorul, ca să te poată suna dacă nu ajungi.</p>
+          <Button type="submit" size="sm" className="w-full rounded-full bg-[#0E6B3A] hover:bg-[#0B5A30]" disabled={seLucreaza || !telefon.trim()}>
+            Confirm, vin la meci
+          </Button>
+        </form>
+      )}
+
+      {meci.esteAlMeu && meci.jucatori.length > 0 && (
+        <div className="mt-4 space-y-2 rounded-2xl bg-primary/5 p-3">
+          <p className="text-[12px] font-semibold uppercase tracking-[0.1em] text-primary">Cine vine</p>
+          {meci.jucatori.map((j) => (
+            <div key={j.id} className="flex items-center gap-2.5">
+              <AvatarCont nume={j.nume} poza={j.poza} className="h-8 w-8" textClassName="text-[11px]" />
+              <div className="min-w-0 flex-1 leading-tight">
+                <p className="truncate text-[13.5px] font-medium">{j.nume}</p>
+                {j.telefon && (
+                  <a href={`tel:${j.telefon.replace(/\s/g, "")}`} className="flex items-center gap-1 text-[12.5px] text-primary">
+                    <Phone className="h-3 w-3" />
+                    {j.telefon}
+                  </a>
+                )}
+              </div>
+              <button
+                type="button"
+                disabled={seLucreaza}
+                onClick={() => {
+                  if (confirm(`Îl scoți pe ${j.nume} din meci? Locul se eliberează pentru altcineva.`)) {
+                    ruleaza(() => scoateJucatorAction(meci.id, j.id), `${j.nume} a fost scos din meci.`);
+                  }
+                }}
+                className="flex items-center gap-1 rounded-lg px-2 py-1 text-[12.5px] font-medium text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+              >
+                <UserMinus className="h-3.5 w-3.5" />
+                Scoate
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
 
       {meci.telefonOrganizator && (
         <a

@@ -18,6 +18,9 @@ struct MeciuriView: View {
     @State private var arataAnuntJucator = false
     @State private var deInvitat: AnuntJucator?
     @State private var mesajInvitatie = ""
+    /// Meciul la care vrei să te alături: întâi cerem telefonul.
+    @State private var deAlaturat: Meci?
+    @State private var telefonAlaturare = ""
     @State private var oras = ""
     @State private var sport: Sport?
     @State private var seIncarca = true
@@ -63,6 +66,14 @@ struct MeciuriView: View {
             Button("Renunță", role: .cancel) {}
         } message: {
             Text("\(deInvitat?.jucator.nume ?? "") primește o notificare și vă vedeți telefoanele.")
+        }
+        .alert("Numărul tău de telefon", isPresented: .init(get: { deAlaturat != nil }, set: { if !$0 { deAlaturat = nil } })) {
+            TextField("07xx xxx xxx", text: $telefonAlaturare)
+                .keyboardType(.phonePad)
+            Button("Vin la meci") { if let m = deAlaturat { actiune(m, "alatura") } }
+            Button("Renunță", role: .cancel) {}
+        } message: {
+            Text("E obligatoriu. Îl vede doar organizatorul, ca să te poată suna dacă nu ajungi.")
         }
         .onChange(of: sectiune) { Task { await incarca() } }
         .onChange(of: oras) { Task { await incarca() } }
@@ -414,6 +425,32 @@ struct MeciuriView: View {
                 butonActiune(meci)
             }
 
+            if meci.esteAlMeu && !meci.jucatori.isEmpty {
+                VStack(alignment: .leading, spacing: 10) {
+                    Text("CINE VINE").font(.caption.weight(.bold)).tracking(0.8).foregroundStyle(Tema.accent)
+                    ForEach(meci.jucatori) { j in
+                        HStack(spacing: 10) {
+                            AvatarPersoana(nume: j.nume, poza: j.poza, marime: 32)
+                            VStack(alignment: .leading, spacing: 1) {
+                                Text(j.nume).font(.subheadline.weight(.medium))
+                                if let t = j.telefon, let url = URL(string: "tel:\(t.filter { $0.isNumber || $0 == "+" })") {
+                                    Link(destination: url) {
+                                        Label(t, systemImage: "phone.fill").font(.caption.weight(.semibold))
+                                    }
+                                }
+                            }
+                            Spacer()
+                            Button(role: .destructive) { scoate(j, din: meci) } label: {
+                                Label("Scoate", systemImage: "person.fill.xmark").font(.caption.weight(.semibold))
+                            }
+                            .buttonStyle(.borderless)
+                        }
+                    }
+                }
+                .padding(12)
+                .background(Tema.accent.opacity(0.06), in: .rect(cornerRadius: 14, style: .continuous))
+            }
+
             if let telefon = meci.telefonOrganizator,
                let url = URL(string: "tel:\(telefon.filter { $0.isNumber || $0 == "+" })") {
                 Link(destination: url) {
@@ -448,7 +485,10 @@ struct MeciuriView: View {
                 .disabled(ocupat)
         } else {
             Button {
-                if estePersonal { actiune(meci, "alatura") } else { arataAutentificarea = true }
+                if estePersonal {
+                    telefonAlaturare = sesiune.utilizator?.telefon ?? ""
+                    deAlaturat = meci
+                } else { arataAutentificarea = true }
             } label: {
                 Group {
                     if ocupat { ProgressView().tint(.white) } else { Text(meci.ramase == 0 ? "Complet" : "Mă alătur") }
@@ -483,6 +523,18 @@ struct MeciuriView: View {
             }
         } catch {
             eroare = error.localizedDescription
+        }
+    }
+
+    /// Organizatorul scoate un jucător; locul se eliberează pentru altcineva.
+    private func scoate(_ j: PersoanaScurta, din meci: Meci) {
+        Task {
+            do {
+                try await ApiClient.shared.cereFaraRaspuns("meciuri/\(meci.id)/jucatori/\(j.id)", metoda: "DELETE")
+                await incarca()
+            } catch {
+                eroare = error.localizedDescription
+            }
         }
     }
 
@@ -528,7 +580,11 @@ struct MeciuriView: View {
             do {
                 switch tip {
                 case "alatura":
-                    let actualizat = try await ApiClient.shared.cere("meciuri/\(meci.id)/alaturare", metoda: "POST", ca: Meci.self)
+                    struct Corp: Encodable { let telefon: String }
+                    let actualizat = try await ApiClient.shared.cere(
+                        "meciuri/\(meci.id)/alaturare", metoda: "POST",
+                        corp: Corp(telefon: telefonAlaturare), ca: Meci.self
+                    )
                     if let i = meciuri.firstIndex(where: { $0.id == meci.id }) {
                         withAnimation(.smooth) { meciuri[i] = actualizat }
                     }

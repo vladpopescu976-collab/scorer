@@ -1,3 +1,5 @@
+import { z } from "zod";
+
 import { cerePersonal, eroareNeasteptata, raspuns } from "@/lib/api/raspuns";
 import { alaturaMeci, parasesteMeci } from "@/lib/meciuri";
 
@@ -7,7 +9,8 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   try {
     const { eroare: refuz, sesiune } = await cerePersonal(request);
     if (refuz) return refuz;
-    return raspuns(await alaturaMeci((await params).id, sesiune.userId));
+    const { telefon } = z.object({ telefon: z.string().optional() }).parse(await request.json().catch(() => ({})));
+    return raspuns(await alaturaMeci((await params).id, sesiune.userId, telefon));
   } catch (error) {
     return eroareNeasteptata("alatura-meci", error);
   }

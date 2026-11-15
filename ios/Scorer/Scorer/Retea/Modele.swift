@@ -172,6 +172,8 @@ struct PersoanaScurta: Codable, Identifiable, Sendable, Hashable {
     let id: String
     let nume: String
     let poza: String?
+    /// Doar pentru organizator: telefonul jucătorului care vine.
+    var telefon: String?
 }
 
 /// Un anunț din „Găsește meci”: cineva mai caută jucători.

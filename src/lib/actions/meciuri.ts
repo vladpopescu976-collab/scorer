@@ -9,6 +9,7 @@ import {
   alaturaMeci,
   creeazaMeci,
   parasesteMeci,
+  scoateJucator,
   seteazaVizibilitate,
   stergeMeci,
 } from "@/lib/meciuri";
@@ -37,9 +38,9 @@ export async function posteazaMeci(input: AnuntInput): Promise<ActionResult> {
   }
 }
 
-export async function alaturaMeciAction(id: string): Promise<ActionResult> {
+export async function alaturaMeciAction(id: string, telefon?: string): Promise<ActionResult> {
   try {
-    await alaturaMeci(id, await cerePersonal());
+    await alaturaMeci(id, await cerePersonal(), telefon);
     revalidatePath("/gaseste-meci");
     return ok();
   } catch (error) {
@@ -114,5 +115,15 @@ export async function seteazaInvitatiiAction(id: string, deschis: boolean): Prom
     return ok();
   } catch (error) {
     return toActionError("seteazaInvitatii", error);
+  }
+}
+
+export async function scoateJucatorAction(id: string, jucatorId: string): Promise<ActionResult> {
+  try {
+    await scoateJucator(id, await cerePersonal(), jucatorId);
+    revalidatePath("/gaseste-meci");
+    return ok();
+  } catch (error) {
+    return toActionError("scoateJucator", error);
   }
 }
