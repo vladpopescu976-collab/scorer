@@ -31,6 +31,9 @@ struct RezervaView: View {
     @State private var applePay = ApplePay()
     /// Split the bill creat după rezervare: arătăm imediat linkul de trimis.
     @State private var impartireCreata: Impartire?
+    /// Ora „posibil disponibilă” apăsată: întrebăm dacă vrea să fie anunțat.
+    @State private var dePandit: Interval?
+    @State private var alertaTrimisa = false
 
     private var esteMutare: Bool { rezervareExistenta != nil }
     private var ore: [Int] { Array(teren.oraDeschidere..<teren.oraInchidere) }
@@ -64,11 +67,28 @@ struct RezervaView: View {
                 laApplePay: { platesteCuApplePay() },
                 laTeren: { alegePlata = false; trimite() },
                 laImpartire: { parti in platesteCuApplePay(parti: parti) },
-                laTest: { parti in alegePlata = false; trimite(parti: parti) }
+                laTest: { parti in alegePlata = false; trimite(parti: parti) },
+                inceput: oraStart.flatMap { Calendar.current.date(bySettingHour: $0, minute: 0, second: 0, of: zi) }
             )
         }
         .sheet(item: $impartireCreata, onDismiss: { laFinal(); inchide() }) { imp in
             NavigationStack { ImpartireView(cod: imp.cod, initiala: imp) }
+        }
+        .confirmationDialog(
+            "Posibil disponibil",
+            isPresented: .init(get: { dePandit != nil }, set: { if !$0 { dePandit = nil } }),
+            titleVisibility: .visible,
+            presenting: dePandit
+        ) { p in
+            Button("Anunță-mă dacă se eliberează") { cereAlerta(p) }
+            Button("Renunță", role: .cancel) {}
+        } message: { p in
+            Text("Se strâng banii pentru un split the bill până la \(p.posibilPana?.oraScurta ?? ""). Dacă nu se strâng, ora se eliberează și primești notificare.")
+        }
+        .alert("Te anunțăm", isPresented: $alertaTrimisa) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text("Primești notificare dacă ora se eliberează.")
         }
         .navigationTitle(esteMutare ? "Modifică rezervarea" : "Rezervă")
         .navigationBarTitleDisplayMode(.inline)
@@ -495,14 +515,39 @@ struct RezervaView: View {
 
     // Orele alese arată la fel, indiferent dacă sunt prima, ultima sau la
     // mijloc: intervalul se citește din text, nu din nuanțe de verde.
-    enum StareOra { case libera, ocupata, aleasa, trecuta }
+    enum StareOra { case libera, ocupata, aleasa, trecuta, posibila }
 
     private func stareOra(_ ora: Int) -> StareOra {
         if let start = oraStart, let sfarsit = oraSfarsit, ora >= start, ora < sfarsit {
             return .aleasa
         }
         if aInceput(ora) { return .trecuta }
+        if posibilPentru(ora) != nil { return .posibila }
         return esteOcupata(ora) ? .ocupata : .libera
+    }
+
+    /// Intervalul ținut de un split the bill care încă strânge banii, dacă ora cade în el.
+    private func posibilPentru(_ ora: Int) -> Interval? {
+        let calendar = Calendar.current
+        guard
+            let inceput = calendar.date(bySettingHour: ora, minute: 0, second: 0, of: zi),
+            let sfarsit = calendar.date(byAdding: .hour, value: 1, to: inceput)
+        else { return nil }
+        return ocupate.first { $0.posibilPana != nil && $0.inceput < sfarsit && $0.sfarsit > inceput }
+    }
+
+    private func cereAlerta(_ p: Interval) {
+        struct Corp: Encodable { let inceput: Date; let sfarsit: Date }
+        Task {
+            do {
+                try await ApiClient.shared.cereFaraRaspuns(
+                    "terenuri/\(teren.id)/alerta", metoda: "POST", corp: Corp(inceput: p.inceput, sfarsit: p.sfarsit)
+                )
+                alertaTrimisa = true
+            } catch {
+                eroare = error.localizedDescription
+            }
+        }
     }
 
     /// Ora a început deja. Serverul refuză orice rezervare care pornește în
@@ -536,6 +581,10 @@ struct RezervaView: View {
     private func alegeOra(_ ora: Int) {
         let selectata = oraStart.map { ora >= $0 && ora < (oraSfarsit ?? $0 + 1) } ?? false
         if esteOcupata(ora) && !selectata {
+            if !aInceput(ora), let p = posibilPentru(ora), !esteMutare {
+                dePandit = p
+                return
+            }
             eroare = aInceput(ora)
                 ? "Ora \(format(ora)) a început deja. Alege o oră de mai târziu."
                 : "Intervalul \(format(ora))–\(format(ora + 1)) este deja ocupat. Alege altă oră."
@@ -773,6 +822,7 @@ private struct CelulaOra: View {
     private var subtitlu: String {
         switch stare {
         case .ocupata: "ocupat"
+        case .posibila: "posibil liber"
         case .aleasa: "ales"
         case .libera: "liber"
         case .trecuta: "trecut"
@@ -784,6 +834,7 @@ private struct CelulaOra: View {
         switch stare {
         case .aleasa: Tema.gradientAccent
         case .ocupata: Tema.ocupat.opacity(0.10)
+        case .posibila: Tema.asteptare.opacity(0.12)
         case .libera: Tema.fundal
         case .trecuta: Color.secondary.opacity(0.08)
         }
@@ -793,6 +844,7 @@ private struct CelulaOra: View {
         switch stare {
         case .aleasa: .white
         case .ocupata: Tema.ocupat.opacity(0.85)
+        case .posibila: Tema.asteptare
         case .libera: .primary
         case .trecuta: .secondary.opacity(0.6)
         }
@@ -801,6 +853,7 @@ private struct CelulaOra: View {
     private var contur: Color {
         switch stare {
         case .ocupata: Tema.ocupat.opacity(0.25)
+        case .posibila: Tema.asteptare.opacity(0.4)
         case .libera: .secondary.opacity(0.18)
         default: .clear
         }

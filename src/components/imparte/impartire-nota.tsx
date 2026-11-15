@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { CalendarClock, Check, Copy, Crown, MapPin, Send, ShieldCheck, Users } from "lucide-react";
+import { CalendarClock, Check, Copy, Crown, MapPin, Send, ShieldCheck, Timer, Users } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -27,6 +27,13 @@ function candAPlatit(iso: string) {
   if (min < 1) return "acum";
   if (min < 60) return `acum ${min} min`;
   return new Date(iso).toLocaleString("ro-RO", { timeZone: "Europe/Bucharest", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+}
+
+/** „5 h 20 min”, „12 min”. */
+function ramasText(ms: number) {
+  const min = Math.max(0, Math.ceil(ms / 60_000));
+  const h = Math.floor(min / 60);
+  return h > 0 ? `${h} h ${min % 60} min` : `${min} min`;
 }
 
 /** Inelul cu câți au plătit din câți. */
@@ -72,6 +79,25 @@ export function ImpartireNota({ date, conectat, estePersonal }: { date: Impartir
   const libere = Math.max(0, date.numarParti - date.platite);
   const complet = libere === 0;
   const procentBani = Math.min(100, (date.colectat / date.total) * 100);
+  // Ceasul pentru termen: se actualizează singur, iar la zero pagina se reîmprospătează.
+  const [acum, setAcum] = useState(() => Date.now());
+  const termenMs = new Date(date.termen).getTime();
+  const strange = date.stare === "STRANGE" && !date.inchisa;
+  useEffect(() => {
+    if (!strange) return;
+    const t = setInterval(() => {
+      const n = Date.now();
+      setAcum(n);
+      if (n >= termenMs) router.refresh();
+    }, 20_000);
+    return () => clearInterval(t);
+  }, [strange, termenMs, router]);
+  const termenOra = new Date(date.termen).toLocaleString("ro-RO", {
+    timeZone: "Europe/Bucharest",
+    weekday: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 
   async function trimiteLinkul() {
     const text = `Hai la meci! ${date.teren.nume}, ${cand(date.inceput, date.sfarsit)}. Partea ta: ${lei(date.sumaParte)} RON.`;
@@ -155,9 +181,30 @@ export function ImpartireNota({ date, conectat, estePersonal }: { date: Impartir
         </div>
       </motion.div>
 
+      {/* Termenul: cât mai e de strâns banii sau cum s-a terminat. */}
+      {strange ? (
+        <div className="mt-4 flex items-center gap-3 rounded-2xl border border-amber-500/30 bg-amber-500/[0.07] px-4 py-3">
+          <Timer className="h-5 w-5 shrink-0 text-amber-600" />
+          <p className="text-[13.5px] leading-snug">
+            <span className="font-semibold">Mai sunt {ramasText(termenMs - acum)}</span>{" "}
+            <span className="text-muted-foreground">
+              să se strângă banii (până {termenOra}). Dacă nu plătește toată lumea, rezervarea se anulează și banii se întorc.
+            </span>
+          </p>
+        </div>
+      ) : date.stare === "COMPLETA" ? (
+        <p className="mt-4 flex items-center justify-center gap-2 rounded-2xl bg-primary/10 px-4 py-3 text-[14px] font-semibold text-primary">
+          <Check className="h-4 w-4" /> Nota e plătită integral. Terenul e al vostru!
+        </p>
+      ) : null}
+
       {/* Acțiunea principală, după cine se uită. */}
       <div className="mt-5">
-        {date.inchisa ? (
+        {date.stare === "ESUATA" ? (
+          <p className="rounded-2xl bg-destructive/10 px-4 py-3.5 text-center text-[14px] font-medium text-destructive">
+            Nu s-au strâns banii la timp. Rezervarea a fost anulată, iar partea plătită se întoarce.
+          </p>
+        ) : date.inchisa ? (
           <p className="rounded-2xl bg-muted px-4 py-3.5 text-center text-[14px] text-muted-foreground">
             Rezervarea a fost anulată. Nu mai e nimic de plătit.
           </p>
@@ -181,9 +228,7 @@ export function ImpartireNota({ date, conectat, estePersonal }: { date: Impartir
             <Check className="h-4 w-4" />
             Ți-ai plătit partea. Ne vedem pe teren!
           </p>
-        ) : complet ? (
-          <p className="rounded-2xl bg-primary/10 px-4 py-3.5 text-center text-[14px] font-medium text-primary">Nota e plătită integral.</p>
-        ) : !conectat ? (
+        ) : complet ? null : !conectat ? (
           <Button
             className="h-12 w-full rounded-2xl bg-[#0E6B3A] text-[15px] hover:bg-[#0B5A30]"
             nativeButton={false}
@@ -207,7 +252,7 @@ export function ImpartireNota({ date, conectat, estePersonal }: { date: Impartir
             Plătește partea ta · {lei(date.sumaParte)} RON
           </Button>
         ) : (
-          <p className="rounded-2xl bg-muted px-4 py-3.5 text-center text-[14px] text-muted-foreground">Meciul a început deja.</p>
+          <p className="rounded-2xl bg-muted px-4 py-3.5 text-center text-[14px] text-muted-foreground">Timpul pentru strâns banii s-a terminat.</p>
         )}
       </div>
 

@@ -389,6 +389,8 @@ struct DetaliuTeren: Codable, Sendable {
 struct Interval: Codable, Sendable {
     let inceput: Date
     let sfarsit: Date
+    /// Ținut de un split the bill care încă strânge banii până atunci: „posibil disponibil”.
+    var posibilPana: Date?
 }
 
 struct Disponibilitate: Codable, Sendable {
@@ -470,6 +472,10 @@ struct Impartire: Codable, Identifiable, Sendable {
     let amPlatit: Bool
     let potPlati: Bool
     let inchisa: Bool
+    /// Până când se pot strânge banii.
+    let termen: Date
+    /// „STRANGE”, „COMPLETA” sau „ESUATA”.
+    let stare: String
 
     var id: String { cod }
     var cand: String {
@@ -482,6 +488,17 @@ struct Impartire: Codable, Identifiable, Sendable {
         let parteaMea = max(0, ((total - sumaParte * Double(parti - 1)) * 100).rounded() / 100)
         return (sumaParte, parteaMea)
     }
+
+    /// Câte ore sunt de strâns banii, după cât de devreme rezervi (ca pe server):
+    /// sub 12 ore nu se poate; 12–24: 1 oră; 24–36: 6 ore; de la 36: 12 ore.
+    static func oreDeStrans(oreInainte: Double) -> Int? {
+        if oreInainte < 12 { return nil }
+        if oreInainte < 24 { return 1 }
+        if oreInainte < 36 { return 6 }
+        return 12
+    }
+
+    static func textOre(_ ore: Int) -> String { ore == 1 ? "o oră" : "\(ore) ore" }
 
     /// 15 → „15”, 14.17 → „14,17”.
     static func lei(_ suma: Double) -> String {

@@ -13,7 +13,7 @@ import { statusLaCreare } from "@/lib/confirmare-automata";
 import { calculeazaPretul } from "@/lib/pret-rezervare";
 import { linieDeSalvat, optiuneDinTeren } from "@/lib/optiuni-teren";
 import { ActionError, fail, ok, toActionError, type ActionResult } from "@/lib/actions/result";
-import { platesteParte, pornesteImpartirea } from "@/lib/impartire-plata";
+import { cereAlerta, expiraImpartirile, platesteParte, pornesteImpartirea } from "@/lib/impartire-plata";
 
 // Statusurile care chiar ocupă terenul. Aceleași sunt folosite și de
 // constrângerea din baza de date (vezi migrarea prevent_booking_overlap).
@@ -200,9 +200,11 @@ const bookedSlotsSchema = z.object({
 
 export async function getBookedSlots(
   input: z.infer<typeof bookedSlotsSchema>
-): Promise<ActionResult<{ start: string; end: string }[]>> {
+): Promise<ActionResult<{ start: string; end: string; posibilPana?: string }[]>> {
   try {
     const data = bookedSlotsSchema.parse(input);
+    // Split the bill-urile expirate eliberează ora înainte s-o arătăm.
+    await expiraImpartirile();
     const dayStart = new Date(data.dayStart);
     const dayEnd = new Date(data.dayEnd);
 
@@ -217,7 +219,7 @@ export async function getBookedSlots(
           endTime: { gt: dayStart },
           ...(data.excludeBookingId ? { NOT: { id: data.excludeBookingId } } : {}),
         },
-        select: { startTime: true, endTime: true },
+        select: { startTime: true, endTime: true, impartire: { select: { stare: true, termen: true } } },
       }),
       prisma.blockedSlot.findMany({
         where: {
@@ -229,10 +231,23 @@ export async function getBookedSlots(
       }),
     ]);
 
+    // „Posibil disponibil”: ora e ținută de un split the bill care încă strânge banii.
+    const toate: { startTime: Date; endTime: Date; posibilPana?: Date }[] = [
+      ...bookings.map((b) => ({
+        startTime: b.startTime,
+        endTime: b.endTime,
+        posibilPana: b.impartire?.stare === "STRANGE" ? b.impartire.termen : undefined,
+      })),
+      ...blocked,
+    ];
     return ok(
-      [...bookings, ...blocked]
+      toate
         .sort((a, b) => a.startTime.getTime() - b.startTime.getTime())
-        .map((s) => ({ start: s.startTime.toISOString(), end: s.endTime.toISOString() }))
+        .map((s) => ({
+          start: s.startTime.toISOString(),
+          end: s.endTime.toISOString(),
+          ...(s.posibilPana ? { posibilPana: s.posibilPana.toISOString() } : {}),
+        }))
     );
   } catch (error) {
     return toActionError("getBookedSlots", error);
@@ -470,5 +485,16 @@ export async function platesteParteaAction(cod: string): Promise<ActionResult> {
     return ok();
   } catch (error) {
     return toActionError("platesteParte", error);
+  }
+}
+
+/** „Anunță-mă dacă se eliberează” pentru o oră ținută de un split the bill. */
+export async function cereAlertaAction(fieldId: string, start: string, end: string): Promise<ActionResult> {
+  try {
+    const session = await requireSession();
+    await cereAlerta(session.user.id, fieldId, new Date(start), new Date(end));
+    return ok();
+  } catch (error) {
+    return toActionError("cereAlerta", error);
   }
 }

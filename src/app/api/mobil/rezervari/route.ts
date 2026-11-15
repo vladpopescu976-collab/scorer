@@ -2,6 +2,7 @@ import { z } from "zod";
 
 import { prisma } from "@/lib/prisma";
 import { expiraRezervarile } from "@/lib/rezervari-expirate";
+import { expiraImpartirile } from "@/lib/impartire-plata";
 import { cereAutentificare, cerePersonal, eroare, eroareNeasteptata, raspuns } from "@/lib/api/raspuns";
 import { serializeazaRezervare } from "@/lib/api/serializare";
 import { outsideOpeningHours } from "@/lib/availability";
@@ -23,6 +24,7 @@ export async function GET(request: Request) {
     const { eroare: refuz, sesiune } = await cereAutentificare(request);
     if (refuz) return refuz;
 
+    await expiraImpartirile();
     // Cererile la care nu s-a raspuns pana la ora lor nu mai pot fi confirmate.
     await expiraRezervarile(
       sesiune.role === "BUSINESS"

@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
-import { MAX_PARTI, MIN_PARTI, calculeazaPartile, lei } from "@/lib/impartire-calcul";
+import { MAX_PARTI, MIN_PARTI, calculeazaPartile, lei, textOre } from "@/lib/impartire-calcul";
 
 /**
  * Plata cu cardul — DOAR DEMONSTRATIV. Nu există încă un procesator de plăți:
@@ -123,7 +123,7 @@ export function DialogPlataCard({
   /** Chemat după plata simulată; aici se trimite rezervarea. Cu split the bill, primește în câți se împarte. */
   laPlata: (parti?: number) => void;
   /** Split the bill: dacă se poate alege și, dacă nu, de ce. Lipsă: opțiunea nu apare. */
-  impartire?: { permis: boolean; motiv?: string };
+  impartire?: { permis: boolean; motiv?: string; oreStrangere?: number };
 }) {
   const [pas, setPas] = useState<Pas>("alege");
   const [metoda, setMetoda] = useState<MetodaOnline | null>(null);
@@ -318,7 +318,7 @@ export function DialogPlataCard({
 
           {pas === "imparte" && parti && calcul && (
             <motion.div key="imparte" {...intrare} transition={{ duration: 0.2 }} className="space-y-5">
-              <PasImparte suma={suma} parti={parti} setParti={setParti} />
+              <PasImparte suma={suma} parti={parti} setParti={setParti} oreStrangere={impartire?.oreStrangere} />
 
               <div role="radiogroup" aria-label="Cum plătești partea ta" className="space-y-2">
                 <p className="text-sm font-semibold">Cum plătești partea ta</p>
@@ -530,7 +530,17 @@ function ButonGooglePay({ onClick }: { onClick: () => void }) {
 }
 
 /** Split the bill: câți împart nota, cât plătește fiecare și cine e în cerc. */
-function PasImparte({ suma, parti, setParti }: { suma: number; parti: number; setParti: (n: number) => void }) {
+function PasImparte({
+  suma,
+  parti,
+  setParti,
+  oreStrangere,
+}: {
+  suma: number;
+  parti: number;
+  setParti: (n: number) => void;
+  oreStrangere?: number;
+}) {
   const { sumaParte, parteaOrganizatorului } = calculeazaPartile(suma, parti);
   const vizibili = Math.min(parti - 1, 7);
   return (
@@ -602,6 +612,15 @@ function PasImparte({ suma, parti, setParti }: { suma: number; parti: number; se
       <p className="mt-4 text-center text-[13px] text-[#F3EFE6]/70">
         Tu plătești acum <span className="font-semibold text-[#F3EFE6]">{lei(parteaOrganizatorului)} RON</span>. Linkul îl trimiți după rezervare.
       </p>
+      {oreStrangere && (
+        <div className="mt-4 flex items-start gap-2.5 rounded-2xl bg-white/[0.07] px-3.5 py-3 text-left ring-1 ring-inset ring-white/10">
+          <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#F5C243]/20 text-[12px]">⏱</span>
+          <p className="text-[12.5px] leading-snug text-[#F3EFE6]/80">
+            <span className="font-semibold text-[#F3EFE6]">Aveți {textOre(oreStrangere)} să strângeți banii.</span> Dacă nu plătește toată
+            lumea până atunci, rezervarea se anulează și banii se întorc.
+          </p>
+        </div>
+      )}
     </div>
   );
 }

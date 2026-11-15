@@ -1,6 +1,7 @@
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { expiraRezervarile } from "@/lib/rezervari-expirate";
+import { expiraImpartirile } from "@/lib/impartire-plata";
 import { MyBookingsClient } from "@/components/dashboard/my-bookings-client";
 import { normalizeazaOras } from "@/lib/orase";
 import { RezervariFaraCont } from "@/components/rezervare/rezervari-fara-cont";
@@ -18,6 +19,7 @@ export default async function MyBookingsPage() {
     return <RezervariFaraCont />;
   }
 
+  await expiraImpartirile();
   await expiraRezervarile({ customerId: session.user.id });
 
   const bookings = await prisma.booking.findMany({

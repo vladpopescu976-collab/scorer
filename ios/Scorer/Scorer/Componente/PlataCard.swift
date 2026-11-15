@@ -80,6 +80,12 @@ struct FoaieMetodaPlata: View {
     var laImpartire: ((Int) -> Void)?
     /// Buton mic „Test”: sare peste Apple Pay și merge mai departe (cu `parti` la split the bill).
     var laTest: ((Int?) -> Void)?
+    /// Începutul rezervării: split the bill merge doar cu minim 12 ore înainte.
+    var inceput: Date?
+
+    private var oreStrangere: Int? {
+        inceput.flatMap { Impartire.oreDeStrans(oreInainte: $0.timeIntervalSinceNow / 3600) }
+    }
 
     @State private var metoda: MetodaPlata?
     @State private var imparte = false
@@ -119,7 +125,7 @@ struct FoaieMetodaPlata: View {
                     .font(.subheadline).foregroundStyle(.secondary)
             }
 
-            PasImparteNota(total: suma, parti: $parti)
+            PasImparteNota(total: suma, parti: $parti, oreStrangere: oreStrangere)
 
             Spacer(minLength: 0)
 
@@ -191,6 +197,7 @@ struct FoaieMetodaPlata: View {
     @ViewBuilder
     private var randInCurand: some View {
         if laImpartire != nil {
+            let permis = oreStrangere != nil
             Button {
                 metoda = nil
                 imparte = true
@@ -203,11 +210,14 @@ struct FoaieMetodaPlata: View {
                         .frame(width: 54, height: 38)
                         .background(Color(red: 0.043, green: 0.165, blue: 0.11), in: .rect(cornerRadius: 9, style: .continuous))
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("Split the bill").font(.body.weight(.semibold))
-                        Text("Fiecare își plătește partea").font(.footnote).foregroundStyle(.secondary)
+                        Text("Split the bill").font(.body.weight(.semibold)).foregroundStyle(permis ? .primary : .secondary)
+                        Text(permis ? "Fiecare își plătește partea" : "Doar dacă rezervi cu minim 12 ore înainte")
+                            .font(.footnote).foregroundStyle(.secondary)
                     }
                     Spacer(minLength: 0)
-                    Image(systemName: "chevron.right").font(.footnote.weight(.semibold)).foregroundStyle(.tertiary)
+                    if permis {
+                        Image(systemName: "chevron.right").font(.footnote.weight(.semibold)).foregroundStyle(.tertiary)
+                    }
                 }
                 .padding(14)
                 .background(Tema.fisa, in: .rect(cornerRadius: 18, style: .continuous))
@@ -218,6 +228,8 @@ struct FoaieMetodaPlata: View {
                 .contentShape(.rect)
             }
             .buttonStyle(.plain)
+            .disabled(!permis)
+            .opacity(permis ? 1 : 0.6)
         }
     }
 

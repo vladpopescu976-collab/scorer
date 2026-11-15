@@ -15,7 +15,9 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { createBookingRequest, getBookedSlots, pornesteImpartireaAction } from "@/lib/actions/bookings";
+import { cereAlertaAction, createBookingRequest, getBookedSlots, pornesteImpartireaAction } from "@/lib/actions/bookings";
+import { ORE_MINIME_SPLIT, oreDeStrans } from "@/lib/impartire-calcul";
+import { Bell } from "lucide-react";
 import { AlegeMetodaPlata, DialogPlataCard, type MetodaPlata } from "@/components/plata/plata-card";
 import { instantInAppZone, localDateTimeToIso, ziCaText } from "@/lib/datetime";
 import {
@@ -60,10 +62,15 @@ export function BookingForm({
   const [optiuniAlese, setOptiuniAlese] = useState<string[]>([]);
   const [metodaPlata, setMetodaPlata] = useState<MetodaPlata>("card");
   const [plataDeschisa, setPlataDeschisa] = useState(false);
+  // Split the bill: câte ore sunt de strâns banii, calculat la deschiderea plății (null = sub 12 ore).
+  const [oreStrangere, setOreStrangere] = useState<number | null>(null);
   const [error, setError] = useState("");
   const [isPending, startTransition] = useTransition();
 
   const [occupied, setOccupied] = useState<Interval[]>([]);
+  // Ore ținute de un split the bill care încă strânge banii: „posibil disponibil”.
+  const [posibile, setPosibile] = useState<(Interval & { pana: Date })[]>([]);
+  const [alerte, setAlerte] = useState<string[]>([]);
   const [loadingSlots, setLoadingSlots] = useState(false);
 
   // Intervalele deja rezervate se cer la alegerea zilei, ca orele ocupate să
@@ -71,6 +78,7 @@ export function BookingForm({
   async function loadOccupied(day: Date) {
     setLoadingSlots(true);
     setOccupied([]);
+    setPosibile([]);
     try {
       // Ziua terenului, în ora României.
       const dayStart = instantInAppZone(ziCaText(day), 0)!;
@@ -82,6 +90,11 @@ export function BookingForm({
       });
       if (result.ok) {
         setOccupied(result.data.map((s) => ({ start: new Date(s.start), end: new Date(s.end) })));
+        setPosibile(
+          result.data
+            .filter((s) => s.posibilPana)
+            .map((s) => ({ start: new Date(s.start), end: new Date(s.end), pana: new Date(s.posibilPana!) }))
+        );
       }
     } finally {
       setLoadingSlots(false);
@@ -120,12 +133,20 @@ export function BookingForm({
     return start ? rangeIsBusy(hourOf(start), hourOf(endLabel), busy) : false;
   }
 
+  // Orele (ca număr) ținute de un split the bill: se văd „posibil disponibil”.
+  const orePosibile = useMemo(() => {
+    if (!date) return new Set<number>();
+    return busyHours(date, posibile, openingHour, closingHour);
+  }, [date, posibile, openingHour, closingHour]);
+
   function pickStart(value: string) {
     if (busy.has(hourOf(value))) {
       setError(
         inceput.has(hourOf(value))
           ? `Ora ${value} a început deja. Alege o oră de mai târziu.`
-          : `Intervalul ${value} este deja rezervat pe acest teren. Alege altă oră.`
+          : orePosibile.has(hourOf(value))
+            ? `Ora ${value} e posibil disponibilă: se strâng banii pentru ea. Apasă „Anunță-mă” și te anunțăm dacă se eliberează.`
+            : `Intervalul ${value} este deja rezervat pe acest teren. Alege altă oră.`
       );
       return;
     }
@@ -302,10 +323,15 @@ export function BookingForm({
             <SelectContent>
               {startOptions.map((h) => {
                 const taken = busy.has(hourOf(h));
+                const posibil = orePosibile.has(hourOf(h)) && !inceput.has(hourOf(h));
                 return (
-                  <SelectItem key={h} value={h} className={taken ? "opacity-45" : undefined}>
+                  <SelectItem key={h} value={h} className={taken && !posibil ? "opacity-45" : undefined}>
                     {h}
-                    {taken && <span className="ml-1.5 text-[11px]">· ocupat</span>}
+                    {posibil ? (
+                      <span className="ml-1.5 text-[11px] font-medium text-amber-600">· posibil disponibil</span>
+                    ) : (
+                      taken && <span className="ml-1.5 text-[11px]">· ocupat</span>
+                    )}
                   </SelectItem>
                 );
               })}
@@ -338,6 +364,44 @@ export function BookingForm({
           Deja rezervat în această zi: <span className="font-medium text-foreground">{describeOccupied(occupied)}</span>
         </p>
       )}
+      {date && !loadingSlots && posibile.map((p) => {
+        const cheie = p.start.toISOString();
+        const ora = (d: Date) => d.toLocaleTimeString("ro-RO", { timeZone: "Europe/Bucharest", hour: "2-digit", minute: "2-digit" });
+        const ceruta = alerte.includes(cheie);
+        return (
+          <div key={cheie} className="space-y-2 rounded-xl border border-amber-500/30 bg-amber-500/[0.07] p-3">
+            <p className="text-[12.5px] leading-snug">
+              <span className="font-semibold text-amber-700 dark:text-amber-400">
+                {ora(p.start)}–{ora(p.end)} · Posibil disponibil.
+              </span>{" "}
+              <span className="text-muted-foreground">
+                Se strâng banii pentru split the bill până la {ora(p.pana)}. Dacă nu se strâng, ora se eliberează.
+              </span>
+            </p>
+            {isAuthenticated ? (
+              <button
+                type="button"
+                disabled={ceruta}
+                onClick={async () => {
+                  const r = await cereAlertaAction(fieldId, p.start.toISOString(), p.end.toISOString());
+                  if (!r.ok) return void toast.error(r.error);
+                  setAlerte((a) => [...a, cheie]);
+                  toast.success("Gata. Primești notificare dacă ora se eliberează.");
+                }}
+                className="inline-flex items-center gap-1.5 rounded-full bg-amber-500/15 px-3 py-1.5 text-[12px] font-semibold text-amber-800 transition-colors hover:bg-amber-500/25 disabled:opacity-70 dark:text-amber-300"
+              >
+                <Bell className="h-3.5 w-3.5" />
+                {ceruta ? "Te anunțăm dacă se eliberează" : "Anunță-mă dacă se eliberează"}
+              </button>
+            ) : (
+              <Link href="/autentificare" className="inline-flex items-center gap-1.5 text-[12px] font-semibold text-amber-800 underline-offset-2 hover:underline dark:text-amber-300">
+                <Bell className="h-3.5 w-3.5" />
+                Conectează-te ca să fii anunțat
+              </Link>
+            )}
+          </div>
+        );
+      })}
       {date && !loadingSlots && occupied.length === 0 && (
         <p className="text-[12px] text-muted-foreground">Toate orele sunt libere în această zi.</p>
       )}
@@ -485,7 +549,11 @@ export function BookingForm({
           // Plata se deschide doar după ce rezervarea e completă, ca să nu
           // „plătești” și apoi să afli că lipsește numele.
           if (metodaPlata === "card" && pret) {
-            if (verifica()) setPlataDeschisa(true);
+            if (verifica()) {
+              const iso = date && start ? localDateTimeToIso(format(date, "yyyy-MM-dd"), start) : null;
+              setOreStrangere(iso ? oreDeStrans((new Date(iso).getTime() - Date.now()) / 3_600_000) : null);
+              setPlataDeschisa(true);
+            }
           } else submit();
         }}
         disabled={isPending}
@@ -502,7 +570,13 @@ export function BookingForm({
         laInchidere={() => setPlataDeschisa(false)}
         suma={total}
         laPlata={submit}
-        impartire={isAuthenticated ? { permis: true } : { permis: false, motiv: "Conectează-te ca să împarți nota" }}
+        impartire={
+          !isAuthenticated
+            ? { permis: false, motiv: "Conectează-te ca să împarți nota" }
+            : oreStrangere === null
+              ? { permis: false, motiv: `Doar dacă rezervi cu minim ${ORE_MINIME_SPLIT} ore înainte` }
+              : { permis: true, oreStrangere }
+        }
       />
     </div>
   );

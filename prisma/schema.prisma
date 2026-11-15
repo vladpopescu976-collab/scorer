@@ -128,6 +128,7 @@ model User {
   tokenuriParola      PasswordResetToken[]
   impartiriOrganizate ImpartirePlata[]         @relation("ImpartiriOrganizate")
   partiPlatite        ParteImpartire[]         @relation("PartiPlatite")
+  alertaTerens        AlertaTeren[]
 
   @@map("users")
 }
@@ -259,8 +260,9 @@ model Field {
   blockedSlots BlockedSlot[]
   extras       FieldExtra[]
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+  alerte    AlertaTeren[]
 
   @@index([cityKey])
   @@index([sportType])
@@ -620,17 +622,22 @@ model ImpartirePlata {
   organizator   User   @relation("ImpartiriOrganizate", fields: [organizatorId], references: [id], onDelete: Cascade)
 
   /// Codul din linkul trimis prietenilor.
-  cod        String  @unique
+  cod        String   @unique
   /// Câți împart nota, cu organizatorul cu tot.
   numarParti Int
   /// Cât plătește fiecare prieten; organizatorul acoperă diferența de rotunjire.
-  sumaParte  Decimal @db.Decimal(10, 2)
+  sumaParte  Decimal  @db.Decimal(10, 2)
+  /// Până când se pot strânge banii. Dacă nu s-au strâns, rezervarea se anulează.
+  termen     DateTime
+  /// „STRANGE” cât se strâng banii, „COMPLETA” când a plătit toată lumea, „ESUATA” dacă n-au ajuns la timp.
+  stare      String   @default("STRANGE")
 
   parti ParteImpartire[]
 
   createdAt DateTime @default(now())
 
   @@index([organizatorId])
+  @@index([stare, termen])
   @@map("impartiri_plata")
 }
 
@@ -650,4 +657,26 @@ model ParteImpartire {
 
   @@unique([impartireId, userId])
   @@map("parti_impartire")
+}
+
+/// „Anunță-mă dacă se eliberează”: cineva vrea o oră ținută de un split the bill
+/// care încă strânge banii. Dacă banii nu se strâng, primește notificare.
+model AlertaTeren {
+  id String @id @default(cuid())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  fieldId String
+  field   Field  @relation(fields: [fieldId], references: [id], onDelete: Cascade)
+
+  startTime   DateTime
+  endTime     DateTime
+  notificatLa DateTime?
+
+  createdAt DateTime @default(now())
+
+  @@unique([userId, fieldId, startTime])
+  @@index([fieldId, startTime])
+  @@map("alerte_teren")
 }

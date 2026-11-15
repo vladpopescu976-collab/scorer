@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { dayRangeInAppZone } from "@/lib/datetime";
 import { eroare, eroareNeasteptata, raspuns } from "@/lib/api/raspuns";
+import { expiraImpartirile } from "@/lib/impartire-plata";
 
 export const maxDuration = 60;
 
@@ -24,6 +25,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
       select: { id: true, openingHour: true, closingHour: true },
     });
     if (!field) return eroare("Terenul nu a fost găsit.", 404);
+    await expiraImpartirile();
 
     const [rezervari, blocate] = await Promise.all([
       prisma.booking.findMany({
@@ -34,7 +36,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
           endTime: { gt: interval.start },
           ...(exclude ? { NOT: { id: exclude } } : {}),
         },
-        select: { startTime: true, endTime: true },
+        select: { startTime: true, endTime: true, impartire: { select: { stare: true, termen: true } } },
       }),
       prisma.blockedSlot.findMany({
         where: {
@@ -46,9 +48,22 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
       }),
     ]);
 
-    const ocupate = [...rezervari, ...blocate]
+    // Ținut de un split the bill care încă strânge banii: „posibil disponibil”.
+    const toate: { startTime: Date; endTime: Date; posibilPana?: Date }[] = [
+      ...rezervari.map((r) => ({
+        startTime: r.startTime,
+        endTime: r.endTime,
+        posibilPana: r.impartire?.stare === "STRANGE" ? r.impartire.termen : undefined,
+      })),
+      ...blocate,
+    ];
+    const ocupate = toate
       .sort((a, b) => a.startTime.getTime() - b.startTime.getTime())
-      .map((o) => ({ inceput: o.startTime.toISOString(), sfarsit: o.endTime.toISOString() }));
+      .map((o) => ({
+        inceput: o.startTime.toISOString(),
+        sfarsit: o.endTime.toISOString(),
+        ...(o.posibilPana ? { posibilPana: o.posibilPana.toISOString() } : {}),
+      }));
 
     return raspuns({
       oraDeschidere: field.openingHour,

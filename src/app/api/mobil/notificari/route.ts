@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { expiraImpartirile } from "@/lib/impartire-plata";
 import { cereAutentificare, eroareNeasteptata, raspuns } from "@/lib/api/raspuns";
 import { clientulRezervarii } from "@/lib/client-rezervare";
 import { pushConfigurat } from "@/lib/push";
@@ -20,6 +21,9 @@ export async function GET(request: Request) {
   try {
     const { eroare: refuz, sesiune } = await cereAutentificare(request);
     if (refuz) return refuz;
+    // Aplicația întreabă des: bun prilej să închidem split the bill-urile expirate,
+    // ca notificările „terenul e disponibil” să plece la timp.
+    await expiraImpartirile().catch(() => 0);
 
     const dupa = new URL(request.url).searchParams.get("dupa");
     const data = dupa ? new Date(dupa) : null;

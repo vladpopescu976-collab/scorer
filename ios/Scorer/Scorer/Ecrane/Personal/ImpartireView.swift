@@ -19,6 +19,7 @@ struct ImpartireView: View {
             VStack(spacing: 18) {
                 if let date {
                     antet(date)
+                    termen(date)
                     actiune(date)
                     lista(date)
                     Label("Mod demonstrativ: nu se debitează nimic.", systemImage: "checkmark.shield")
@@ -127,11 +128,41 @@ struct ImpartireView: View {
         .background(.white.opacity(0.07), in: .rect(cornerRadius: 14, style: .continuous))
     }
 
+    // MARK: Termen
+
+    @ViewBuilder
+    private func termen(_ d: Impartire) -> some View {
+        if d.stare == "STRANGE" && !d.inchisa {
+            TimelineView(.periodic(from: .now, by: 30)) { context in
+                let ramas = max(0, d.termen.timeIntervalSince(context.date))
+                let minute = Int((ramas / 60).rounded(.up))
+                HStack(alignment: .top, spacing: 12) {
+                    Image(systemName: "timer").font(.title3).foregroundStyle(Tema.asteptare)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(minute >= 60 ? "Mai sunt \(minute / 60) h \(minute % 60) min" : "Mai sunt \(minute) min")
+                            .font(.subheadline.weight(.semibold))
+                        Text("să se strângă banii (până la \(d.termen.oraScurta)). Dacă nu plătește toată lumea, rezervarea se anulează și banii se întorc.")
+                            .font(.footnote).foregroundStyle(.secondary)
+                    }
+                    Spacer(minLength: 0)
+                }
+                .padding(14)
+                .background(Tema.asteptare.opacity(0.09), in: .rect(cornerRadius: 18, style: .continuous))
+                .overlay { RoundedRectangle(cornerRadius: 18, style: .continuous).strokeBorder(Tema.asteptare.opacity(0.3)) }
+                .onChange(of: ramas == 0) { _, gata in if gata { Task { await incarca() } } }
+            }
+        } else if d.stare == "COMPLETA" {
+            mesaj("Nota e plătită integral. Terenul e al vostru!", culoare: Tema.accent, simbol: "checkmark.seal.fill")
+        }
+    }
+
     // MARK: Acțiunea principală
 
     @ViewBuilder
     private func actiune(_ d: Impartire) -> some View {
-        if d.inchisa {
+        if d.stare == "ESUATA" {
+            mesaj("Nu s-au strâns banii la timp. Rezervarea a fost anulată, iar partea plătită se întoarce.", culoare: Tema.ocupat)
+        } else if d.inchisa {
             mesaj("Rezervarea a fost anulată. Nu mai e nimic de plătit.", culoare: .secondary)
         } else if d.esteOrganizator {
             ShareLink(
@@ -150,7 +181,7 @@ struct ImpartireView: View {
         } else if d.amPlatit {
             mesaj("Ți-ai plătit partea. Ne vedem pe teren!", culoare: Tema.accent, simbol: "checkmark.seal.fill")
         } else if d.platite >= d.numarParti {
-            mesaj("Nota e plătită integral.", culoare: Tema.accent)
+            EmptyView()
         } else if d.potPlati {
             PayWithApplePayButton(.plain) { plateste(d) }
                 .payWithApplePayButtonStyle(.black)
@@ -166,7 +197,7 @@ struct ImpartireView: View {
                 .padding(.top, 14)
             ButonTest { platesteDirect() }
         } else {
-            mesaj("Meciul a început deja.", culoare: .secondary)
+            mesaj("Timpul pentru strâns banii s-a terminat.", culoare: .secondary)
         }
     }
 
@@ -309,6 +340,7 @@ struct ImpartireView: View {
 struct PasImparteNota: View {
     let total: Double
     @Binding var parti: Int
+    var oreStrangere: Int?
 
     var body: some View {
         let (sumaParte, parteaMea) = Impartire.calculeaza(total: total, parti: parti)
@@ -381,6 +413,23 @@ struct PasImparteNota: View {
                 .font(.footnote)
                 .opacity(0.75)
                 .multilineTextAlignment(.center)
+
+            if let ore = oreStrangere {
+                HStack(alignment: .top, spacing: 10) {
+                    Image(systemName: "timer")
+                        .font(.footnote.weight(.bold))
+                        .foregroundStyle(.yellow)
+                        .frame(width: 26, height: 26)
+                        .background(.yellow.opacity(0.15), in: .circle)
+                    (Text("Aveți \(Impartire.textOre(ore)) să strângeți banii. ").bold()
+                     + Text("Dacă nu plătește toată lumea până atunci, rezervarea se anulează și banii se întorc."))
+                        .font(.caption)
+                        .opacity(0.85)
+                    Spacer(minLength: 0)
+                }
+                .padding(12)
+                .background(.white.opacity(0.07), in: .rect(cornerRadius: 14, style: .continuous))
+            }
         }
         .foregroundStyle(Color(red: 0.95, green: 0.94, blue: 0.90))
         .padding(18)
