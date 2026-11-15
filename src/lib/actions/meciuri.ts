@@ -15,6 +15,7 @@ import {
 import {
   type AnuntJucatorInput,
   invitaJucator,
+  seteazaInvitatii,
   salveazaAnuntJucator,
   stergeAnuntJucator,
 } from "@/lib/jucatori-liberi";
@@ -103,5 +104,15 @@ export async function invitaJucatorAction(id: string, mesaj?: string): Promise<A
     return ok();
   } catch (error) {
     return toActionError("invitaJucator", error);
+  }
+}
+
+export async function seteazaInvitatiiAction(id: string, deschis: boolean): Promise<ActionResult> {
+  try {
+    await seteazaInvitatii(id, await cerePersonal(), deschis);
+    revalidatePath("/gaseste-meci");
+    return ok();
+  } catch (error) {
+    return toActionError("seteazaInvitatii", error);
   }
 }

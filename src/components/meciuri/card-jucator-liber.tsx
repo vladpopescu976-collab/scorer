@@ -7,7 +7,7 @@ import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { AvatarCont } from "@/components/cont/poza-profil";
-import { invitaJucatorAction, stergeAnuntJucatorAction } from "@/lib/actions/meciuri";
+import { invitaJucatorAction, seteazaInvitatiiAction, stergeAnuntJucatorAction } from "@/lib/actions/meciuri";
 import type { AnuntJucatorPublic } from "@/lib/jucatori-liberi";
 import { sportMeta } from "@/lib/sports";
 import { textDisponibilitate } from "@/lib/jucatori-liberi-pozitii";
@@ -75,6 +75,30 @@ export function CardJucatorLiber({ anunt, conectat }: { anunt: AnuntJucatorPubli
       <div className="mt-auto pt-5">
         {anunt.esteAlMeu ? (
           <div className="space-y-3">
+            {/* Doar jucătorul decide când nu mai vrea invitații. */}
+            <label className="flex cursor-pointer items-center justify-between gap-3 rounded-2xl border px-4 py-3">
+              <span>
+                <span className="block text-[14px] font-medium">Primesc invitații</span>
+                <span className="block text-[12px] text-muted-foreground">
+                  {anunt.primesteInvitatii ? "Oricâte echipe te pot invita." : "Oprit: echipele nu te mai pot invita."}
+                </span>
+              </span>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={anunt.primesteInvitatii}
+                disabled={seLucreaza}
+                onClick={() =>
+                  startTransition(async () => {
+                    const r = await seteazaInvitatiiAction(anunt.id, !anunt.primesteInvitatii);
+                    if (!r.ok) toast.error(r.error);
+                  })
+                }
+                className={`relative h-7 w-12 shrink-0 rounded-full transition-colors ${anunt.primesteInvitatii ? "bg-[#17854A]" : "bg-muted-foreground/30"}`}
+              >
+                <span className={`absolute top-1 h-5 w-5 rounded-full bg-white shadow transition-all ${anunt.primesteInvitatii ? "left-6" : "left-1"}`} />
+              </button>
+            </label>
             {anunt.invitatii.length > 0 ? (
               <div className="space-y-2 rounded-2xl bg-primary/5 p-3">
                 <p className="text-[12px] font-semibold uppercase tracking-[0.1em] text-primary">Te vor în echipă</p>
@@ -125,6 +149,10 @@ export function CardJucatorLiber({ anunt, conectat }: { anunt: AnuntJucatorPubli
               </a>
             )}
           </div>
+        ) : !anunt.primesteInvitatii ? (
+          <p className="rounded-xl bg-muted py-2.5 text-center text-[13.5px] text-muted-foreground">
+            Nu primește invitații momentan
+          </p>
         ) : !conectat ? (
           <Button className="w-full rounded-full bg-[#0E6B3A] hover:bg-[#0B5A30]" nativeButton={false} render={<Link href="/autentificare" />}>
             <UserPlus className="h-4 w-4" />

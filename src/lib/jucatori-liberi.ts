@@ -63,6 +63,8 @@ export type AnuntJucatorPublic = {
   jucator: { id: string; nume: string; poza: string | null };
   esteAlMeu: boolean;
   lAmInvitat: boolean;
+  /** Jucătorul primește invitații; doar el îl poate opri. */
+  primesteInvitatii: boolean;
   /** Telefonul jucătorului: doar pentru cine l-a invitat, dacă l-a arătat. */
   telefonJucator: string | null;
   /** Pentru propriul anunț: cine te-a invitat, cu telefonul lor. */
@@ -96,6 +98,7 @@ function serializeaza(a: AnuntCuDetalii, vizitatorId: string | null): AnuntJucat
     jucator: { id: a.user.id, nume: a.user.name, poza: a.user.image },
     esteAlMeu,
     lAmInvitat,
+    primesteInvitatii: a.primesteInvitatii,
     telefonJucator: lAmInvitat && a.arataTelefon ? a.user.phone : null,
     invitatii: esteAlMeu
       ? a.invitatii.map((i) => ({
@@ -155,9 +158,13 @@ export async function stergeAnuntJucator(id: string, userId: string) {
 
 /** O echipă îl invită pe jucător. */
 export async function invitaJucator(anuntId: string, userId: string, mesaj?: string | null): Promise<AnuntJucatorPublic> {
-  const anunt = await prisma.anuntJucator.findUnique({ where: { id: anuntId }, select: { userId: true, sport: true } });
+  const anunt = await prisma.anuntJucator.findUnique({
+    where: { id: anuntId },
+    select: { userId: true, sport: true, primesteInvitatii: true },
+  });
   if (!anunt) throw new ActionError("Anunțul nu mai există.");
   if (anunt.userId === userId) throw new ActionError("Nu te poți invita singur.");
+  if (!anunt.primesteInvitatii) throw new ActionError("Jucătorul nu mai primește invitații momentan.");
 
   const curat = mesaj?.trim().slice(0, 300) || null;
   await prisma.invitatieJucator.upsert({
@@ -177,4 +184,11 @@ export async function invitaJucator(anuntId: string, userId: string, mesaj?: str
 
   const actual = await prisma.anuntJucator.findUniqueOrThrow({ where: { id: anuntId }, include });
   return serializeaza(actual, userId);
+}
+
+/** Jucătorul pornește sau oprește invitațiile. Doar el poate. */
+export async function seteazaInvitatii(id: string, userId: string, deschis: boolean) {
+  const anunt = await prisma.anuntJucator.findUnique({ where: { id }, select: { userId: true } });
+  if (!anunt || anunt.userId !== userId) throw new ActionError("Doar tu poți schimba asta.");
+  await prisma.anuntJucator.update({ where: { id }, data: { primesteInvitatii: deschis } });
 }

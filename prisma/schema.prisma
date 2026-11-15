@@ -512,21 +512,23 @@ model AnuntJucator {
   userId String
   user   User   @relation("AnunturiJucator", fields: [userId], references: [id], onDelete: Cascade)
 
-  sport        SportType
-  oras         String
+  sport             SportType
+  oras              String
   /// Orașul fără diacritice, cu litere mici, pentru căutare.
-  orasCheie    String
+  orasCheie         String
   /// Pozițiile pe care joacă („Portar”, „Atacant”…); goală la tenis, padel.
-  pozitii      String[]
-  nivel        SkillLevel?
-  descriere    String?     @db.Text
+  pozitii           String[]
+  nivel             SkillLevel?
+  descriere         String?     @db.Text
   /// Zilele în care poate juca: 1 = luni … 7 = duminică. Goală = oricând.
-  zile         Int[]       @default([])
+  zile              Int[]       @default([])
   /// Intervalul orar în care poate (ex. 18–22). Lipsă = orice oră.
-  oraDe        Int?
-  oraPana      Int?
+  oraDe             Int?
+  oraPana           Int?
+  /// Jucătorul decide: cât e pornit, oricâte echipe îl pot invita; îl oprește când vrea.
+  primesteInvitatii Boolean     @default(true)
   /// Telefonul se arată echipelor care l-au invitat.
-  arataTelefon Boolean     @default(true)
+  arataTelefon      Boolean     @default(true)
 
   invitatii InvitatieJucator[]
 

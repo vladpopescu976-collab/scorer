@@ -230,6 +230,18 @@ struct MeciuriView: View {
             if let d = a.descriere { Text(d).font(.subheadline).foregroundStyle(.primary.opacity(0.8)) }
 
             if a.esteAlMeu {
+                // Doar jucătorul decide când nu mai vrea invitații.
+                Toggle(isOn: Binding(
+                    get: { a.primesteInvitatii ?? true },
+                    set: { nou in seteazaInvitatii(a, nou) }
+                )) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Primesc invitații").font(.subheadline.weight(.medium))
+                        Text((a.primesteInvitatii ?? true) ? "Oricâte echipe te pot invita." : "Oprit: echipele nu te mai pot invita.")
+                            .font(.caption).foregroundStyle(.secondary)
+                    }
+                }
+                .tint(Tema.accent)
                 if a.invitatii.isEmpty {
                     Text("Nicio invitație încă. Te anunțăm când te vrea o echipă.")
                         .font(.footnote).foregroundStyle(.secondary)
@@ -267,6 +279,13 @@ struct MeciuriView: View {
                             .foregroundStyle(Tema.accent)
                     }
                 }
+            } else if a.primesteInvitatii == false {
+                Text("Nu primește invitații momentan")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 11)
+                    .background(Color.primary.opacity(0.05), in: .rect(cornerRadius: 12, style: .continuous))
             } else {
                 Button {
                     if estePersonal { mesajInvitatie = ""; deInvitat = a } else { arataAutentificarea = true }
@@ -484,6 +503,14 @@ struct MeciuriView: View {
             } catch {
                 eroare = error.localizedDescription
             }
+        }
+    }
+
+    private func seteazaInvitatii(_ a: AnuntJucator, _ deschis: Bool) {
+        Task {
+            struct Corp: Encodable { let primesteInvitatii: Bool }
+            try? await ApiClient.shared.cereFaraRaspuns("jucatori-liberi/\(a.id)", metoda: "PATCH", corp: Corp(primesteInvitatii: deschis))
+            await incarca()
         }
     }
 

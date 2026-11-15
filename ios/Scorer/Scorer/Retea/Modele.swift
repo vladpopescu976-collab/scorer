@@ -228,6 +228,8 @@ struct AnuntJucator: Codable, Identifiable, Sendable {
     let jucator: PersoanaScurta
     let esteAlMeu: Bool
     let lAmInvitat: Bool
+    /// Doar jucătorul o oprește. Lipsește pe serverele mai vechi.
+    var primesteInvitatii: Bool?
     let telefonJucator: String?
     let invitatii: [Invitatie]
 }
