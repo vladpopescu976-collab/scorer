@@ -114,9 +114,12 @@ model User {
   vizibilInCautare Boolean       @default(false)
 
   /// Telefoanele pe care primește notificări (rezervări noi etc.).
-  dispozitivePush DispozitivPush[]
+  dispozitivePush  DispozitivPush[]
   /// Tot ce i s-a întâmplat contului: rezervări, anulări, meciuri. Și pentru lista din aplicație.
-  notificari      Notificare[]
+  notificari       Notificare[]
+  /// „Caută echipă”: anunțurile jucătorului despre el și invitațiile trimise de echipe.
+  anunturiJucator  AnuntJucator[]     @relation("AnunturiJucator")
+  invitatiiTrimise InvitatieJucator[] @relation("InvitatiiTrimise")
 
   tokenuriEmail  EmailVerificationToken[]
   tokenuriParola PasswordResetToken[]
@@ -500,4 +503,48 @@ model Notificare {
 
   @@index([userId, createdAt])
   @@map("notificari")
+}
+
+/// „Caută echipă”: un jucător spune că vrea să joace — sport, oraș, poziție.
+/// Un singur anunț pe sport pentru fiecare jucător.
+model AnuntJucator {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation("AnunturiJucator", fields: [userId], references: [id], onDelete: Cascade)
+
+  sport        SportType
+  oras         String
+  /// Orașul fără diacritice, cu litere mici, pentru căutare.
+  orasCheie    String
+  /// Pozițiile pe care joacă („Portar”, „Atacant”…); goală la tenis, padel.
+  pozitii      String[]
+  nivel        SkillLevel?
+  descriere    String?     @db.Text
+  /// Telefonul se arată echipelor care l-au invitat.
+  arataTelefon Boolean     @default(true)
+
+  invitatii InvitatieJucator[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, sport])
+  @@index([orasCheie, sport])
+  @@map("anunturi_jucator")
+}
+
+/// O echipă (un organizator) îl vrea pe jucător: îl anunțăm și își văd telefoanele.
+model InvitatieJucator {
+  anuntId String
+  anunt   AnuntJucator @relation(fields: [anuntId], references: [id], onDelete: Cascade)
+
+  dinParteaId String
+  dinPartea   User   @relation("InvitatiiTrimise", fields: [dinParteaId], references: [id], onDelete: Cascade)
+
+  mesaj String?
+
+  createdAt DateTime @default(now())
+
+  @@id([anuntId, dinParteaId])
+  @@map("invitatii_jucator")
 }

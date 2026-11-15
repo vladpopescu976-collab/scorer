@@ -206,6 +206,41 @@ struct JucatorPublic: Codable, Identifiable, Sendable {
     let nivel: String?
 }
 
+/// „Caută echipă”: un jucător care vrea să joace.
+struct AnuntJucator: Codable, Identifiable, Sendable {
+    struct Invitatie: Codable, Identifiable, Sendable {
+        let id: String
+        let nume: String
+        let poza: String?
+        let telefon: String?
+        let mesaj: String?
+    }
+    let id: String
+    let sport: Sport
+    let oras: String
+    let pozitii: [String]
+    let nivel: String?
+    let descriere: String?
+    let jucator: PersoanaScurta
+    let esteAlMeu: Bool
+    let lAmInvitat: Bool
+    let telefonJucator: String?
+    let invitatii: [Invitatie]
+}
+
+extension Sport {
+    /// Pozițiile din fiecare sport (aceleași ca pe server).
+    var pozitii: [String] {
+        switch self {
+        case .fotbal: ["Portar", "Fundaș", "Mijlocaș", "Atacant"]
+        case .baschet: ["Conducător", "Extremă", "Pivot"]
+        case .handbal: ["Portar", "Extremă", "Inter", "Centru", "Pivot"]
+        case .volei: ["Ridicător", "Trăgător", "Central", "Libero"]
+        default: []
+        }
+    }
+}
+
 enum NivelJoc {
     static func eticheta(_ cod: String?) -> String? {
         switch cod {

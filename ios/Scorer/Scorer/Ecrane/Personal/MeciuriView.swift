@@ -5,7 +5,18 @@ import SwiftUI
 struct MeciuriView: View {
     @Environment(Sesiune.self) private var sesiune
 
+    enum Sectiune: String, CaseIterable, Identifiable {
+        case jucatori = "Caută jucători"
+        case echipa = "Caută echipă"
+        var id: String { rawValue }
+    }
+
+    @State private var sectiune = Sectiune.jucatori
     @State private var meciuri: [Meci] = []
+    @State private var jucatoriLiberi: [AnuntJucator] = []
+    @State private var arataAnuntJucator = false
+    @State private var deInvitat: AnuntJucator?
+    @State private var mesajInvitatie = ""
     @State private var oras = ""
     @State private var sport: Sport?
     @State private var seIncarca = true
@@ -30,7 +41,6 @@ struct MeciuriView: View {
         .background(Tema.fundal.ignoresSafeArea())
         .navigationTitle("Găsește meci")
         .navigationBarTitleDisplayMode(.large)
-        .navigationDestination(for: String.self) { _ in JucatoriView(orasInitial: oras) }
         .sheet(isPresented: $arataAnunt) {
             NavigationStack {
                 PosteazaMeciView(orasInitial: oras.isEmpty ? (sesiune.utilizator?.oras ?? "") : oras) {
@@ -39,6 +49,21 @@ struct MeciuriView: View {
             }
         }
         .sheet(isPresented: $arataAutentificarea) { AutentificareView() }
+        .sheet(isPresented: $arataAnuntJucator) {
+            NavigationStack {
+                PuneAnuntJucatorView(orasInitial: oras.isEmpty ? (sesiune.utilizator?.oras ?? "") : oras) {
+                    Task { await incarca() }
+                }
+            }
+        }
+        .alert("Îl vrei în echipă?", isPresented: .init(get: { deInvitat != nil }, set: { if !$0 { deInvitat = nil } })) {
+            TextField("Mesaj (opțional)", text: $mesajInvitatie)
+            Button("Trimite invitația") { if let a = deInvitat { invita(a) } }
+            Button("Renunță", role: .cancel) {}
+        } message: {
+            Text("\(deInvitat?.jucator.nume ?? "") primește o notificare și vă vedeți telefoanele.")
+        }
+        .onChange(of: sectiune) { Task { await incarca() } }
         .task {
             if oras.isEmpty, let din = sesiune.utilizator?.oras { oras = din }
             await incarca()
@@ -50,7 +75,14 @@ struct MeciuriView: View {
 
     private var antet: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text("Alege orașul și vezi cine mai are nevoie de jucători.")
+            Picker("Secțiune", selection: $sectiune) {
+                ForEach(Sectiune.allCases) { Text($0.rawValue).tag($0) }
+            }
+            .pickerStyle(.segmented)
+
+            Text(sectiune == .jucatori
+                 ? "Echipe care mai au nevoie de jucători. Te alături cu un tap."
+                 : "Jucători care caută echipă. Îi inviți, iar ei primesc o notificare.")
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
 
@@ -83,23 +115,17 @@ struct MeciuriView: View {
 
             HStack(spacing: 10) {
                 Button {
-                    if estePersonal { arataAnunt = true } else { arataAutentificarea = true }
+                    if !estePersonal { arataAutentificarea = true }
+                    else if sectiune == .jucatori { arataAnunt = true }
+                    else { arataAnuntJucator = true }
                 } label: {
-                    Label("Pune un anunț", systemImage: "plus")
+                    Label(sectiune == .jucatori ? "Caut jucători" : "Caut echipă", systemImage: "plus")
                         .font(.subheadline.weight(.semibold))
                         .foregroundStyle(.white)
                         .frame(maxWidth: .infinity)
                         .frame(height: 46)
                         .background(Tema.gradientAccent, in: .capsule)
                         .shadow(color: Tema.accent.opacity(0.3), radius: 10, y: 5)
-                }
-                NavigationLink(value: "jucatori") {
-                    Label("Caută jucători", systemImage: "person.2.fill")
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(Tema.accent)
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 46)
-                        .background(Tema.accent.opacity(0.1), in: .capsule)
                 }
             }
             .buttonStyle(.plain)
@@ -125,6 +151,136 @@ struct MeciuriView: View {
 
     @ViewBuilder
     private var lista: some View {
+        if sectiune == .echipa {
+            listaJucatori
+        } else {
+            listaMeciuri
+        }
+    }
+
+    @ViewBuilder
+    private var listaJucatori: some View {
+        if seIncarca && jucatoriLiberi.isEmpty {
+            ForEach(0..<2, id: \.self) { _ in ScheletFisa(inaltime: 160) }
+        } else if jucatoriLiberi.isEmpty {
+            VStack(spacing: 10) {
+                Image(systemName: "person.badge.plus")
+                    .font(.system(size: 26))
+                    .foregroundStyle(Tema.accent)
+                    .frame(width: 60, height: 60)
+                    .background(Tema.accent.opacity(0.1), in: .circle)
+                Text(oras.isEmpty ? "Niciun jucător nu caută echipă" : "Niciun jucător în \(oras)")
+                    .font(.headline)
+                Text("Cauți tu echipă? Apasă „Caut echipă” și spune ce poziție joci.")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 36)
+        } else {
+            ForEach(Array(jucatoriLiberi.enumerated()), id: \.element.id) { index, anunt in
+                cardJucator(anunt).intrareElement(index)
+            }
+        }
+    }
+
+    private func cardJucator(_ a: AnuntJucator) -> some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(spacing: 12) {
+                AvatarPersoana(nume: a.jucator.nume, poza: a.jucator.poza, marime: 52)
+                VStack(alignment: .leading, spacing: 3) {
+                    HStack(spacing: 6) {
+                        Text(a.jucator.nume).font(.headline)
+                        if a.esteAlMeu {
+                            Text("anunțul tău").font(.caption.weight(.semibold)).foregroundStyle(Tema.accent)
+                        }
+                    }
+                    Text([a.oras, NivelJoc.eticheta(a.nivel)].compactMap { $0 }.joined(separator: " · "))
+                        .font(.subheadline).foregroundStyle(.secondary)
+                }
+                Spacer(minLength: 0)
+            }
+
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 6) {
+                    Label(a.sport.eticheta, systemImage: a.sport.simbol)
+                        .font(.footnote.weight(.semibold))
+                        .foregroundStyle(Tema.accent)
+                        .padding(.horizontal, 11).padding(.vertical, 6)
+                        .background(Tema.accent.opacity(0.1), in: .capsule)
+                    ForEach(a.pozitii, id: \.self) { p in
+                        Text(p)
+                            .font(.footnote.weight(.medium))
+                            .padding(.horizontal, 11).padding(.vertical, 6)
+                            .background(Color.primary.opacity(0.06), in: .capsule)
+                    }
+                }
+            }
+
+            if let d = a.descriere { Text(d).font(.subheadline).foregroundStyle(.primary.opacity(0.8)) }
+
+            if a.esteAlMeu {
+                if a.invitatii.isEmpty {
+                    Text("Nicio invitație încă. Te anunțăm când te vrea o echipă.")
+                        .font(.footnote).foregroundStyle(.secondary)
+                } else {
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text("TE VOR ÎN ECHIPĂ").font(.caption.weight(.bold)).tracking(0.8).foregroundStyle(Tema.accent)
+                        ForEach(a.invitatii) { i in
+                            HStack(spacing: 10) {
+                                AvatarPersoana(nume: i.nume, poza: i.poza, marime: 32)
+                                VStack(alignment: .leading, spacing: 1) {
+                                    Text(i.nume).font(.subheadline.weight(.medium))
+                                    if let m = i.mesaj { Text("„\(m)”").font(.caption).foregroundStyle(.secondary) }
+                                }
+                                Spacer()
+                                if let t = i.telefon, let url = URL(string: "tel:\(t.filter { $0.isNumber || $0 == "+" })") {
+                                    Link(destination: url) { Label(t, systemImage: "phone.fill").font(.footnote.weight(.semibold)) }
+                                }
+                            }
+                        }
+                    }
+                    .padding(12)
+                    .background(Tema.accent.opacity(0.06), in: .rect(cornerRadius: 14, style: .continuous))
+                }
+                Button("Scoate anunțul", role: .destructive) { stergeAnuntJucator(a) }
+                    .font(.subheadline.weight(.semibold))
+            } else if a.lAmInvitat {
+                Text("L-ai invitat. A primit o notificare.").font(.footnote.weight(.medium)).foregroundStyle(Tema.accent)
+                if let t = a.telefonJucator, let url = URL(string: "tel:\(t.filter { $0.isNumber || $0 == "+" })") {
+                    Link(destination: url) {
+                        Label("Sună-l: \(t)", systemImage: "phone.fill")
+                            .font(.subheadline.weight(.medium))
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 11)
+                            .background(Tema.accent.opacity(0.1), in: .rect(cornerRadius: 12, style: .continuous))
+                            .foregroundStyle(Tema.accent)
+                    }
+                }
+            } else {
+                Button {
+                    if estePersonal { mesajInvitatie = ""; deInvitat = a } else { arataAutentificarea = true }
+                } label: {
+                    Label(inLucru == a.id ? "Se trimite…" : "Vreau în echipă", systemImage: "person.badge.plus")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(.white)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 44)
+                        .background(Tema.gradientAccent, in: .capsule)
+                }
+                .buttonStyle(.plain)
+                .disabled(inLucru == a.id)
+            }
+        }
+        .padding(18)
+        .background(Tema.fisa, in: .rect(cornerRadius: 24, style: .continuous))
+        .shadow(color: .black.opacity(0.04), radius: 1, y: 1)
+        .shadow(color: .black.opacity(0.07), radius: 18, y: 8)
+    }
+
+    @ViewBuilder
+    private var listaMeciuri: some View {
         if seIncarca && meciuri.isEmpty {
             ForEach(0..<2, id: \.self) { _ in ScheletFisa(inaltime: 200) }
         } else if let eroare, meciuri.isEmpty {
@@ -151,7 +307,7 @@ struct MeciuriView: View {
             .frame(maxWidth: .infinity)
             .padding(.vertical, 36)
         } else {
-            Text("\(meciuri.count) \(meciuri.count == 1 ? "meci caută" : "meciuri caută") jucători")
+            Text("\(meciuri.count) \(meciuri.count == 1 ? "echipă caută" : "echipe caută") jucători")
                 .font(.footnote)
                 .foregroundStyle(.secondary)
             ForEach(Array(meciuri.enumerated()), id: \.element.id) { index, meci in
@@ -288,11 +444,44 @@ struct MeciuriView: View {
         if !oras.trimmingCharacters(in: .whitespaces).isEmpty { parametri["oras"] = oras }
         if let sport { parametri["sport"] = sport.rawValue }
         do {
-            let noi = try await ApiClient.shared.cere("meciuri", parametri: parametri, ca: [Meci].self)
-            eroare = nil
-            withAnimation(.smooth) { meciuri = noi }
+            if sectiune == .echipa {
+                let noi = try await ApiClient.shared.cere("jucatori-liberi", parametri: parametri, ca: [AnuntJucator].self)
+                eroare = nil
+                withAnimation(.smooth) { jucatoriLiberi = noi }
+            } else {
+                let noi = try await ApiClient.shared.cere("meciuri", parametri: parametri, ca: [Meci].self)
+                eroare = nil
+                withAnimation(.smooth) { meciuri = noi }
+            }
         } catch {
             eroare = error.localizedDescription
+        }
+    }
+
+    private func invita(_ a: AnuntJucator) {
+        inLucru = a.id
+        let mesaj = mesajInvitatie
+        Task {
+            defer { inLucru = nil }
+            struct Corp: Encodable { let mesaj: String? }
+            do {
+                let actualizat = try await ApiClient.shared.cere(
+                    "jucatori-liberi/\(a.id)/invita", metoda: "POST",
+                    corp: Corp(mesaj: mesaj.isEmpty ? nil : mesaj), ca: AnuntJucator.self
+                )
+                if let i = jucatoriLiberi.firstIndex(where: { $0.id == a.id }) {
+                    withAnimation(.smooth) { jucatoriLiberi[i] = actualizat }
+                }
+            } catch {
+                eroare = error.localizedDescription
+            }
+        }
+    }
+
+    private func stergeAnuntJucator(_ a: AnuntJucator) {
+        Task {
+            try? await ApiClient.shared.cereFaraRaspuns("jucatori-liberi/\(a.id)", metoda: "DELETE")
+            withAnimation(.smooth) { jucatoriLiberi.removeAll { $0.id == a.id } }
         }
     }
 
@@ -430,89 +619,119 @@ struct PosteazaMeciView: View {
     }
 }
 
-/// „Caută jucători”: cei care au ales să fie găsiți, după oraș, nume și sport.
-struct JucatoriView: View {
+/// „Caut echipă”: jucătorul își pune anunțul cu sportul, orașul și poziția.
+struct PuneAnuntJucatorView: View {
     let orasInitial: String
+    let laFinal: () -> Void
 
-    @Environment(Sesiune.self) private var sesiune
-    @State private var jucatori: [JucatorPublic] = []
+    @Environment(\.dismiss) private var inchide
+
+    @State private var sport: Sport = .fotbal
+    @State private var pozitii: Set<String> = []
     @State private var oras = ""
-    @State private var nume = ""
-    @State private var sport: Sport?
-    @State private var seIncarca = true
-    @State private var vizibil = false
+    @State private var nivel = ""
+    @State private var descriere = ""
+    @State private var arataTelefon = true
+    @State private var eroare: String?
+    @State private var seTrimite = false
 
     var body: some View {
-        List {
-            Section {
-                TextField("Oraș", text: $oras).onSubmit { Task { await incarca() } }
-                TextField("Nume (opțional)", text: $nume).onSubmit { Task { await incarca() } }
+        Form {
+            Section("Sport") {
                 Picker("Sport", selection: $sport) {
-                    Text("Toate").tag(Sport?.none)
-                    ForEach(Sport.allCases.filter { $0 != .altele }, id: \.self) { s in Text(s.eticheta).tag(Optional(s)) }
-                }
-                Button("Caută") { Task { await incarca() } }.fontWeight(.semibold)
-            }
-
-            if sesiune.esteConectat && !sesiune.esteBusiness {
-                Section {
-                    Toggle("Apar și eu în căutare", isOn: $vizibil)
-                        .tint(Tema.accent)
-                        .onChange(of: vizibil) { _, nou in
-                            Task {
-                                struct Corp: Encodable { let vizibil: Bool }
-                                try? await ApiClient.shared.cereFaraRaspuns("eu/vizibilitate", metoda: "PUT", corp: Corp(vizibil: nou))
-                                await sesiune.reincarcaProfil()
-                            }
-                        }
-                } footer: {
-                    Text("Ceilalți îți văd doar numele, poza, orașul, sporturile și nivelul.")
-                }
-            }
-
-            Section {
-                if seIncarca && jucatori.isEmpty {
-                    ProgressView().frame(maxWidth: .infinity)
-                } else if jucatori.isEmpty {
-                    Text("Niciun jucător găsit. Apar aici doar cei care au ales asta.")
-                        .font(.subheadline).foregroundStyle(.secondary)
-                } else {
-                    ForEach(jucatori) { j in
-                        HStack(spacing: 14) {
-                            AvatarPersoana(nume: j.nume, poza: j.poza, marime: 48)
-                            VStack(alignment: .leading, spacing: 3) {
-                                Text(j.nume).font(.body.weight(.semibold))
-                                Text([j.oras, NivelJoc.eticheta(j.nivel)].compactMap { $0 }.joined(separator: " · "))
-                                    .font(.footnote).foregroundStyle(.secondary)
-                                if !j.sporturi.isEmpty {
-                                    Text(j.sporturi.map(\.eticheta).joined(separator: ", "))
-                                        .font(.caption.weight(.medium)).foregroundStyle(Tema.accent)
-                                }
-                            }
-                        }
-                        .padding(.vertical, 4)
+                    ForEach(Sport.allCases.filter { $0 != .altele }, id: \.self) { s in
+                        Label(s.eticheta, systemImage: s.simbol).tag(s)
                     }
                 }
-            } header: {
-                Text(jucatori.isEmpty ? "" : "\(jucatori.count) jucători")
+            }
+            if !sport.pozitii.isEmpty {
+                Section {
+                    LazyVGrid(columns: [.init(.adaptive(minimum: 100), spacing: 8)], spacing: 8) {
+                        ForEach(sport.pozitii, id: \.self) { p in
+                            let ales = pozitii.contains(p)
+                            Button {
+                                if ales { pozitii.remove(p) } else { pozitii.insert(p) }
+                            } label: {
+                                Text(p)
+                                    .font(.subheadline.weight(.medium))
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.vertical, 10)
+                                    .background(ales ? Tema.accent : Tema.fundal, in: .rect(cornerRadius: 10, style: .continuous))
+                                    .foregroundStyle(ales ? .white : .primary)
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                    .padding(.vertical, 4)
+                } header: {
+                    Text("Pe ce poziție joci?")
+                } footer: {
+                    Text("Poți alege mai multe.")
+                }
+            }
+            Section {
+                TextField("Oraș", text: $oras)
+                Picker("Nivel", selection: $nivel) {
+                    Text("Nu spun").tag("")
+                    Text("Începător").tag("INCEPATOR")
+                    Text("Mediu").tag("MEDIU")
+                    Text("Avansat").tag("AVANSAT")
+                    Text("Competitiv").tag("COMPETITIV")
+                }
+                TextField("Despre tine (opțional)", text: $descriere, axis: .vertical).lineLimit(2...5)
+                Toggle("Arată telefonul meu echipelor care mă invită", isOn: $arataTelefon)
+            }
+            if let eroare {
+                Section { Text(eroare).font(.footnote).foregroundStyle(.red) }
+            }
+            Section {
+                Button(action: trimite) {
+                    HStack {
+                        Spacer()
+                        if seTrimite { ProgressView().tint(.white) } else { Text("Pune-mă pe listă").fontWeight(.semibold) }
+                        Spacer()
+                    }
+                }
+                .listRowBackground(Tema.accent)
+                .foregroundStyle(.white)
+                .disabled(seTrimite)
             }
         }
-        .navigationTitle("Caută jucători")
+        .navigationTitle("Caut echipă")
         .navigationBarTitleDisplayMode(.inline)
-        .task {
-            if oras.isEmpty { oras = orasInitial }
-            vizibil = sesiune.utilizator?.vizibilInCautare ?? false
-            await incarca()
-        }
+        .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Renunță") { inchide() } } }
+        .onAppear { if oras.isEmpty { oras = orasInitial } }
+        .onChange(of: sport) { pozitii = [] }
     }
 
-    private func incarca() async {
-        seIncarca = true
-        defer { seIncarca = false }
-        var parametri: [String: String] = [:]
-        if !oras.trimmingCharacters(in: .whitespaces).isEmpty { parametri["oras"] = oras }
-        if !nume.trimmingCharacters(in: .whitespaces).isEmpty { parametri["nume"] = nume }
-        if let sport { parametri["sport"] = sport.rawValue }
-        jucatori = (try? await ApiClient.shared.cere("jucatori", parametri: parametri, ca: [JucatorPublic].self)) ?? []
+    private func trimite() {
+        eroare = nil
+        guard oras.trimmingCharacters(in: .whitespaces).count >= 2 else { eroare = "Scrie orașul."; return }
+        struct Corp: Encodable {
+            let sport: String
+            let oras: String
+            let pozitii: [String]
+            let nivel: String?
+            let descriere: String?
+            let arataTelefon: Bool
+        }
+        let corp = Corp(
+            sport: sport.rawValue, oras: oras,
+            pozitii: sport.pozitii.filter { pozitii.contains($0) },
+            nivel: nivel.isEmpty ? nil : nivel,
+            descriere: descriere.isEmpty ? nil : descriere,
+            arataTelefon: arataTelefon
+        )
+        seTrimite = true
+        Task {
+            defer { seTrimite = false }
+            do {
+                try await ApiClient.shared.cereFaraRaspuns("jucatori-liberi", metoda: "POST", corp: corp)
+                laFinal()
+                inchide()
+            } catch {
+                eroare = error.localizedDescription
+            }
+        }
     }
 }

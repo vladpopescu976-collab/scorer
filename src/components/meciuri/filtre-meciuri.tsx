@@ -8,12 +8,14 @@ import { cn } from "@/lib/utils";
 import { sportOptions } from "@/lib/sports";
 
 /** Orașul și sportul: se scriu în adresă, ca lista să poată fi trimisă cuiva. */
-export function FiltreMeciuri({ cale, oras, sport, cuNume = false, nume = "" }: {
+export function FiltreMeciuri({ cale, oras, sport, cuNume = false, nume = "", pastreaza = {} }: {
   cale: string;
   oras: string;
   sport: string;
   cuNume?: boolean;
   nume?: string;
+  /** Parametri care rămân la fiecare căutare (de exemplu secțiunea aleasă). */
+  pastreaza?: Record<string, string>;
 }) {
   const router = useRouter();
   const [, startTransition] = useTransition();
@@ -22,7 +24,7 @@ export function FiltreMeciuri({ cale, oras, sport, cuNume = false, nume = "" }: 
 
   function aplica(schimbari: Record<string, string | undefined>) {
     const params = new URLSearchParams();
-    const valori = { oras: orasLocal, sport, nume: numeLocal, ...schimbari };
+    const valori = { ...pastreaza, oras: orasLocal, sport, nume: numeLocal, ...schimbari };
     Object.entries(valori).forEach(([cheie, valoare]) => valoare && params.set(cheie, valoare));
     startTransition(() => router.push(`${cale}${params.size ? `?${params}` : ""}`));
   }

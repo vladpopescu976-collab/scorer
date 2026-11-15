@@ -12,6 +12,12 @@ import {
   seteazaVizibilitate,
   stergeMeci,
 } from "@/lib/meciuri";
+import {
+  type AnuntJucatorInput,
+  invitaJucator,
+  salveazaAnuntJucator,
+  stergeAnuntJucator,
+} from "@/lib/jucatori-liberi";
 
 async function cerePersonal() {
   const sesiune = await auth();
@@ -67,5 +73,35 @@ export async function seteazaVizibilitateAction(vizibil: boolean): Promise<Actio
     return ok();
   } catch (error) {
     return toActionError("seteazaVizibilitate", error);
+  }
+}
+
+export async function salveazaAnuntJucatorAction(input: AnuntJucatorInput): Promise<ActionResult> {
+  try {
+    await salveazaAnuntJucator(await cerePersonal(), input);
+    revalidatePath("/gaseste-meci");
+    return ok();
+  } catch (error) {
+    return toActionError("salveazaAnuntJucator", error);
+  }
+}
+
+export async function stergeAnuntJucatorAction(id: string): Promise<ActionResult> {
+  try {
+    await stergeAnuntJucator(id, await cerePersonal());
+    revalidatePath("/gaseste-meci");
+    return ok();
+  } catch (error) {
+    return toActionError("stergeAnuntJucator", error);
+  }
+}
+
+export async function invitaJucatorAction(id: string, mesaj?: string): Promise<ActionResult> {
+  try {
+    await invitaJucator(id, await cerePersonal(), mesaj);
+    revalidatePath("/gaseste-meci");
+    return ok();
+  } catch (error) {
+    return toActionError("invitaJucator", error);
   }
 }
