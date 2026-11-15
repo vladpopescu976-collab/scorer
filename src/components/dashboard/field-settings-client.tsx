@@ -12,6 +12,7 @@ import { OptiuniTeren } from "@/components/dashboard/optiuni-teren";
 import { OreBlocate, type BlocareTeren } from "@/components/dashboard/ore-blocate";
 import { updateField, removeField } from "@/lib/actions/business";
 import { sportMeta } from "@/lib/sports";
+import { TitluPanou } from "@/components/antet-pagina";
 
 type Field = EditableField;
 
@@ -186,7 +187,7 @@ function FieldCard({
             className={
               "flex flex-1 items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-[12.5px] font-medium transition-colors " +
               (saved
-                ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400"
+                ? "bg-primary/10 text-primary dark:bg-[#7BD389]/10 dark:text-[#7BD389]"
                 : dirty
                   ? "bg-primary text-primary-foreground hover:opacity-90"
                   : "bg-muted text-muted-foreground")
@@ -243,7 +244,7 @@ export function FieldSettingsClient({
     <div className="space-y-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="font-heading text-[20px] font-semibold">Terenurile tale</h1>
+          <TitluPanou titlu="Terenurile tale." accent="Program și prețuri." />
           <p className="text-[13px] text-muted-foreground">
             {fields.filter((f) => f.isActive).length} active din {fields.length}
           </p>

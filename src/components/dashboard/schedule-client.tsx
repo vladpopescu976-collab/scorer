@@ -40,6 +40,7 @@ import {
   TOATE,
 } from "@/components/dashboard/selector-sport-teren";
 import type { BookingStatus, SportType } from "@prisma/client";
+import { TitluPanou } from "@/components/antet-pagina";
 
 const START_HOUR = 8;
 const END_HOUR = 23;
@@ -203,7 +204,7 @@ export function ScheduleClient({
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="font-heading text-[20px] font-semibold capitalize">{weekdayFmt.format(selectedDate)}</h1>
+          <TitluPanou titlu={weekdayFmt.format(selectedDate)} />
           <p className="text-[13px] text-muted-foreground">{longDateFmt.format(selectedDate)}</p>
         </div>
         <div className="flex items-center gap-2">

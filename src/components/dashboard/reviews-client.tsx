@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Stars } from "@/components/reviews";
 import { replyToReview } from "@/lib/actions/reviews";
+import { TitluPanou } from "@/components/antet-pagina";
 
 type Review = {
   id: string;
@@ -117,7 +118,7 @@ export function ReviewsClient({ reviews }: { reviews: Review[] }) {
   return (
     <div className="space-y-4">
       <div>
-        <h1 className="font-heading text-[20px] font-semibold">Recenzii</h1>
+        <TitluPanou titlu="Recenzii." accent="Ce spun jucătorii." />
         <p className="text-[13px] text-muted-foreground">
           {reviews.length === 0
             ? "Încă nu ai primit recenzii."

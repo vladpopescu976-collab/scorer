@@ -29,7 +29,7 @@ export default async function ConfirmaEmailPage({
         {rezultat.stare === "confirmat" || rezultat.stare === "deja-confirmat" ? (
           <>
             <CardHeader>
-              <div className="mb-1 flex h-11 w-11 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-600">
+              <div className="mb-1 flex h-11 w-11 items-center justify-center rounded-full bg-primary/10 text-primary">
                 <CheckCircle2 className="h-6 w-6" />
               </div>
               <CardTitle>

@@ -94,7 +94,7 @@ export function CardMeci(props: Props) {
             </span>
           </div>
           <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-muted">
-            <div className="h-full rounded-full bg-[#17854A] transition-all" style={{ width: `${procent}%` }} />
+            <div className="h-full rounded-full bg-[#0E6B3A] transition-all" style={{ width: `${procent}%` }} />
           </div>
         </div>
 

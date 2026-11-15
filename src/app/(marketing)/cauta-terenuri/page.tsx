@@ -1,13 +1,12 @@
 import { Suspense } from "react";
 import type { Metadata } from "next";
-import Link from "next/link";
-import { MapPin, SearchX } from "lucide-react";
+import { SearchX } from "lucide-react";
 import type { Prisma, SportType } from "@prisma/client";
 
 import { prisma } from "@/lib/prisma";
-import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { FieldCard } from "@/components/field-card";
+import { AntetPagina, StareGoala } from "@/components/antet-pagina";
 import { SearchFilters } from "@/components/search-filters";
 import { sportMeta } from "@/lib/sports";
 import { dayRangeInAppZone } from "@/lib/datetime";
@@ -31,11 +30,12 @@ function isSportType(value: string | undefined): value is SportType {
 }
 
 function ResultsSkeleton() {
+  // Doar trei carduri, mai mici: cât se încarcă, pagina nu e un perete gri.
   return (
     <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
-      {Array.from({ length: 6 }).map((_, i) => (
-        <div key={i} className="overflow-hidden rounded-2xl border bg-card">
-          <Skeleton className="aspect-[4/3] w-full rounded-none" />
+      {Array.from({ length: 3 }).map((_, i) => (
+        <div key={i} className="overflow-hidden rounded-3xl border border-black/[0.06] bg-card">
+          <Skeleton className="aspect-[16/10] w-full rounded-none" />
           <div className="space-y-2.5 p-4">
             <Skeleton className="h-4 w-3/4" />
             <Skeleton className="h-3 w-1/3" />
@@ -113,18 +113,12 @@ async function Results({ sport, oras, pretMax, data, dimensiune }: SearchParams)
 
   if (visible.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed py-20 text-center">
-        <div className="flex h-14 w-14 items-center justify-center rounded-full bg-muted">
-          <SearchX className="h-6 w-6 text-muted-foreground" />
-        </div>
-        <p className="mt-4 font-medium">Niciun teren găsit</p>
-        <p className="mt-1 max-w-sm text-sm text-muted-foreground">
-          Încearcă să elimini câteva filtre sau caută în alt oraș.
-        </p>
-        <Button variant="outline" className="mt-6" nativeButton={false} render={<Link href="/cauta-terenuri" />}>
-          Vezi toate terenurile
-        </Button>
-      </div>
+      <StareGoala
+        icon={SearchX}
+        titlu="Niciun teren găsit"
+        text="Încearcă să scoți câteva filtre sau caută în alt oraș. Terenuri noi apar în fiecare săptămână."
+        actiune={{ eticheta: "Vezi toate terenurile", href: "/cauta-terenuri" }}
+      />
     );
   }
 
@@ -166,14 +160,14 @@ export default async function CautaTerenuriPage({
   const { sport = "", oras = "", pretMax = "", data = "", dimensiune = "" } = params;
 
   return (
+    <>
+    <AntetPagina
+      eticheta="Terenuri"
+      titlu="Caută terenuri."
+      accent="Joacă azi."
+      descriere="Filtrează după sport, dimensiune, oraș, preț și ziua în care vrei să joci."
+    />
     <div className="mx-auto w-full max-w-6xl px-4 py-10 sm:px-6 lg:px-8">
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">Caută terenuri</h1>
-        <p className="mt-1.5 flex items-center gap-1.5 text-muted-foreground">
-          <MapPin className="h-4 w-4" />
-          Filtrează după sport, dimensiune, oraș, preț și disponibilitate.
-        </p>
-      </div>
 
       <div className="grid gap-6 lg:grid-cols-[260px_1fr] lg:gap-10">
         <SearchFilters sport={sport} oras={oras} pretMax={pretMax} data={data} dimensiune={dimensiune} />
@@ -185,5 +179,6 @@ export default async function CautaTerenuriPage({
         </div>
       </div>
     </div>
+    </>
   );
 }

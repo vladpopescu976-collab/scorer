@@ -5,6 +5,7 @@ import { expiraImpartirile } from "@/lib/impartire-plata";
 import { MyBookingsClient } from "@/components/dashboard/my-bookings-client";
 import { normalizeazaOras } from "@/lib/orase";
 import { RezervariFaraCont } from "@/components/rezervare/rezervari-fara-cont";
+import { AntetPagina } from "@/components/antet-pagina";
 
 // Baza Prisma Postgres se suspenda cand e inactiva, iar prima cerere
 // care o trezeste poate dura ~30s. Implicit Vercel taie functia la 10s,
@@ -35,11 +36,15 @@ export default async function MyBookingsPage() {
   });
 
   return (
+    <>
+    <AntetPagina
+      eticheta="Rezervări"
+      titlu="Rezervările mele."
+      accent="Totul într-un loc."
+      descriere="Urmărește cererile, mutările propuse și split the bill-urile tale."
+    />
     <div className="mx-auto max-w-5xl px-4 py-10">
-      <h1 className="text-2xl font-bold tracking-tight">Rezervările mele</h1>
-      <p className="mt-1 text-muted-foreground">Urmărește statusul cererilor tale de rezervare.</p>
-
-      <div className="mt-8">
+      <div>
         <MyBookingsClient
           bookings={bookings.map((b) => ({
             ...b,
@@ -54,5 +59,6 @@ export default async function MyBookingsPage() {
         />
       </div>
     </div>
+    </>
   );
 }

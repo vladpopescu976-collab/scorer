@@ -101,16 +101,20 @@ export function PaginaCont({ user, note }: { user: DateCont; note?: NotePrimite 
 
       <div className="space-y-12">
         {/* Antet: poza, numele și tipul contului, centrate și aerisite. */}
-        <section className="flex flex-col items-center text-center">
+        <section className="relative flex flex-col items-center overflow-hidden rounded-[28px] bg-[radial-gradient(120%_120%_at_0%_0%,#17543A_0%,#0B2A1C_55%,#07160F_100%)] px-6 pb-9 pt-10 text-center text-[#F3EFE6] shadow-[0_30px_60px_-30px_rgba(7,22,15,.7)]">
+          <div aria-hidden className="pointer-events-none absolute -right-20 -top-20 h-56 w-56 rounded-full bg-[#7BD389]/10 blur-3xl" />
+          <p className="relative mb-5 text-[13px] font-medium text-[#F3EFE6]/60">
+            Contul tău <span className="font-display text-[15px] italic">· Scorer</span>
+          </p>
           <PozaProfil nume={user.name} poza={user.image} />
-          <h1 className="mt-6 text-[28px] font-semibold tracking-[-0.03em] sm:text-[34px]">{user.name}</h1>
-          <p className="mt-1 text-[15px] text-muted-foreground">{user.email}</p>
-          <div className="mt-4 flex flex-wrap items-center justify-center gap-2 text-[13px]">
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-3.5 py-1.5 font-medium text-primary">
+          <h1 className="relative mt-6 text-[28px] font-semibold tracking-[-0.03em] sm:text-[34px]">{user.name}</h1>
+          <p className="relative mt-1 text-[15px] text-[#F3EFE6]/65">{user.email}</p>
+          <div className="relative mt-4 flex flex-wrap items-center justify-center gap-2 text-[13px]">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-[#7BD389]/15 px-3.5 py-1.5 font-medium text-[#7BD389]">
               {esteBusiness ? <Building2 className="h-3.5 w-3.5" /> : <UserRound className="h-3.5 w-3.5" />}
               {esteBusiness ? "Cont Business" : "Cont Personal"}
             </span>
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-muted px-3.5 py-1.5 text-muted-foreground">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-3.5 py-1.5 text-[#F3EFE6]/75">
               <CalendarDays className="h-3.5 w-3.5" />
               Membru din {membruDin}
             </span>

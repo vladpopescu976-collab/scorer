@@ -7,6 +7,7 @@ import { MapPin, Check, X, CalendarClock, Ban, Users, ChevronRight } from "lucid
 import { toast } from "sonner";
 
 import { StatusBadge } from "@/components/dashboard/status-badge";
+import { StareGoala } from "@/components/antet-pagina";
 import { EditBookingDialog } from "@/components/edit-booking-dialog";
 import { ReviewForm, Stars } from "@/components/reviews";
 import { acceptReschedule, cancelBooking, declineReschedule } from "@/lib/actions/bookings";
@@ -121,7 +122,7 @@ function BookingRow({ booking }: { booking: Booking }) {
               type="button"
               disabled={isPending}
               onClick={accept}
-              className="flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-2 text-[12.5px] font-medium text-white hover:opacity-90 disabled:opacity-50"
+              className="flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-primary px-3 py-2 text-[12.5px] font-medium text-white hover:opacity-90 disabled:opacity-50"
             >
               <Check className="h-3.5 w-3.5" /> Acceptă noua oră
             </button>
@@ -222,10 +223,12 @@ function BookingRow({ booking }: { booking: Booking }) {
 export function MyBookingsClient({ bookings }: { bookings: Booking[] }) {
   if (bookings.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed py-20 text-center">
-        <p className="text-[14px] font-medium">Nu ai nicio rezervare încă</p>
-        <p className="mt-1 text-[13px] text-muted-foreground">Caută un teren și trimite prima ta cerere de rezervare.</p>
-      </div>
+      <StareGoala
+        icon={CalendarClock}
+        titlu="Nicio rezervare încă"
+        text="Alege un teren, o oră liberă și trimite prima cerere. O vezi aici imediat."
+        actiune={{ eticheta: "Caută terenuri", href: "/cauta-terenuri" }}
+      />
     );
   }
 

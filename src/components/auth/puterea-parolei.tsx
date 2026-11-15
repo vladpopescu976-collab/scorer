@@ -9,8 +9,8 @@ const CULORI = [
   "bg-destructive",
   "bg-destructive",
   "bg-amber-500",
-  "bg-emerald-500",
-  "bg-emerald-600",
+  "bg-primary/100",
+  "bg-primary",
 ];
 
 /** Cât de bună e parola, cât o scrii. Nu blochează nimic, doar arată. */

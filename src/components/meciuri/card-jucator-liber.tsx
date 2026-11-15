@@ -182,7 +182,7 @@ function DetaliiJucator({ anunt, conectat, telefonCont = "" }: Props) {
                     if (!r.ok) toast.error(r.error);
                   })
                 }
-                className={`relative h-7 w-12 shrink-0 rounded-full transition-colors ${anunt.primesteInvitatii ? "bg-[#17854A]" : "bg-muted-foreground/30"}`}
+                className={`relative h-7 w-12 shrink-0 rounded-full transition-colors ${anunt.primesteInvitatii ? "bg-[#0E6B3A]" : "bg-muted-foreground/30"}`}
               >
                 <span className={`absolute top-1 h-5 w-5 rounded-full bg-white shadow transition-all ${anunt.primesteInvitatii ? "left-6" : "left-1"}`} />
               </button>

@@ -18,10 +18,10 @@ export type StilInterval = {
 export const FEL_INTERVAL: Record<FelInterval, StilInterval> = {
   site: {
     eticheta: "Rezervare pe site",
-    fundal: "bg-emerald-50 dark:bg-emerald-500/10",
-    margine: "border-emerald-500",
-    text: "text-emerald-700 dark:text-emerald-400",
-    bulina: "bg-emerald-500",
+    fundal: "bg-primary/10 dark:bg-[#7BD389]/10",
+    margine: "border-[#2FA560]",
+    text: "text-primary dark:text-[#7BD389]",
+    bulina: "bg-primary/100",
   },
   telefon: {
     eticheta: "Comandă telefonică",

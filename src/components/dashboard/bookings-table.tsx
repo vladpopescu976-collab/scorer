@@ -19,6 +19,7 @@ import { approveBooking, rejectBooking } from "@/lib/actions/business";
 import { bookingStatusLabel } from "@/lib/status";
 import { toDateInput, toTimeInput } from "@/lib/datetime";
 import type { BookingStatus } from "@prisma/client";
+import { TitluPanou } from "@/components/antet-pagina";
 
 type Row = {
   id: string;
@@ -153,7 +154,7 @@ export function BookingsTable({ bookings, fields }: { bookings: Row[]; fields: {
     <div className="space-y-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="font-heading text-[20px] font-semibold">Gestionare rezervări</h1>
+          <TitluPanou titlu="Rezervări." accent="Cele mai noi sus." />
           <p className="text-[13px] text-muted-foreground">
             {bookings.length} în total · {pendingCount} necesită răspuns
           </p>
@@ -311,7 +312,7 @@ export function BookingsTable({ bookings, fields }: { bookings: Row[]; fields: {
                             type="button"
                             disabled={isPending && pendingId === b.id}
                             onClick={() => handleApprove(b.id)}
-                            className="flex items-center gap-1 rounded-lg bg-emerald-50 px-2.5 py-1.5 text-[12px] font-medium text-emerald-700 hover:brightness-95 disabled:opacity-50 dark:bg-emerald-500/10 dark:text-emerald-400"
+                            className="flex items-center gap-1 rounded-lg bg-primary/10 px-2.5 py-1.5 text-[12px] font-medium text-primary hover:brightness-95 disabled:opacity-50 dark:bg-[#7BD389]/10 dark:text-[#7BD389]"
                           >
                             <Check className="h-3.5 w-3.5" /> Aprobă
                           </button>
