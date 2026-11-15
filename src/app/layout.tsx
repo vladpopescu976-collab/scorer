@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono, Instrument_Serif } from "next/font/google";
 import "./globals.css";
 
@@ -23,7 +23,14 @@ const instrumentSerif = Instrument_Serif({
   style: ["normal", "italic"],
 });
 
+export const viewport: Viewport = {
+  // Culoarea barei de titlu a aplicației instalate (Windows, Android).
+  themeColor: "#0B2A1C",
+};
+
 export const metadata: Metadata = {
+  applicationName: "Scorer",
+  appleWebApp: { capable: true, title: "Scorer", statusBarStyle: "black-translucent" },
   title: "Scorer — Închiriază terenuri sportive",
   description:
     "Platforma prin care găsești și rezervi terenuri sportive rapid, sau îți administrezi propriile terenuri.",

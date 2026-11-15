@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AvatarCont } from "@/components/cont/poza-profil";
+import { InstaleazaAplicatia } from "@/components/instaleaza-aplicatia";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -134,6 +135,7 @@ export function Navbar() {
         </nav>
 
         <div className="hidden items-center gap-3 md:flex">
+          <InstaleazaAplicatia peHero={peHero} />
           {status === "loading" ? (
             <Skeleton className="h-9 w-24 rounded-full" />
           ) : session?.user ? (
