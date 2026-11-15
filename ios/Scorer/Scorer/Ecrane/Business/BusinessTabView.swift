@@ -31,12 +31,10 @@ struct BusinessTabView: View {
                 NavigationStack { TerenuriBusinessView() }
                     .intrarePagina(.ridicare)
             }
-            Tab("Recenzii", systemImage: "star", value: "recenzii") {
-                NavigationStack { RecenziiBusinessView() }
-                    .intrarePagina(.apropiere)
-            }
-            Tab("Cont", systemImage: "person", value: "cont") {
-                NavigationStack { ContView() }
+            // Recenziile și contul stau într-un ecran propriu, nu în lista „Altele”
+            // a sistemului (iPhone-ul arată doar cinci taburi).
+            Tab("Altele", systemImage: "square.grid.2x2", value: "altele") {
+                NavigationStack { AlteleBusinessView() }
                     .intrarePagina(.clarificare)
             }
         }
