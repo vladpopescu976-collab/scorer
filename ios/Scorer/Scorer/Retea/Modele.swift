@@ -176,6 +176,39 @@ struct PersoanaScurta: Codable, Identifiable, Sendable, Hashable {
     var telefon: String?
 }
 
+/// Un meci jucat în care ai pe cine nota.
+struct MeciDeEvaluat: Codable, Identifiable, Sendable {
+    struct Persoana: Codable, Identifiable, Sendable {
+        let id: String
+        let nume: String
+        let poza: String?
+        let rol: String
+        let notaMea: Int?
+    }
+    let id: String
+    let sport: Sport
+    let oras: String
+    let locatie: String?
+    let inceput: Date
+    let persoane: [Persoana]
+}
+
+/// Notele primite după meciuri, pentru pagina de cont.
+struct NotePrimite: Codable, Sendable {
+    struct Nota: Codable, Identifiable, Sendable {
+        struct Autor: Codable, Sendable { let nume: String; let poza: String? }
+        let id: String
+        let nota: Int
+        let comentariu: String?
+        let data: Date
+        let sport: Sport
+        let autor: Autor
+    }
+    let medie: Double?
+    let numar: Int
+    let note: [Nota]
+}
+
 /// Un jucător într-un meci (acceptat sau care a cerut să vină).
 struct JucatorInMeci: Codable, Identifiable, Sendable, Hashable {
     let id: String

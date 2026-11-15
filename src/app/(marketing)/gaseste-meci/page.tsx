@@ -12,6 +12,8 @@ import { PosteazaMeci } from "@/components/meciuri/posteaza-meci";
 import { CardJucatorLiber } from "@/components/meciuri/card-jucator-liber";
 import { PuneAnuntJucator } from "@/components/meciuri/pune-anunt-jucator";
 import { listaJucatoriLiberi } from "@/lib/jucatori-liberi";
+import { meciuriDeEvaluat } from "@/lib/note-jucatori";
+import { DeEvaluat } from "@/components/meciuri/de-evaluat";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 
@@ -31,10 +33,11 @@ export default async function GasesteMeciPage({
   const userId = sesiune?.user?.id ?? null;
   const estePersonal = sesiune?.user?.role === "PERSONAL";
 
-  const [meciuri, jucatori, eu] = await Promise.all([
+  const [meciuri, jucatori, eu, deEvaluat] = await Promise.all([
     cautaEchipa ? Promise.resolve([]) : listaMeciuri({ oras, sport }, userId),
     cautaEchipa ? listaJucatoriLiberi({ oras, sport }, userId) : Promise.resolve([]),
     userId ? prisma.user.findUnique({ where: { id: userId }, select: { city: true, phone: true } }) : null,
+    estePersonal && userId ? meciuriDeEvaluat(userId).catch(() => []) : Promise.resolve([]),
   ]);
 
   return (
@@ -92,6 +95,7 @@ export default async function GasesteMeciPage({
       </AntetMeciuri>
 
       <section className="mx-auto max-w-6xl px-4 py-12">
+        <DeEvaluat meciuri={deEvaluat} />
         {cautaEchipa ? (
           <>
             <p className="mb-6 text-sm text-muted-foreground">

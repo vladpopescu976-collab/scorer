@@ -7,6 +7,8 @@ import { Badge } from "@/components/ui/badge";
 import { ZonaPericuloasa } from "@/components/cont/zona-periculoasa";
 import { SchimbaDate } from "@/components/cont/schimba-date";
 import { PozaProfil } from "@/components/cont/poza-profil";
+import { NotePrimiteCont } from "@/components/cont/note-primite";
+import type { NotePrimite } from "@/lib/note-jucatori";
 import { sportMeta } from "@/lib/sports";
 
 const NIVELURI: Record<string, string> = {
@@ -43,7 +45,7 @@ export type DateCont = {
 };
 
 /** Pagina „Contul meu”: antet, contact și securitate, profil, zonă periculoasă. */
-export function PaginaCont({ user }: { user: DateCont }) {
+export function PaginaCont({ user, note }: { user: DateCont; note?: NotePrimite | null }) {
   const esteBusiness = user.role === "BUSINESS";
 
   // Datele de profil; emailul, telefonul și parola au secțiunea lor, cu schimbare.
@@ -155,6 +157,8 @@ export function PaginaCont({ user }: { user: DateCont }) {
             )}
           </dl>
         </Sectiune>
+
+        {note && <NotePrimiteCont note={note} />}
 
         <ZonaPericuloasa esteBusiness={esteBusiness} />
       </div>

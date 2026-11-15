@@ -120,6 +120,9 @@ model User {
   /// „Caută echipă”: anunțurile jucătorului despre el și invitațiile trimise de echipe.
   anunturiJucator  AnuntJucator[]     @relation("AnunturiJucator")
   invitatiiTrimise InvitatieJucator[] @relation("InvitatiiTrimise")
+  /// Note după meciuri: date altora și primite de la ei.
+  noteDate         NotaJucator[]      @relation("NoteDate")
+  notePrimite      NotaJucator[]      @relation("NotePrimite")
 
   tokenuriEmail  EmailVerificationToken[]
   tokenuriParola PasswordResetToken[]
@@ -449,6 +452,7 @@ model AnuntMeci {
   /// Telefonul organizatorului se arată celor care s-au alăturat.
   arataTelefon     Boolean     @default(true)
 
+  note     NotaJucator[]
   jucatori JucatorMeci[]
 
   createdAt DateTime @default(now())
@@ -562,4 +566,28 @@ model InvitatieJucator {
 
   @@id([anuntId, dinParteaId])
   @@map("invitatii_jucator")
+}
+
+/// Nota de după un meci: organizatorul notează jucătorii, jucătorii pe organizator.
+/// O singură notă de la o persoană la alta, pentru fiecare meci.
+model NotaJucator {
+  id      String    @id @default(cuid())
+  anuntId String
+  anunt   AnuntMeci @relation(fields: [anuntId], references: [id], onDelete: Cascade)
+
+  autorId String
+  autor   User   @relation("NoteDate", fields: [autorId], references: [id], onDelete: Cascade)
+
+  destinatarId String
+  destinatar   User   @relation("NotePrimite", fields: [destinatarId], references: [id], onDelete: Cascade)
+
+  /// 1–5 stele.
+  nota       Int
+  comentariu String?
+
+  createdAt DateTime @default(now())
+
+  @@unique([anuntId, autorId, destinatarId])
+  @@index([destinatarId])
+  @@map("note_jucatori")
 }

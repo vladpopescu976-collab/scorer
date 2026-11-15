@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { PaginaCont } from "@/components/cont/pagina-cont";
+import { notePrimite } from "@/lib/note-jucatori";
 
 export const metadata: Metadata = { title: "Contul meu — Scorer" };
 
@@ -26,5 +27,6 @@ export default async function ContulMeuPage() {
   });
   if (!user) redirect("/autentificare");
 
-  return <PaginaCont user={user} />;
+  const note = user.role === "PERSONAL" ? await notePrimite(session.user.id).catch(() => null) : null;
+  return <PaginaCont user={user} note={note} />;
 }

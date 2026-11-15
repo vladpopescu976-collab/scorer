@@ -21,6 +21,7 @@ import {
   salveazaAnuntJucator,
   stergeAnuntJucator,
 } from "@/lib/jucatori-liberi";
+import { noteazaJucator } from "@/lib/note-jucatori";
 
 async function cerePersonal() {
   const sesiune = await auth();
@@ -139,5 +140,19 @@ export async function raspundeCerereAction(id: string, jucatorId: string, accept
     return ok();
   } catch (error) {
     return toActionError("raspundeCerere", error);
+  }
+}
+
+export async function noteazaJucatorAction(
+  id: string,
+  date: { destinatarId: string; nota: number; comentariu?: string }
+): Promise<ActionResult> {
+  try {
+    await noteazaJucator(id, await cerePersonal(), date);
+    revalidatePath("/gaseste-meci");
+    revalidatePath("/contul-meu");
+    return ok();
+  } catch (error) {
+    return toActionError("noteazaJucator", error);
   }
 }

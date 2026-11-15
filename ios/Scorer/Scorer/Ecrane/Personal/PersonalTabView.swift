@@ -88,6 +88,7 @@ struct ContView: View {
     @State private var seIncarcaPoza = false
     @State private var eroarePoza: String?
     @State private var pozaSchimbata = 0
+    @State private var note: NotePrimite?
 
     var body: some View {
         ZStack {
@@ -130,6 +131,44 @@ struct ContView: View {
                                 .contentShape(.rect)
                             }
                             .buttonStyle(.plain)
+                        }
+                        if !sesiune.esteBusiness, let note, note.numar > 0 {
+                            sectiune("Notele tale după meciuri") {
+                                HStack(spacing: 14) {
+                                    Text(String(format: "%.1f", note.medie ?? 0))
+                                        .font(.system(size: 34, weight: .semibold).monospacedDigit())
+                                    VStack(alignment: .leading, spacing: 3) {
+                                        HStack(spacing: 2) {
+                                            ForEach(1...5, id: \.self) { n in
+                                                Image(systemName: Double(n) <= (note.medie ?? 0).rounded() ? "star.fill" : "star")
+                                                    .font(.system(size: 13))
+                                                    .foregroundStyle(Double(n) <= (note.medie ?? 0).rounded() ? Color.yellow : Color.secondary.opacity(0.4))
+                                            }
+                                        }
+                                        Text("\(note.numar) \(note.numar == 1 ? "notă" : "note") de la alți jucători")
+                                            .font(.footnote).foregroundStyle(.secondary)
+                                    }
+                                    Spacer()
+                                }
+                                .padding(.vertical, 14)
+                                ForEach(note.note.prefix(5)) { n in
+                                    separator
+                                    HStack(alignment: .top, spacing: 12) {
+                                        AvatarPersoana(nume: n.autor.nume, poza: n.autor.poza, marime: 34)
+                                        VStack(alignment: .leading, spacing: 2) {
+                                            HStack {
+                                                Text(n.autor.nume).font(.subheadline.weight(.medium))
+                                                Spacer()
+                                                Text(String(repeating: "★", count: n.nota) + String(repeating: "☆", count: 5 - n.nota))
+                                                    .font(.caption).foregroundStyle(.yellow)
+                                            }
+                                            Text(n.sport.eticheta).font(.caption).foregroundStyle(.secondary)
+                                            if let c = n.comentariu { Text("„\(c)”").font(.footnote) }
+                                        }
+                                    }
+                                    .padding(.vertical, 12)
+                                }
+                            }
                         }
                         if !sesiune.esteBusiness {
                             sectiune("Activitate") {
@@ -182,6 +221,10 @@ struct ContView: View {
             incarca(noua)
         }
         .sensoryFeedback(.success, trigger: pozaSchimbata)
+        .task {
+            guard sesiune.esteConectat, !sesiune.esteBusiness else { return }
+            note = try? await ApiClient.shared.cere("eu/note", ca: NotePrimite.self)
+        }
         .sheet(isPresented: $arataStergerea) {
             NavigationStack { StergeContulView() }
                 .presentationDetents([.height(380)])

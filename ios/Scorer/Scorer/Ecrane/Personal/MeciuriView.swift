@@ -14,6 +14,14 @@ struct MeciuriView: View {
     @State private var sectiune = Sectiune.jucatori
     @State private var arataOrase = false
     @State private var meciuri: [Meci] = []
+    @State private var deEvaluat: [MeciDeEvaluat] = []
+    @State private var deNotat: NotaDeDat?
+
+    struct NotaDeDat: Identifiable {
+        let meci: MeciDeEvaluat
+        let persoana: MeciDeEvaluat.Persoana
+        var id: String { meci.id + persoana.id }
+    }
     @State private var jucatoriLiberi: [AnuntJucator] = []
     @State private var arataAnuntJucator = false
     @State private var deInvitat: AnuntJucator?
@@ -35,6 +43,7 @@ struct MeciuriView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 22) {
                 antet
+                if !deEvaluat.isEmpty { sectiuneEvaluare }
                 lista
             }
             .padding(.horizontal, 20)
@@ -65,6 +74,12 @@ struct MeciuriView: View {
             Button("Renunță", role: .cancel) {}
         } message: {
             Text("\(deInvitat?.jucator.nume ?? "") primește o notificare și vă vedeți telefoanele.")
+        }
+        .sheet(item: $deNotat) { d in
+            NavigationStack {
+                NotaMeciView(meciId: d.meci.id, persoana: d.persoana) { Task { await incarcaDeEvaluat() } }
+            }
+            .presentationDetents([.medium, .large])
         }
         .sheet(item: $deAlaturat) { meci in
             NavigationStack {
@@ -164,6 +179,47 @@ struct MeciuriView: View {
     }
 
     // MARK: - Listă
+
+    /// „Cum a fost meciul?”: notele pentru organizator sau jucători, după meci.
+    private var sectiuneEvaluare: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("CUM A FOST MECIUL?").font(.caption.weight(.bold)).tracking(0.8).foregroundStyle(.secondary)
+            ForEach(deEvaluat) { m in
+                VStack(alignment: .leading, spacing: 10) {
+                    Text("\(m.sport.eticheta) · \(m.inceput.formatted(.dateTime.weekday(.wide).day().month(.wide).locale(.aplicatie).inRomania).capitalized)")
+                        .font(.subheadline.weight(.semibold))
+                    ForEach(m.persoane) { p in
+                        Button { deNotat = NotaDeDat(meci: m, persoana: p) } label: {
+                            HStack(spacing: 10) {
+                                AvatarPersoana(nume: p.nume, poza: p.poza, marime: 34)
+                                VStack(alignment: .leading, spacing: 1) {
+                                    Text(p.nume).font(.subheadline.weight(.medium)).foregroundStyle(.primary)
+                                    Text(p.rol).font(.caption).foregroundStyle(.secondary)
+                                }
+                                Spacer()
+                                HStack(spacing: 2) {
+                                    ForEach(1...5, id: \.self) { n in
+                                        Image(systemName: n <= (p.notaMea ?? 0) ? "star.fill" : "star")
+                                            .font(.system(size: 14))
+                                            .foregroundStyle(n <= (p.notaMea ?? 0) ? Color.yellow : Color.secondary.opacity(0.4))
+                                    }
+                                }
+                            }
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+                .padding(16)
+                .background(Tema.fisa, in: .rect(cornerRadius: 20, style: .continuous))
+                .shadow(color: .black.opacity(0.05), radius: 12, y: 5)
+            }
+        }
+    }
+
+    private func incarcaDeEvaluat() async {
+        guard estePersonal else { deEvaluat = []; return }
+        deEvaluat = (try? await ApiClient.shared.cere("meciuri/de-evaluat", ca: [MeciDeEvaluat].self)) ?? []
+    }
 
     @ViewBuilder
     private var lista: some View {
@@ -540,6 +596,7 @@ struct MeciuriView: View {
     // MARK: - Date
 
     private func incarca() async {
+        Task { await incarcaDeEvaluat() }
         seIncarca = true
         defer { seIncarca = false }
         var parametri: [String: String] = [:]
@@ -1034,6 +1091,85 @@ struct CerereMeciView: View {
                     ca: Meci.self
                 )
                 laTrimis(actualizat)
+                inchide()
+            } catch {
+                eroare = error.localizedDescription
+            }
+        }
+    }
+}
+
+/// Nota de după meci: 1–5 stele și câteva cuvinte.
+struct NotaMeciView: View {
+    let meciId: String
+    let persoana: MeciDeEvaluat.Persoana
+    let laSalvat: () -> Void
+
+    @Environment(\.dismiss) private var inchide
+    @State private var nota = 0
+    @State private var comentariu = ""
+    @State private var eroare: String?
+    @State private var seSalveaza = false
+
+    var body: some View {
+        Form {
+            Section {
+                HStack(spacing: 12) {
+                    AvatarPersoana(nume: persoana.nume, poza: persoana.poza, marime: 44)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(persoana.nume).font(.headline)
+                        Text(persoana.rol).font(.subheadline).foregroundStyle(.secondary)
+                    }
+                }
+                HStack(spacing: 10) {
+                    Spacer()
+                    ForEach(1...5, id: \.self) { n in
+                        Button { nota = n } label: {
+                            Image(systemName: n <= nota ? "star.fill" : "star")
+                                .font(.system(size: 30))
+                                .foregroundStyle(n <= nota ? Color.yellow : Color.secondary.opacity(0.4))
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel("\(n) stele")
+                    }
+                    Spacer()
+                }
+                .padding(.vertical, 6)
+                TextField("Câteva cuvinte (opțional)", text: $comentariu, axis: .vertical).lineLimit(2...4)
+            }
+            if let eroare {
+                Section { Text(eroare).font(.footnote).foregroundStyle(.red) }
+            }
+            Section {
+                Button(action: salveaza) {
+                    HStack {
+                        Spacer()
+                        if seSalveaza { ProgressView().tint(.white) } else { Text("Salvează nota").fontWeight(.semibold) }
+                        Spacer()
+                    }
+                }
+                .listRowBackground(nota == 0 ? Color.gray.opacity(0.35) : Tema.accent)
+                .foregroundStyle(.white)
+                .disabled(nota == 0 || seSalveaza)
+            }
+        }
+        .navigationTitle("Cum a fost?")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Renunță") { inchide() } } }
+        .onAppear { if nota == 0 { nota = persoana.notaMea ?? 0 } }
+    }
+
+    private func salveaza() {
+        struct Corp: Encodable { let destinatarId: String; let nota: Int; let comentariu: String? }
+        seSalveaza = true
+        Task {
+            defer { seSalveaza = false }
+            do {
+                try await ApiClient.shared.cereFaraRaspuns(
+                    "meciuri/\(meciId)/note", metoda: "POST",
+                    corp: Corp(destinatarId: persoana.id, nota: nota, comentariu: comentariu.isEmpty ? nil : comentariu)
+                )
+                laSalvat()
                 inchide()
             } catch {
                 eroare = error.localizedDescription
