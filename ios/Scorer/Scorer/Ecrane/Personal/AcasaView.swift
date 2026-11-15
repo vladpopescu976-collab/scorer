@@ -145,14 +145,6 @@ struct AcasaView: View {
                 .padding(.top, 26)
                 .intrare(aparut, intarziere: 0.42)
 
-            VStack(alignment: .leading, spacing: 11) {
-                avantaj("Rezervi și fără cont")
-                avantaj("Plătești cu Apple Pay sau la teren")
-                avantaj("Vezi orele libere pe loc")
-            }
-            .padding(.top, 28)
-            .intrare(aparut, intarziere: 0.5)
-
             PrevizualizareRezervare()
                 .padding(.top, 30)
                 .padding(.bottom, 52)
