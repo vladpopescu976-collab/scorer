@@ -7,13 +7,13 @@ import type { SportType } from "@prisma/client";
 
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { salveazaAnuntJucatorAction } from "@/lib/actions/meciuri";
 import { POZITII } from "@/lib/jucatori-liberi-pozitii";
 import { sportOptions } from "@/lib/sports";
 import { cn } from "@/lib/utils";
+import { SelectorOras } from "@/components/selector-oras";
 
 const NIVELURI = [
   { id: "", eticheta: "Nu spun" },
@@ -116,7 +116,7 @@ export function PuneAnuntJucator({ orasImplicit }: { orasImplicit: string }) {
 
             <div className="space-y-2">
               <Label htmlFor="jucator-oras">Oraș</Label>
-              <Input id="jucator-oras" value={oras} onChange={(e) => setOras(e.target.value)} placeholder="ex. Timișoara" />
+              <SelectorOras id="jucator-oras" value={oras} onChange={setOras} />
             </div>
 
             <div className="space-y-2">

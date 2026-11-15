@@ -5,10 +5,9 @@ import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { ro } from "date-fns/locale";
 import { format } from "date-fns";
-import { CalendarIcon, MapPin, Search } from "lucide-react";
+import { CalendarIcon, Search } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
@@ -19,6 +18,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { sportOptions } from "@/lib/sports";
+import { SelectorOras } from "@/components/selector-oras";
 
 export function HeroSearch() {
   const router = useRouter();
@@ -62,14 +62,8 @@ export function HeroSearch() {
 
       <div className="hidden h-8 w-px bg-border sm:block" />
 
-      <div className="flex flex-1 items-center gap-2 rounded-xl px-3 py-2 sm:rounded-full">
-        <MapPin className="h-4 w-4 shrink-0 text-muted-foreground" />
-        <Input
-          value={city}
-          onChange={(event) => setCity(event.target.value)}
-          placeholder="Oraș sau zonă"
-          className="border-0 bg-transparent p-0 shadow-none focus-visible:ring-0"
-        />
+      <div className="flex flex-1 items-center rounded-xl px-3 py-2 sm:rounded-full">
+        <SelectorOras value={city} onChange={setCity} placeholder="Oraș" permiteToate fara_contur className="text-sm" />
       </div>
 
       <div className="hidden h-8 w-px bg-border sm:block" />

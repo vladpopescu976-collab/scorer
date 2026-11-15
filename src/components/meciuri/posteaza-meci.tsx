@@ -15,6 +15,7 @@ import { localDateTimeToIso } from "@/lib/datetime";
 import { formatePentru } from "@/lib/formate-teren";
 import { sportOptions } from "@/lib/sports";
 import { cn } from "@/lib/utils";
+import { SelectorOras } from "@/components/selector-oras";
 
 const NIVELURI = [
   { id: "", eticheta: "Oricine" },
@@ -136,7 +137,7 @@ export function PosteazaMeci({ orasImplicit }: { orasImplicit: string }) {
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
                 <Label htmlFor="meci-oras">Oraș</Label>
-                <Input id="meci-oras" value={oras} onChange={(e) => setOras(e.target.value)} placeholder="ex. Timișoara" />
+                <SelectorOras id="meci-oras" value={oras} onChange={setOras} />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="meci-locatie">Teren / adresă</Label>

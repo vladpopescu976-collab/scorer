@@ -4,7 +4,7 @@ import type { Prisma, SkillLevel, SportType } from "@prisma/client";
 
 import { prisma } from "@/lib/prisma";
 import { ActionError } from "@/lib/actions/result";
-import { cheieOras, normalizeazaOras } from "@/lib/orase";
+import { ORASE_ROMANIA, cheieOras, normalizeazaOras } from "@/lib/orase";
 import { trimiteNotificare } from "@/lib/push";
 import { POZITII } from "@/lib/jucatori-liberi-pozitii";
 
@@ -27,6 +27,11 @@ export const anuntJucatorSchema = z
     nivel: z.enum(NIVELURI).optional(),
     descriere: z.string().trim().max(400, "Descrierea are cel mult 400 de caractere.").optional(),
     arataTelefon: z.boolean().optional(),
+  })
+  // Orașul vine din listă: scris greșit, jucătorul n-ar mai fi găsit de nimeni.
+  .refine((d) => ORASE_ROMANIA.some((o) => cheieOras(o) === cheieOras(d.oras)), {
+    message: "Alege orașul din listă.",
+    path: ["oras"],
   })
   .refine((d) => (d.pozitii ?? []).every((p) => POZITII[d.sport].includes(p)), {
     message: "Poziția nu se potrivește cu sportul.",

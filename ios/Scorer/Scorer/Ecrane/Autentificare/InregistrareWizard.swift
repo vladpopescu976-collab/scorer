@@ -99,6 +99,7 @@ struct InregistrareWizard: View {
     @State private var confirmare = ""
     @State private var telefon = ""
     @State private var oras = ""
+    @State private var arataOrase = false
     @State private var numeFirma = ""
     @State private var site = ""
     @State private var arataErori = false
@@ -282,10 +283,39 @@ struct InregistrareWizard: View {
                 .font(.footnote).foregroundStyle(.secondary)
                 .frame(maxWidth: .infinity, alignment: .leading).padding(.horizontal, 4)
                 .padding(.top, -8)
-            CampAuth(
-                titlu: "Oraș", simbol: "mappin.and.ellipse", text: $oras, tipContinut: .addressCity,
-                eroare: arataErori ? eroareOras : nil, exemplu: "Timișoara"
-            )
+            // Orașul se alege din listă, nu se scrie.
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Oraș")
+                    .font(.subheadline.weight(.medium))
+                    .foregroundStyle(arataErori && eroareOras != nil ? Tema.ocupat : .primary)
+                    .padding(.leading, 4)
+                Button { arataOrase = true } label: {
+                    HStack(spacing: 10) {
+                        Image(systemName: "mappin.and.ellipse")
+                            .font(.system(size: 15, weight: .medium))
+                            .foregroundStyle(.secondary)
+                            .frame(width: 20)
+                        Text(oras.isEmpty ? "Alege orașul" : oras)
+                            .foregroundStyle(oras.isEmpty ? .secondary : .primary)
+                        Spacer()
+                        Image(systemName: "chevron.down").font(.footnote.weight(.semibold)).foregroundStyle(.tertiary)
+                    }
+                    .padding(.horizontal, 14)
+                    .frame(minHeight: 54)
+                    .background(Tema.fisa, in: .rect(cornerRadius: 14, style: .continuous))
+                    .overlay {
+                        RoundedRectangle(cornerRadius: 14, style: .continuous)
+                            .strokeBorder(arataErori && eroareOras != nil ? Tema.ocupat : Color.primary.opacity(0.08), lineWidth: 1)
+                    }
+                }
+                .buttonStyle(.plain)
+                if arataErori, let eroareOras {
+                    Text(eroareOras).font(.footnote).foregroundStyle(Tema.ocupat).padding(.leading, 4)
+                }
+            }
+            .sheet(isPresented: $arataOrase) {
+                NavigationStack { AlegeOrasView(permiteToate: false, ales: $oras) }
+            }
             if rol == .business {
                 CampAuth(
                     titlu: "Site (opțional)", simbol: "globe", text: $site, tipTastatura: .URL,

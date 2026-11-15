@@ -3,7 +3,7 @@ import type { Prisma, SkillLevel, SportType } from "@prisma/client";
 
 import { prisma } from "@/lib/prisma";
 import { ActionError } from "@/lib/actions/result";
-import { cheieOras, normalizeazaOras } from "@/lib/orase";
+import { ORASE_ROMANIA, cheieOras, normalizeazaOras } from "@/lib/orase";
 import { esteFormatValid } from "@/lib/formate-teren";
 import { after } from "next/server";
 import { trimiteNotificare } from "@/lib/push";
@@ -32,6 +32,11 @@ export const anuntSchema = z
     nivel: z.enum(NIVELURI).optional(),
     descriere: z.string().trim().max(400, "Descrierea are cel mult 400 de caractere.").optional(),
     arataTelefon: z.boolean().optional(),
+  })
+  // Orașul vine din listă: scris greșit, anunțul n-ar mai fi găsit de nimeni.
+  .refine((d) => ORASE_ROMANIA.some((o) => cheieOras(o) === cheieOras(d.oras)), {
+    message: "Alege orașul din listă.",
+    path: ["oras"],
   })
   .refine((d) => new Date(d.inceput).getTime() > Date.now() - 60_000, {
     message: "Meciul trebuie să fie în viitor.",

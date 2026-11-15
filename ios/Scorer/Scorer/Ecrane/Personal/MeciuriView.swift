@@ -12,6 +12,7 @@ struct MeciuriView: View {
     }
 
     @State private var sectiune = Sectiune.jucatori
+    @State private var arataOrase = false
     @State private var meciuri: [Meci] = []
     @State private var jucatoriLiberi: [AnuntJucator] = []
     @State private var arataAnuntJucator = false
@@ -64,6 +65,10 @@ struct MeciuriView: View {
             Text("\(deInvitat?.jucator.nume ?? "") primește o notificare și vă vedeți telefoanele.")
         }
         .onChange(of: sectiune) { Task { await incarca() } }
+        .onChange(of: oras) { Task { await incarca() } }
+        .sheet(isPresented: $arataOrase) {
+            NavigationStack { AlegeOrasView(ales: $oras) }
+        }
         .task {
             if oras.isEmpty, let din = sesiune.utilizator?.oras { oras = din }
             await incarca()
@@ -86,21 +91,20 @@ struct MeciuriView: View {
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
 
-            HStack(spacing: 10) {
-                Image(systemName: "mappin.and.ellipse").foregroundStyle(Tema.accent)
-                TextField("Orașul tău, ex. Timișoara", text: $oras)
-                    .submitLabel(.search)
-                    .onSubmit { Task { await incarca() } }
-                if !oras.isEmpty {
-                    Button { oras = ""; Task { await incarca() } } label: {
-                        Image(systemName: "xmark.circle.fill").foregroundStyle(.tertiary)
-                    }
+            Button { arataOrase = true } label: {
+                HStack(spacing: 10) {
+                    Image(systemName: "mappin.and.ellipse").foregroundStyle(Tema.accent)
+                    Text(oras.isEmpty ? "Toate orașele" : oras)
+                        .foregroundStyle(oras.isEmpty ? .secondary : .primary)
+                    Spacer()
+                    Image(systemName: "chevron.down").font(.footnote.weight(.semibold)).foregroundStyle(.tertiary)
                 }
+                .padding(.horizontal, 16)
+                .frame(height: 50)
+                .background(Tema.fisa, in: .capsule)
+                .shadow(color: .black.opacity(0.06), radius: 12, y: 5)
             }
-            .padding(.horizontal, 16)
-            .frame(height: 50)
-            .background(Tema.fisa, in: .capsule)
-            .shadow(color: .black.opacity(0.06), radius: 12, y: 5)
+            .buttonStyle(.plain)
 
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 8) {
@@ -546,7 +550,13 @@ struct PosteazaMeciView: View {
             }
             Section("Când și unde") {
                 DatePicker("Data și ora", selection: $inceput, in: Date()..., displayedComponents: [.date, .hourAndMinute])
-                TextField("Oraș", text: $oras)
+                NavigationLink { AlegeOrasView(permiteToate: false, ales: $oras) } label: {
+                    HStack {
+                        Text("Oraș")
+                        Spacer()
+                        Text(oras.isEmpty ? "Alege" : oras).foregroundStyle(.secondary)
+                    }
+                }
                 TextField("Teren sau adresă (opțional)", text: $locatie)
             }
             Section {
@@ -670,7 +680,13 @@ struct PuneAnuntJucatorView: View {
                 }
             }
             Section {
-                TextField("Oraș", text: $oras)
+                NavigationLink { AlegeOrasView(permiteToate: false, ales: $oras) } label: {
+                    HStack {
+                        Text("Oraș")
+                        Spacer()
+                        Text(oras.isEmpty ? "Alege" : oras).foregroundStyle(.secondary)
+                    }
+                }
                 Picker("Nivel", selection: $nivel) {
                     Text("Nu spun").tag("")
                     Text("Începător").tag("INCEPATOR")

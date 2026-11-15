@@ -13,7 +13,6 @@ import {
   CheckCircle2,
   ClipboardList,
   Globe,
-  MapPin,
   Phone,
   Loader2,
   Lock,
@@ -49,10 +48,10 @@ import {
   type RegisterFormValues,
 } from "@/lib/validations/auth";
 import { problemaParola, sugestieEmail } from "@/lib/parola-sigura";
-import { ORASE_ROMANIA } from "@/lib/orase";
 import { sportOptions, sportMeta } from "@/lib/sports";
 import { cn } from "@/lib/utils";
 import type { Role, SportType } from "@prisma/client";
+import { SelectorOras } from "@/components/selector-oras";
 
 const PASI = [
   {
@@ -715,19 +714,13 @@ function CampOras({ form }: { form: FormularInregistrare }) {
         <FormItem>
           <FormLabel>Oraș</FormLabel>
           <FormControl>
-            <CampIcon
-              pictograma={MapPin}
-              placeholder="Timișoara"
-              list="orase-inregistrare"
-              autoComplete="address-level2"
-              {...field}
+            <SelectorOras
+              value={field.value ?? ""}
+              onChange={field.onChange}
+              placeholder="Alege orașul"
+              className="h-12 rounded-xl"
             />
           </FormControl>
-          <datalist id="orase-inregistrare">
-            {ORASE_ROMANIA.map((oras) => (
-              <option key={oras} value={oras} />
-            ))}
-          </datalist>
           <FormDescription>
             {esteBusiness
               ? "Orașul în care ai terenurile."

@@ -14,6 +14,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { sportOptions } from "@/lib/sports";
 import { FORMATE_PE_SPORT } from "@/lib/formate-teren";
+import { SelectorOras } from "@/components/selector-oras";
 
 export function SearchFilters({
   sport,
@@ -35,7 +36,7 @@ export function SearchFilters({
   const [mobileOpen, setMobileOpen] = useState(false);
 
   // Stare locală ca inputurile să rămână fluide; URL-ul e sursa de adevăr.
-  const [localOras, setLocalOras] = useState(oras);
+  const [, setLocalOras] = useState(oras);
   const [localPret, setLocalPret] = useState(pretMax);
   const [datePopoverOpen, setDatePopoverOpen] = useState(false);
 
@@ -134,13 +135,12 @@ export function SearchFilters({
         <Label htmlFor="filtru-oras" className="text-[12.5px] font-medium text-muted-foreground">
           Oraș
         </Label>
-        <Input
+        <SelectorOras
           id="filtru-oras"
-          value={localOras}
-          onChange={(e) => setLocalOras(e.target.value)}
-          onBlur={() => localOras !== oras && apply({ oras: localOras || undefined })}
-          onKeyDown={(e) => e.key === "Enter" && apply({ oras: localOras || undefined })}
-          placeholder="ex. București"
+          value={oras}
+          onChange={(ales) => apply({ oras: ales || undefined })}
+          placeholder="Toate orașele"
+          permiteToate
           className="mt-2"
         />
       </div>

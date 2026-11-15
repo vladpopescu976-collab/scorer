@@ -2,10 +2,11 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { MapPin, Search } from "lucide-react";
+import { Search } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { sportOptions } from "@/lib/sports";
+import { SelectorOras } from "@/components/selector-oras";
 
 /** Orașul și sportul: se scriu în adresă, ca lista să poată fi trimisă cuiva. */
 export function FiltreMeciuri({ cale, oras, sport, cuNume = false, nume = "", pastreaza = {} }: {
@@ -38,15 +39,18 @@ export function FiltreMeciuri({ cale, oras, sport, cuNume = false, nume = "", pa
         }}
         className="flex w-full max-w-2xl flex-col gap-2 rounded-2xl bg-white p-2 text-neutral-900 shadow-[0_1px_1px_rgba(0,0,0,0.08),0_10px_20px_-6px_rgba(0,0,0,0.28),0_40px_80px_-20px_rgba(0,0,0,0.6)] sm:flex-row sm:items-center sm:rounded-full"
       >
-        <label className="flex flex-1 items-center gap-2 px-3 py-2">
-          <MapPin className="h-4 w-4 shrink-0 text-neutral-400" />
-          <input
+        <div className="flex flex-1 items-center px-3 py-2">
+          <SelectorOras
             value={orasLocal}
-            onChange={(e) => setOrasLocal(e.target.value)}
-            placeholder="Orașul tău, ex. Timișoara"
-            className="w-full bg-transparent text-[15px] outline-none placeholder:text-neutral-400"
+            onChange={(ales) => {
+              setOrasLocal(ales);
+              aplica({ oras: ales || undefined });
+            }}
+            placeholder="Alege orașul"
+            permiteToate
+            fara_contur
           />
-        </label>
+        </div>
         {cuNume && (
           <>
             <span className="hidden h-8 w-px bg-neutral-200 sm:block" />

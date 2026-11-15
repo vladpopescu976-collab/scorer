@@ -230,19 +230,26 @@ private struct CelulaAlegere: View {
 
 /// Lista completă a orașelor din România, cu căutare. Cele care au deja
 /// terenuri publicate apar primele, ca alegerea obișnuită să fie la un tap.
-private struct AlegeOrasView: View {
-    let orase: [OrasDisponibil]
+/// Orașul se alege mereu din listă, nu se scrie: o greșeală de tastare făcea
+/// ca terenurile sau jucătorii să nu mai fie găsiți.
+struct AlegeOrasView: View {
+    var orase: [OrasDisponibil] = []
+    /// Prima opțiune e „Toate orașele” (în căutări); la anunțuri, nu.
+    var permiteToate = true
     @Binding var ales: String
 
     @Environment(\.dismiss) private var inchide
     @State private var cautare = ""
+    @State private var incarcate: [OrasDisponibil] = []
+
+    private var lista: [OrasDisponibil] { orase.isEmpty ? incarcate : orase }
 
     private var cuTerenuri: [OrasDisponibil] {
-        orase.filter { $0.terenuri > 0 && sePotriveste($0.oras) }
+        lista.filter { $0.terenuri > 0 && sePotriveste($0.oras) }
     }
 
     private var restul: [OrasDisponibil] {
-        orase.filter { $0.terenuri == 0 && sePotriveste($0.oras) }
+        lista.filter { $0.terenuri == 0 && sePotriveste($0.oras) }
     }
 
     /// Căutarea ignoră diacriticele: „timisoara” găsește „Timișoara”.
@@ -255,6 +262,10 @@ private struct AlegeOrasView: View {
 
     var body: some View {
         List {
+            if lista.isEmpty {
+                HStack { Spacer(); ProgressView(); Spacer() }
+            }
+            if permiteToate {
             Section {
                 Button {
                     ales = ""
@@ -267,6 +278,8 @@ private struct AlegeOrasView: View {
                     }
                 }
                 .foregroundStyle(.primary)
+            }
+
             }
 
             if !cuTerenuri.isEmpty {
@@ -284,6 +297,11 @@ private struct AlegeOrasView: View {
         .navigationTitle("Alege orașul")
         .navigationBarTitleDisplayMode(.inline)
         .searchable(text: $cautare, prompt: "Caută orașul")
+        .task {
+            if orase.isEmpty && incarcate.isEmpty {
+                incarcate = (try? await ApiClient.shared.cere("orase", ca: [OrasDisponibil].self)) ?? []
+            }
+        }
     }
 
     private func rand(_ item: OrasDisponibil) -> some View {

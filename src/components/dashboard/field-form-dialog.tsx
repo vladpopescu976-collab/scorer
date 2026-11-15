@@ -16,6 +16,7 @@ import { sportOptions } from "@/lib/sports";
 import { MAX_FIELD_IMAGES, fieldEditSchema, fieldSchema } from "@/lib/validations/field";
 import { esteFormatValid, formatePentru } from "@/lib/formate-teren";
 import type { SportType } from "@prisma/client";
+import { SelectorOras } from "@/components/selector-oras";
 
 const MAX_IMAGES = MAX_FIELD_IMAGES;
 
@@ -346,7 +347,7 @@ export function FieldFormDialog({
             </div>
             <div>
               <Label htmlFor="field-city">Oraș</Label>
-              <Input id="field-city" value={form.city} onChange={(e) => set("city", e.target.value)} placeholder="ex. București" className="mt-1.5" />
+              <SelectorOras id="field-city" value={form.city} onChange={(ales) => set("city", ales)} className="mt-1.5" />
             </div>
           </div>
 

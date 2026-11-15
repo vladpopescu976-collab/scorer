@@ -69,7 +69,8 @@ export function InstaleazaAplicatia({ peHero, compact = false }: { peHero: boole
         )}
       >
         <Download className="h-4 w-4" />
-        {!compact && "Instalează aplicația"}
+        {/* Pe ecrane medii doar iconița, ca bara să nu se înghesuie. */}
+        {!compact && <span className="hidden xl:inline">Instalează aplicația</span>}
       </button>
 
       <Dialog open={ajutor} onOpenChange={setAjutor}>
