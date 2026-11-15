@@ -19,7 +19,7 @@ import { approveBooking, rejectBooking } from "@/lib/actions/business";
 import { bookingStatusLabel } from "@/lib/status";
 import { toDateInput, toTimeInput } from "@/lib/datetime";
 import type { BookingStatus } from "@prisma/client";
-import { TitluPanou } from "@/components/antet-pagina";
+import { AntetPanou } from "@/components/antet-pagina";
 
 type Row = {
   id: string;
@@ -160,18 +160,17 @@ export function BookingsTable({ bookings, fields }: { bookings: Row[]; fields: {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <TitluPanou titlu="Rezervări." accent={ACCENT_ORDINE[ordine]} />
-          <p className="text-[13px] text-muted-foreground">
-            {bookings.length} în total · {pendingCount} necesită răspuns
-          </p>
-        </div>
-        <div className="relative w-full sm:w-64">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Caută după client…" className="pl-9" />
-        </div>
-      </div>
+      <AntetPanou
+        titlu="Rezervări."
+        accent={ACCENT_ORDINE[ordine]}
+        detaliu={`${bookings.length} în total · ${pendingCount} necesită răspuns`}
+        actiuni={
+          <div className="relative w-full sm:w-64">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Caută după client…" className="h-10 rounded-full border-0 bg-white pl-9 shadow-sm" />
+          </div>
+        }
+      />
 
       <div className="flex flex-wrap items-center gap-2">
         <Popover>

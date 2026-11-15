@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Stars } from "@/components/reviews";
 import { replyToReview } from "@/lib/actions/reviews";
-import { TitluPanou } from "@/components/antet-pagina";
+import { AntetPanou } from "@/components/antet-pagina";
 
 type Review = {
   id: string;
@@ -117,16 +117,11 @@ export function ReviewsClient({ reviews }: { reviews: Review[] }) {
 
   return (
     <div className="space-y-4">
-      <div>
-        <TitluPanou titlu="Recenzii." accent="Ce spun jucătorii." />
-        <p className="text-[13px] text-muted-foreground">
-          {reviews.length === 0
+      <AntetPanou titlu="Recenzii." accent="Ce spun jucătorii." detaliu={reviews.length === 0
             ? "Încă nu ai primit recenzii."
             : `${reviews.length} ${reviews.length === 1 ? "recenzie" : "recenzii"} · media ${average.toFixed(1)}/5${
                 withoutReply > 0 ? ` · ${withoutReply} fără răspuns` : ""
-              }`}
-        </p>
-      </div>
+              }`} />
 
       {reviews.length === 0 ? (
         <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed py-16 text-center">

@@ -132,3 +132,65 @@ export function CategoriiSport({
     </nav>
   );
 }
+
+/**
+ * Antetul paginilor din panoul business: un card verde rotunjit, ca banda din
+ * aplicație. Titlul cu accent în serif, un rând de context, butoanele paginii
+ * în dreapta și, opțional, cifrele importante dedesubt.
+ */
+export function AntetPanou({
+  eticheta = "Panou",
+  titlu,
+  accent,
+  detaliu,
+  actiuni,
+  children,
+}: {
+  eticheta?: string;
+  titlu: string;
+  accent?: string;
+  detaliu?: React.ReactNode;
+  actiuni?: React.ReactNode;
+  children?: React.ReactNode;
+}) {
+  return (
+    <section className="relative overflow-hidden rounded-[28px] bg-[radial-gradient(120%_140%_at_0%_0%,#17543A_0%,#0B2A1C_50%,#07160F_100%)] p-6 text-[#F3EFE6] shadow-[0_24px_50px_-28px_rgba(7,22,15,0.7)] sm:p-8">
+      <div aria-hidden className="pointer-events-none absolute -right-20 -top-24 h-72 w-72 rounded-full bg-[#7BD389]/10 blur-3xl" />
+      <div className="relative flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+        <div className="min-w-0">
+          <p className="text-[12.5px] font-medium text-[#F3EFE6]/60">{eticheta}</p>
+          <h1 className="mt-2 text-[30px] font-semibold leading-[1.05] tracking-[-0.035em] first-letter:uppercase sm:text-[36px]">
+            {titlu}
+            {accent && <> <span className="font-display text-[30px] font-normal italic text-[#F3EFE6]/60 sm:text-[34px]">{accent}</span></>}
+          </h1>
+          {detaliu && <p className="mt-2 text-[14px] text-[#F3EFE6]/65">{detaliu}</p>}
+        </div>
+        {actiuni && <div className="flex shrink-0 flex-wrap items-center gap-2 text-foreground">{actiuni}</div>}
+      </div>
+      {children && <div className="relative mt-7">{children}</div>}
+    </section>
+  );
+}
+
+/** O casetă de sticlă pe cardul verde: cifra mare, eticheta mică. */
+export function CasetaVerde({
+  eticheta,
+  valoare,
+  icon: Icon,
+  atentie = false,
+}: {
+  eticheta: string;
+  valoare: string;
+  icon: LucideIcon;
+  atentie?: boolean;
+}) {
+  return (
+    <div
+      className={`rounded-2xl p-4 ring-1 ring-inset ${atentie ? "bg-amber-400/10 ring-amber-400/40" : "bg-white/[0.07] ring-white/10"}`}
+    >
+      <Icon className={`h-4 w-4 ${atentie ? "text-amber-400" : "text-[#7BD389]"}`} />
+      <p className="mt-2.5 text-[22px] font-semibold leading-none tabular-nums">{valoare}</p>
+      <p className="mt-1.5 text-[12px] text-[#F3EFE6]/60">{eticheta}</p>
+    </div>
+  );
+}

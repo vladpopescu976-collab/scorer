@@ -12,7 +12,7 @@ import { OptiuniTeren } from "@/components/dashboard/optiuni-teren";
 import { OreBlocate, type BlocareTeren } from "@/components/dashboard/ore-blocate";
 import { updateField, removeField } from "@/lib/actions/business";
 import { sportMeta } from "@/lib/sports";
-import { TitluPanou } from "@/components/antet-pagina";
+import { AntetPanou } from "@/components/antet-pagina";
 
 type Field = EditableField;
 
@@ -242,22 +242,21 @@ export function FieldSettingsClient({
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <TitluPanou titlu="Terenurile tale." accent="Program și prețuri." />
-          <p className="text-[13px] text-muted-foreground">
-            {fields.filter((f) => f.isActive).length} active din {fields.length}
-          </p>
-        </div>
-        <button
-          type="button"
-          onClick={() => setAddOpen(true)}
-          className="flex items-center justify-center gap-1.5 rounded-lg bg-primary px-3.5 py-2 text-[13px] font-medium text-primary-foreground hover:opacity-90"
-        >
-          <Plus className="h-4 w-4" />
-          Adaugă teren
-        </button>
-      </div>
+      <AntetPanou
+        titlu="Terenurile tale."
+        accent="Program și prețuri."
+        detaliu={`${fields.filter((f) => f.isActive).length} active din ${fields.length}`}
+        actiuni={
+          <button
+            type="button"
+            onClick={() => setAddOpen(true)}
+            className="flex items-center justify-center gap-1.5 h-10 rounded-full bg-[#F3EFE6] px-4 text-[13.5px] font-semibold text-[#0B2A1C] transition-colors hover:bg-white"
+          >
+            <Plus className="h-4 w-4" />
+            Adaugă teren
+          </button>
+        }
+      />
 
       {fields.length === 0 ? (
         <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed py-16 text-center">

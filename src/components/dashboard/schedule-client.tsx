@@ -40,7 +40,7 @@ import {
   TOATE,
 } from "@/components/dashboard/selector-sport-teren";
 import type { BookingStatus, SportType } from "@prisma/client";
-import { TitluPanou } from "@/components/antet-pagina";
+import { AntetPanou } from "@/components/antet-pagina";
 
 const START_HOUR = 8;
 const END_HOUR = 23;
@@ -202,89 +202,90 @@ export function ScheduleClient({
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <TitluPanou titlu={weekdayFmt.format(selectedDate)} />
-          <p className="text-[13px] text-muted-foreground">{longDateFmt.format(selectedDate)}</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="flex items-center gap-1 rounded-lg border bg-background p-1">
-            <button
-              type="button"
-              onClick={() => setSelectedDate((d) => new Date(d.getFullYear(), d.getMonth(), d.getDate() - 1))}
-              className="flex items-center gap-1 rounded-md px-2 py-1.5 text-[12.5px] font-medium text-muted-foreground hover:bg-muted hover:text-foreground"
-            >
-              <ChevronLeft className="h-4 w-4" />
-              <span className="hidden sm:inline">Ziua anterioară</span>
-            </button>
-            {/* Data vizitată se vede mereu, iar apăsarea deschide un calendar
-                în care zilele sunt colorate după cât de ocupate sunt. */}
-            <Popover open={pickerOpen} onOpenChange={setPickerOpen}>
-              <PopoverTrigger
-                render={
-                  <button
-                    type="button"
-                    title="Alege ziua"
-                    className={
-                      "flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-[12.5px] font-medium tabular-nums " +
-                      (isToday ? "bg-primary/10 text-primary" : "text-foreground hover:bg-muted")
-                    }
-                  />
-                }
+      <AntetPanou
+        eticheta="Calendar & orar"
+        titlu={weekdayFmt.format(selectedDate)}
+        accent={longDateFmt.format(selectedDate)}
+        actiuni={
+          <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1 rounded-full bg-white p-1 shadow-sm">
+              <button
+                type="button"
+                onClick={() => setSelectedDate((d) => new Date(d.getFullYear(), d.getMonth(), d.getDate() - 1))}
+                className="flex items-center gap-1 rounded-md px-2 py-1.5 text-[12.5px] font-medium text-muted-foreground hover:bg-muted hover:text-foreground"
               >
-                <CalendarDays className="h-3.5 w-3.5" />
-                {isToday && <span>Azi ·</span>}
-                {shortDateFmt.format(selectedDate)}
-                <ChevronDown className="h-3 w-3 opacity-60" />
-              </PopoverTrigger>
-              <PopoverContent align="center" className="w-auto p-0">
-                <DayHeatPicker
-                  fields={fields}
-                  intervals={heatIntervals}
-                  selectedDate={selectedDate}
-                  onSelect={(date) => {
-                    setSelectedDate(date);
-                    setPickerOpen(false);
-                  }}
-                />
-                {!isToday && (
-                  <div className="border-t p-2">
+                <ChevronLeft className="h-4 w-4" />
+                <span className="hidden sm:inline">Ziua anterioară</span>
+              </button>
+              {/* Data vizitată se vede mereu, iar apăsarea deschide un calendar
+                  în care zilele sunt colorate după cât de ocupate sunt. */}
+              <Popover open={pickerOpen} onOpenChange={setPickerOpen}>
+                <PopoverTrigger
+                  render={
                     <button
                       type="button"
-                      onClick={() => {
-                        setSelectedDate(new Date());
-                        setPickerOpen(false);
-                      }}
-                      className="w-full rounded-md px-2 py-1.5 text-[12px] font-medium text-primary hover:bg-primary/10"
-                    >
-                      Înapoi la azi
-                    </button>
-                  </div>
-                )}
-              </PopoverContent>
-            </Popover>
-            <button
-              type="button"
-              onClick={() => setSelectedDate((d) => new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1))}
-              className="flex items-center gap-1 rounded-md px-2 py-1.5 text-[12.5px] font-medium text-muted-foreground hover:bg-muted hover:text-foreground"
-            >
-              <span className="hidden sm:inline">Ziua următoare</span>
-              <ChevronRight className="h-4 w-4" />
-            </button>
-          </div>
+                      title="Alege ziua"
+                      className={
+                        "flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-[12.5px] font-medium tabular-nums " +
+                        (isToday ? "bg-primary/10 text-primary" : "text-foreground hover:bg-muted")
+                      }
+                    />
+                  }
+                >
+                  <CalendarDays className="h-3.5 w-3.5" />
+                  {isToday && <span>Azi ·</span>}
+                  {shortDateFmt.format(selectedDate)}
+                  <ChevronDown className="h-3 w-3 opacity-60" />
+                </PopoverTrigger>
+                <PopoverContent align="center" className="w-auto p-0">
+                  <DayHeatPicker
+                    fields={fields}
+                    intervals={heatIntervals}
+                    selectedDate={selectedDate}
+                    onSelect={(date) => {
+                      setSelectedDate(date);
+                      setPickerOpen(false);
+                    }}
+                  />
+                  {!isToday && (
+                    <div className="border-t p-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSelectedDate(new Date());
+                          setPickerOpen(false);
+                        }}
+                        className="w-full rounded-md px-2 py-1.5 text-[12px] font-medium text-primary hover:bg-primary/10"
+                      >
+                        Înapoi la azi
+                      </button>
+                    </div>
+                  )}
+                </PopoverContent>
+              </Popover>
+              <button
+                type="button"
+                onClick={() => setSelectedDate((d) => new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1))}
+                className="flex items-center gap-1 rounded-md px-2 py-1.5 text-[12.5px] font-medium text-muted-foreground hover:bg-muted hover:text-foreground"
+              >
+                <span className="hidden sm:inline">Ziua următoare</span>
+                <ChevronRight className="h-4 w-4" />
+              </button>
+            </div>
 
-          {fields.length > 0 && (
-            <button
-              type="button"
-              onClick={() => setBlockOpen(true)}
-              className="flex items-center gap-1.5 rounded-lg bg-primary px-3 py-2 text-[12.5px] font-medium text-primary-foreground hover:opacity-90"
-            >
-              <Plus className="h-4 w-4" />
-              Blochează ore
-            </button>
-          )}
-        </div>
-      </div>
+            {fields.length > 0 && (
+              <button
+                type="button"
+                onClick={() => setBlockOpen(true)}
+                className="flex items-center gap-1.5 rounded-lg bg-primary px-3 py-2 text-[12.5px] font-medium text-primary-foreground hover:opacity-90"
+              >
+                <Plus className="h-4 w-4" />
+                Blochează ore
+              </button>
+            )}
+          </div>
+        }
+      />
 
       <SelectorSportTeren
         terenuri={toateTerenurile}

@@ -3,7 +3,6 @@ import { prisma } from "@/lib/prisma";
 import { expiraRezervarile } from "@/lib/rezervari-expirate";
 import { OverviewClient } from "@/components/dashboard/overview-client";
 import { UrgentBookingsAlert } from "@/components/dashboard/urgent-bookings-alert";
-import { TitluPanou } from "@/components/antet-pagina";
 
 // Baza Prisma Postgres se suspenda cand e inactiva, iar prima cerere
 // care o trezeste poate dura ~30s. Implicit Vercel taie functia la 10s,
@@ -46,14 +45,8 @@ export default async function BusinessOverviewPage() {
 
   return (
     <div>
-      <div className="mb-6">
-        <TitluPanou titlu="Privire de ansamblu." accent="Azi, pe scurt." />
-        <p className="text-[13px] text-muted-foreground">Rezumatul activității tale pe Scorer</p>
-      </div>
-      <div className="mb-6">
-        <UrgentBookingsAlert bookings={urgentBookings} ownerPhone={owner?.phone ?? null} />
-      </div>
       <OverviewClient
+        alerta={<UrgentBookingsAlert bookings={urgentBookings} ownerPhone={owner?.phone ?? null} />}
         fields={fields.map((f) => ({
           id: f.id,
           sportType: f.sportType,

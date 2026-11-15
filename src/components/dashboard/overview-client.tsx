@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { motion } from "framer-motion";
-import { Wallet, CalendarCheck2, Timer, Gauge } from "lucide-react";
+import { CalendarCheck2, Timer, Gauge } from "lucide-react";
 import {
   ResponsiveContainer,
   AreaChart,
@@ -17,29 +17,11 @@ import {
 } from "recharts";
 
 import { Card, CardContent } from "@/components/ui/card";
+import { AntetPanou, CasetaVerde } from "@/components/antet-pagina";
 import { computeKpis, revenueSeries, hoursBySport, type AnalyticsBooking, type AnalyticsField } from "@/lib/analytics";
 
 const container = { hidden: {}, show: { transition: { staggerChildren: 0.06 } } };
 const item = { hidden: { opacity: 0, y: 14 }, show: { opacity: 1, y: 0, transition: { duration: 0.4 } } };
-
-function KpiCard({ icon: Icon, label, value, hint }: { icon: typeof Wallet; label: string; value: string; hint: string }) {
-  return (
-    <motion.div variants={item}>
-      <Card className="shadow-sm">
-        <CardContent className="p-5">
-          <div className="flex items-start justify-between">
-            <p className="text-[13px] font-medium text-muted-foreground">{label}</p>
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
-              <Icon className="h-4 w-4" strokeWidth={2} />
-            </div>
-          </div>
-          <p className="mt-3 font-heading text-[26px] font-semibold tracking-tight tabular-nums">{value}</p>
-          <p className="mt-2 text-[12.5px] text-muted-foreground">{hint}</p>
-        </CardContent>
-      </Card>
-    </motion.div>
-  );
-}
 
 type SimpleTooltipProps = {
   active?: boolean;
@@ -62,7 +44,16 @@ function ChartTooltip({ active, payload, label }: SimpleTooltipProps) {
   );
 }
 
-export function OverviewClient({ bookings, fields }: { bookings: AnalyticsBooking[]; fields: AnalyticsField[] }) {
+export function OverviewClient({
+  bookings,
+  fields,
+  alerta,
+}: {
+  bookings: AnalyticsBooking[];
+  fields: AnalyticsField[];
+  /** Cererile vechi la care n-ai răspuns: sub cardul verde, ca să sară în ochi. */
+  alerta?: React.ReactNode;
+}) {
   const [range, setRange] = useState(14);
 
   const kpis = useMemo(() => computeKpis(bookings, fields), [bookings, fields]);
@@ -72,25 +63,33 @@ export function OverviewClient({ bookings, fields }: { bookings: AnalyticsBookin
 
   return (
     <motion.div variants={container} initial="hidden" animate="show" className="space-y-6">
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <KpiCard
-          icon={Wallet}
-          label="Încasări estimate (luna curentă)"
-          value={`${kpis.monthRevenue.toLocaleString("ro-RO")} RON`}
-          hint="din rezervări confirmate"
-        />
-        <KpiCard icon={CalendarCheck2} label="Total rezervări" value={kpis.totalBookings.toString()} hint="toate statusurile" />
-        <KpiCard
-          icon={Timer}
-          label="Ore ocupate"
-          value={`${Math.round(kpis.occupiedHours * 10) / 10} h`}
-          hint="confirmate, total"
-        />
-        <KpiCard icon={Gauge} label="Rata de ocupare" value={`${kpis.occupancyRate}%`} hint="ultimele 7 zile" />
-      </div>
+      {/* Cardul verde: încasarea lunii mare, ca un panou de bord, și trei casete. */}
+      <AntetPanou
+        eticheta={`Panou · ${new Date().toLocaleDateString("ro-RO", { month: "long", year: "numeric" })}`}
+        titlu="Privire de ansamblu."
+        accent="Azi, pe scurt."
+      >
+        <div className="grid gap-6 lg:grid-cols-[1.1fr_2fr] lg:items-end">
+          <div>
+            <p className="font-display text-[19px] italic text-[#F3EFE6]/70">Încasări estimate luna aceasta</p>
+            <p className="mt-1 text-[44px] font-semibold leading-none tracking-[-0.03em] tabular-nums sm:text-[52px]">
+              {kpis.monthRevenue.toLocaleString("ro-RO")}
+              <span className="ml-2 text-[20px] font-medium text-[#F3EFE6]/55">RON</span>
+            </p>
+            <p className="mt-2 text-[12.5px] text-[#F3EFE6]/55">din rezervări confirmate</p>
+          </div>
+          <div className="grid grid-cols-3 gap-2.5 sm:gap-3">
+            <CasetaVerde icon={CalendarCheck2} eticheta="Rezervări" valoare={kpis.totalBookings.toString()} />
+            <CasetaVerde icon={Timer} eticheta="Ore ocupate" valoare={`${Math.round(kpis.occupiedHours * 10) / 10} h`} />
+            <CasetaVerde icon={Gauge} eticheta="Ocupare · 7 zile" valoare={`${kpis.occupancyRate}%`} />
+          </div>
+        </div>
+      </AntetPanou>
+
+      {alerta}
 
       <motion.div variants={item}>
-        <Card className="shadow-sm">
+        <Card className="rounded-3xl border-black/[0.06] shadow-[0_1px_2px_rgba(0,0,0,0.04),0_14px_34px_-18px_rgba(0,0,0,0.14)]">
           <CardContent className="p-5 sm:p-6">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
@@ -155,7 +154,7 @@ export function OverviewClient({ bookings, fields }: { bookings: AnalyticsBookin
       </motion.div>
 
       <motion.div variants={item}>
-        <Card className="shadow-sm">
+        <Card className="rounded-3xl border-black/[0.06] shadow-[0_1px_2px_rgba(0,0,0,0.04),0_14px_34px_-18px_rgba(0,0,0,0.14)]">
           <CardContent className="p-5">
             <h3 className="font-heading text-[15.5px] font-semibold">Ore rezervate pe sport</h3>
             <p className="text-[12.5px] text-muted-foreground">Rezervări confirmate</p>
